@@ -1,0 +1,7 @@
+alefragnani.project-manager
+bradzacher.vscode-copy-filename
+ms-ceintl.vscode-language-pack-ja
+ms-python.debugpy
+ms-python.python
+ms-python.vscode-pylance
+ms-python.vscode-python-envs
