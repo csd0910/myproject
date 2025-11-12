@@ -1,0 +1,60 @@
+コード,説明
+Step 1: フォルダ作成と環境準備
+mkdir NewApp,新しいプロジェクトフォルダを作成。
+cd NewApp,作成したフォルダへ移動。
+pyenv local 3.12.5,このプロジェクトで使用するPythonバージョンを指定。
+python -m venv .venv,仮想環境（.venv）を作成。
+source .venv/Scripts/activate,仮想環境を有効化。（プロンプトに (.venv) が表示されます）
+
+Step 2: Git初期化と依存関係の設定
+git init,このフォルダをGitリポジトリとして初期化。
+code .,VS Codeでフォルダを開き、.gitignore を作成。（.venv/ など必須）
+pip install Flask,必要なライブラリを仮想環境にインストール。（例: Flask）
+pip freeze > requirements.txt,インストールしたライブラリ一覧をファイルに書き出す。（最重要）
+
+Step 3: GitHubへの初回プッシュ
+git add .,すべてのファイルをステージング。
+"git commit -m ""feat: Initial setup""",初回コミット。（差出人情報は自動で設定されます）
+git remote add origin git@github.com:csd0910/new-app.git,GitHubで作成したリモートリポジトリを登録。
+git push -u origin main,初回プッシュを実行し、GitHubにコードを公開。
+
+もう一方のPCでの作業開始
+もう一方のPC（会社PC or 個人PC）で作業を始めるときは、以下の3ステップを実行します。
+git clone git@github.com:csd0910/new-app.git
+cd new-app
+
+環境再構築:
+python -m venv .venv
+source .venv/Scripts/activate
+pip install -r requirements.txt
+
+.exe パッケージ作成
+1.最終環境の整備
+source .venv/Scripts/activate,プロジェクトの仮想環境を有効化する。（システム環境を汚染しない）
+pip install pyinstaller,.exe 化に必要な PyInstaller を仮想環境内にインストール。
+pip install --upgrade pip setuptools,パッケージングツールが必要とするビルド関連ライブラリを最新に保つ。
+
+2.データファイルの準備と定義
+app.py,コード内のデータファイル参照パスを、相対パスで記述する。（例: data/config.json）
+mkdir data,実行時に必要なデータファイルを格納するフォルダをプロジェクト内に作成。（例: data）
+
+3..exe の生成（PyInstaller） PyInstallerを使って、単一の自己完結型実行ファイルを生成します。
+コード,説明
+"pyinstaller --onefile --add-data ""data:data"" app.py",単一ファイル（--onefile）で生成し、
+dataフォルダ全体を実行ファイル内に埋め込む（--add-data）処理。
+生成場所,.exe ファイルは、プロジェクト内の dist フォルダに出力されます。
+
+4.配布前の最終処理
+dist フォルダの圧縮,dist フォルダ内の .exe ファイルを配布する前に、一度 zip や rar で圧縮する。
+配布,圧縮したファイルを配布する。
+
+【重要性】: ファイルをインターネット経由でダウンロードすると、**「Zone Identifier」**という
+セキュリティ属性が付与されますが、圧縮ファイル（$\text{zip}$など）をダウンロードし、展開すると、
+この属性が削除される傾向にあります。これにより、配布先で「ブロックの解除」操作を要求される可能性が低くなります。
+
+5.配布先での実行
+受け取った側（別のPC）での操作はシンプルです。
+操作,説明
+展開,圧縮ファイルを任意の場所に展開する。
+実行,.exe ファイルをダブルクリックして実行する。
+（もし警告が出たら）,警告が出た場合のみ、**プロパティから「ブロックの解除」**を操作してもらう。
