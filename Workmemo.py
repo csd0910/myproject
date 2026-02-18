@@ -7,7 +7,6 @@ import json
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import japanize_matplotlib
-import google.generativeai as genai
 from openpyxl import Workbook
 from openpyxl.drawing.image import Image as XLImage
 from openpyxl.styles import Alignment, Font, Border, Side
@@ -18,7 +17,6 @@ DEFAULT_CSV_PATH = "work_log.csv"
 
 DEFAULT_CONFIG = {
     "user_name": "伊藤",
-    "api_key": "",
     "categories": ["障害", "運用", "保守", "その他"],
     "genres": ["OA端末関連", "SCAW関連", "総務関連", "ネットワーク"],
     "departments": ["商品部", "物流部", "営業管理部", "人事部"],
@@ -48,7 +46,7 @@ class SettingsWindow(tk.Toplevel):
     def __init__(self, parent, config, on_save):
         super().__init__(parent)
         self.title("設定")
-        self.geometry("380x520")
+        self.geometry("380x480")
         self.config_data = config
         self.on_save = on_save
         self.setup_ui()
@@ -60,11 +58,6 @@ class SettingsWindow(tk.Toplevel):
         self.ent_user = ttk.Entry(main_frame)
         self.ent_user.insert(0, self.config_data.get("user_name", ""))
         self.ent_user.pack(fill=tk.X, pady=(0, 10))
-
-        ttk.Label(main_frame, text="Gemini API Key (レポート作成用):").pack(anchor=tk.W)
-        self.ent_key = ttk.Entry(main_frame)
-        self.ent_key.insert(0, self.config_data.get("api_key", ""))
-        self.ent_key.pack(fill=tk.X, pady=(0, 10))
 
         self.edits = {}
         fields = [("categories", "分類"), ("genres", "ジャンル"), ("departments", "部署")]
@@ -79,7 +72,6 @@ class SettingsWindow(tk.Toplevel):
     def save(self):
         new_config = {
             "user_name": self.ent_user.get(),
-            "api_key": self.ent_key.get(),
             "categories": [s.strip() for s in self.edits["categories"].get("1.0", tk.END).split(",") if s.strip()],
             "genres": [s.strip() for s in self.edits["genres"].get("1.0", tk.END).split(",") if s.strip()],
             "departments": [s.strip() for s in self.edits["departments"].get("1.0", tk.END).split(",") if s.strip()],
@@ -189,7 +181,7 @@ class AnalysisWindow(tk.Toplevel):
             self.ent_end.pack(side=tk.LEFT, padx=2)
 
             ttk.Button(ctrl_frame, text="表示更新", command=self.refresh_plots).pack(side=tk.LEFT, padx=10)
-            ttk.Button(ctrl_frame, text="集計期間でレポート(Excel)を生成", command=self.create_report).pack(side=tk.RIGHT, padx=5)
+            ttk.Button(ctrl_frame, text="レポート(Excel)を生成", command=self.create_report).pack(side=tk.RIGHT, padx=5)
 
             # グラフ表示エリア
             self.plot_frame = ttk.Frame(self)
@@ -265,11 +257,6 @@ class AnalysisWindow(tk.Toplevel):
         ax.set_title(title, pad=20)
 
     def create_report(self):
-        api_key = self.config.get("api_key", "")
-        if not api_key:
-            messagebox.showwarning("警告", "レポート作成にはGemini APIキーが必要です。設定画面で登録してください。")
-            return
-
         data = self.get_filtered_data()
         if not data:
             messagebox.showinfo("情報", "対象期間のデータがありません。")
@@ -280,30 +267,7 @@ class AnalysisWindow(tk.Toplevel):
         period_display = f"{self.ent_start.get()}～{self.ent_end.get()}"
 
         try:
-            messagebox.showinfo("処理中", "AIレビューを生成し、Excelを作成します。数秒かかります...")
-
-            # AIレビュー生成 (エラーハンドリング強化)
-            ai_review = ""
-            try:
-                genai.configure(api_key=api_key)
-                summary_text = "\n".join([f"- {r.get('問題事象')} -> {r.get('対応内容')}" for r in data[:30]])
-                prompt = f"以下の指定期間({period_display})の作業ログを元に、業務のレビュー（振り返り）を400文字程度で作成してください。\n\n作業ログ:\n{summary_text}"
-
-                # 利用可能なモデルで試行
-                try:
-                    model = genai.GenerativeModel('gemini-1.5-flash')
-                    response = model.generate_content(prompt)
-                except:
-                    model = genai.GenerativeModel('gemini-2.0-flash')
-                    response = model.generate_content(prompt)
-
-                ai_review = response.text.strip()
-            except Exception as e:
-                error_msg = str(e)
-                if "429" in error_msg:
-                    ai_review = "【AIレビュー生成制限】APIの無料枠制限（クォータ）に達しました。時間を置いて再度お試しください。\nエラー詳細: " + error_msg
-                else:
-                    ai_review = "【AIレビュー生成失敗】自動生成中にエラーが発生しました。\nエラー詳細: " + error_msg
+            messagebox.showinfo("処理中", "データを集計し、Excelを作成します...")
 
             wb = Workbook()
             ws = wb.active
@@ -316,26 +280,22 @@ class AnalysisWindow(tk.Toplevel):
             ws.merge_cells("A1:H1")
             ws["A1"].alignment = Alignment(horizontal="center")
 
-            ws["A3"] = "【業務振り返り (AI生成)】"
-            ws["A3"].font = Font(bold=True)
-            ws["A4"] = ai_review
-            ws["A4"].alignment = Alignment(wrap_text=True, vertical="top")
-            ws.merge_cells("A4:H10")
-
+            # グラフの挿入
             chart_path = "temp_report_chart.png"
             self.fig.savefig(chart_path, dpi=100)
             img = XLImage(chart_path)
             img.width = 550
             img.height = 400
-            ws.add_image(img, "A12")
+            ws.add_image(img, "A3")
 
-            ws["A33"] = "【項目別集計】"
-            ws["A33"].font = Font(bold=True)
-            ws["A34"] = "カテゴリ"; ws["B34"] = "件数"
+            # 集計データの記載
+            ws["A25"] = "【項目別集計】"
+            ws["A25"].font = Font(bold=True)
+            ws["A26"] = "カテゴリ"; ws["B26"] = "件数"
 
             from collections import Counter
             genres = Counter([r.get("ジャンル") for r in data if r.get("ジャンル")])
-            row = 35
+            row = 27
             for g, count in genres.items():
                 ws.cell(row=row, column=1, value=g)
                 ws.cell(row=row, column=2, value=count)
@@ -403,7 +363,7 @@ class WorkLogApp:
         time_frame.pack(fill=tk.X, pady=(0, 2))
         self.btn_start = ttk.Button(time_frame, text="開始", width=5, command=self.record_start)
         self.btn_start.pack(side=tk.LEFT, padx=2)
-        self.lbl_times = ttk.Label(time_frame, text="--:-- ～ --:-- (0:00)", font=("Segoe UI", 8))
+        self.lbl_times = ttk.Label(time_frame, text="--:-- ～ --:-- (0:00)")
         self.lbl_times.pack(side=tk.LEFT, padx=5)
         ttk.Button(time_frame, text="👔履歴", width=7, command=self.open_history).pack(side=tk.RIGHT, padx=2)
 
