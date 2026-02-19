@@ -11,9 +11,14 @@ from openpyxl import Workbook
 from openpyxl.drawing.image import Image as XLImage
 from openpyxl.styles import Alignment, Font, Border, Side
 
-# --- 定数とデフォルト設定 ---
-CONFIG_FILE = "config.json"
-DEFAULT_CSV_PATH = "work_log.csv"
+# --- ファイルパス設定 (実行ファイルのあるフォルダの親のdataフォルダを参照) ---
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DATA_DIR = os.path.join(BASE_DIR, "data")
+if not os.path.exists(DATA_DIR):
+    os.makedirs(DATA_DIR)
+
+CONFIG_FILE = os.path.join(DATA_DIR, "config.json")
+DEFAULT_CSV_PATH = os.path.join(DATA_DIR, "work_log.csv")
 
 DEFAULT_CONFIG = {
     "user_name": "伊藤",

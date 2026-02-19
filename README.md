@@ -30,9 +30,14 @@ pip install -r requirements.txt
 ## 3. アプリの起動
 以下のコマンドでアプリが起動します。
 ```powershell
-python Workmemo.py
+python app/Workmemo.py
 ```
 
+## フォルダ構造
+- `app/` : アプリケーション本体 (`Workmemo.py`)
+- `data/` : 作業データ (`work_log.csv`) と設定 (`config.json`)
+- `tools/` : 補助ツールやドキュメント
+
 ## 注意事項
-- **データについて**: `work_log.csv` が作業データ本体です。複数のPCで共有する場合は、必要に応じてこのファイルを同期してください。
-- **設定について**: `config.json` に担当者名などの設定が保存されます。初回起動時に自動生成されます。
+- **データについて**: `data/work_log.csv` が作業データ本体です。
+- **設定について**: `data/config.json` に担当者名などが保存されます。

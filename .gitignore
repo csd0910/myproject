@@ -1,17 +1,19 @@
-# データ・設定ファイル
-work_log.csv
-config.json
+# データ・設定ファイル (dataフォルダ全体を無視しつつ空フォルダは維持)
+data/*
+!data/.keep
 
-# 一時ファイル・生成レポート
-temp_report_chart.png
-Report_*.xlsx
-*.log
-
-# 開発用・一時スクリプト
-check_models.py
-models_list.txt
+# ツールフォルダ内の一時ファイル
+tools/temp_report_chart.png
+tools/Report_*.xlsx
+tools/*.log
+tools/models_list.txt
 
 # Python仮想環境
 .venv/
 __pycache__/
 *.pyc
+
+# エクスプローラー・ビルド関連
+build/
+dist/
+*.spec
