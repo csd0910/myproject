@@ -1,0 +1,5 @@
+﻿情報取得日時,発生日付,情報元,ベンダー,機種名/製品名,バージョン,不具合内容,危険度指標,ステータス,対応策
+2026-03-06 17:16:58,2026-03-03T09:30:00+09:00,JVN,Microsoft,Windows 11,24H2,キヤノン製IJ Scan Utilityにおける引用符で囲まれていないファイルパスの脆弱性,4.0,確認要,https://jvn.jp/vu/JVNVU99676444/
+2026-03-06 17:16:59,2026-02-23 17:59 PT,Microsoft公式,Microsoft,Windows 11,24H2,Kerberos でのパスワードローテーションの失敗による認証の問題この問題は、PKINIT プロトコルを使用する場合のニッチなシナリオで観察され、2025 年 4 月のセキュリティ更新プログラムで解決されます。,確認中,解消済,https://learn.microsoft.com/ja-jp/windows/release-health/status-windows-11-24H2
+2026-03-06 17:16:59,2026-02-10 18:11 PT,Microsoft公式,Microsoft,Windows 11,24H2,Web フィルタリングがオンのブラウザー バージョンによっては、保護者の同意が表示されない場合があります Web フィルタリングがオンになっていると、子どもが一部のブラウザーを使用できない場合があり、アクティビティ レポートがオフになっているFamily Safety,確認中,解消済,https://learn.microsoft.com/ja-jp/windows/release-health/status-windows-11-24H2
+2026-03-06 17:16:59,2025-09-30 10:04 PT,Microsoft公式,Microsoft,Windows 11,24H2,共有フォルダーからインストールした場合、WUSA 経由でインストールされたUpdatesが失敗する可能性がありますこの問題は、複数の .msu ファイルを含むネットワーク フォルダーから更新プログラムをインストールするときに発生する可能性があります。,確認中,軽減,https://learn.microsoft.com/ja-jp/windows/release-health/status-windows-11-24H2
