@@ -3,3 +3,89 @@
 2026-03-06 17:16:59,2026-02-23 17:59 PT,Microsoft公式,Microsoft,Windows 11,24H2,Kerberos でのパスワードローテーションの失敗による認証の問題この問題は、PKINIT プロトコルを使用する場合のニッチなシナリオで観察され、2025 年 4 月のセキュリティ更新プログラムで解決されます。,確認中,解消済,https://learn.microsoft.com/ja-jp/windows/release-health/status-windows-11-24H2
 2026-03-06 17:16:59,2026-02-10 18:11 PT,Microsoft公式,Microsoft,Windows 11,24H2,Web フィルタリングがオンのブラウザー バージョンによっては、保護者の同意が表示されない場合があります Web フィルタリングがオンになっていると、子どもが一部のブラウザーを使用できない場合があり、アクティビティ レポートがオフになっているFamily Safety,確認中,解消済,https://learn.microsoft.com/ja-jp/windows/release-health/status-windows-11-24H2
 2026-03-06 17:16:59,2025-09-30 10:04 PT,Microsoft公式,Microsoft,Windows 11,24H2,共有フォルダーからインストールした場合、WUSA 経由でインストールされたUpdatesが失敗する可能性がありますこの問題は、複数の .msu ファイルを含むネットワーク フォルダーから更新プログラムをインストールするときに発生する可能性があります。,確認中,軽減,https://learn.microsoft.com/ja-jp/windows/release-health/status-windows-11-24H2
+2026-03-12 12:02:24,2026-03-12T10:18:00+09:00,窓の杜,Microsoft,Windows 11,24H2,「Windows Server」のリモート管理ツールがついにARM64を公式サポート、x64と同等に／軽量・長時間駆動の携帯性に優れるデバイスが選べる,確認中,確認要,https://forest.watch.impress.co.jp/docs/news/2092628.html
+2026-03-12 13:55:22,2026-03-05T00:00:00+09:00,窓の杜,Google,Chrome,,「Google Chrome」に致命的な脆弱性 ～セキュリティアップデートを実施中,確認中,確認要,https://forest.watch.impress.co.jp/docs/news/2090809.html
+2026-03-12 13:55:22,2026-02-24T00:00:00+09:00,窓の杜,Google,Chrome,,「Google Chrome」に3件の脆弱性、境界外読み取り・書き込みの欠陥などに対処,確認中,確認要,https://forest.watch.impress.co.jp/docs/news/2087987.html
+2026-03-12 13:55:22,2026-02-19T00:00:00+09:00,窓の杜,Google,Chrome,,「Google Chrome」にセキュリティ更新 ～「PDFium」のヒープオーバーフローなどに対処,確認中,確認要,https://forest.watch.impress.co.jp/docs/news/2087082.html
+2026-03-12 13:55:22,2026-02-16T00:00:00+09:00,窓の杜,Google,Chrome,,リリースされたばかりの「Google Chrome 145」にゼロデイ脆弱性、修正版が緊急公開,確認中,確認要,https://forest.watch.impress.co.jp/docs/news/2085987.html
+2026-03-12 13:55:22,2026-02-12T00:00:00+09:00,窓の杜,Google,Chrome,,「Google Chrome 145」安定版が公開 ～「分割ビュー」をサポート,確認中,確認要,https://forest.watch.impress.co.jp/docs/news/2085297.html
+2026-03-12 13:55:22,2026-02-04T00:00:00+09:00,窓の杜,Google,Chrome,,「Google Chrome」に2件の脆弱性、「libvpx」「V8」の欠陥を修正,確認中,確認要,https://forest.watch.impress.co.jp/docs/news/2083222.html
+2026-03-12 13:55:22,2026-01-28T00:00:00+09:00,窓の杜,Google,Chrome,,「Google Chrome」のBackground Fetch APIに脆弱性、修正更新が展開中,確認中,確認要,https://forest.watch.impress.co.jp/docs/news/2081312.html
+2026-03-12 13:55:22,2026-01-21T00:00:00+09:00,窓の杜,Google,Chrome,,「Google Chrome」にセキュリティアップデート、スクリプトエンジン「V8」に欠陥,確認中,確認要,https://forest.watch.impress.co.jp/docs/news/2079505.html
+2026-03-12 13:55:22,2026-01-14T00:00:00+09:00,窓の杜,Google,Chrome,,「Google Chrome 144」安定版が公開 ～「プライバシー サンドボックス」の削除を開始,確認中,確認要,https://forest.watch.impress.co.jp/docs/news/2077665.html
+2026-03-12 13:55:22,2026-01-07T00:00:00+09:00,窓の杜,Google,Chrome,,「Google Chrome」に今年初めてのセキュリティアップデート,確認中,確認要,https://forest.watch.impress.co.jp/docs/news/2076221.html
+2026-03-12 13:55:22,2025-12-17T00:00:00+09:00,窓の杜,Google,Chrome,,「Google Chrome」に脆弱性、「WebGPU」の解放後メモリ利用と「V8」の境界外読み書き,確認中,確認要,https://forest.watch.impress.co.jp/docs/news/2071882.html
+2026-03-12 13:55:22,2025-12-11T00:00:00+09:00,窓の杜,Google,Chrome,,「Google Chrome」へのセキュリティ攻撃を確認、すぐに修正版へのアップデートを,確認中,確認要,https://forest.watch.impress.co.jp/docs/news/2070312.html
+2026-03-12 13:55:22,2025-11-18T00:00:00+09:00,窓の杜,Google,Chrome,,すぐに「Google Chrome」の更新を、スクリプトエンジン「V8」にゼロデイ脆弱性,確認中,確認要,https://forest.watch.impress.co.jp/docs/news/2064032.html
+2026-03-12 13:55:22,2025-11-12T00:00:00+09:00,窓の杜,Google,Chrome,,スクリプトエンジン「V8」に脆弱性、「Google Chrome」のセキュリティ更新が公開,確認中,確認要,https://forest.watch.impress.co.jp/docs/news/2062511.html
+2026-03-12 13:55:22,2025-11-06T00:00:00+09:00,窓の杜,Google,Chrome,,「Google Chrome」に5件の脆弱性、WebGPUやV8、オムニバー（アドレスバー）などで,確認中,確認要,https://forest.watch.impress.co.jp/docs/news/2060923.html
+2026-03-12 13:55:22,2025-10-30T00:00:00+09:00,窓の杜,Google,Chrome,,「Google Chrome 142」では20件の脆弱性修正も ～最大深刻度は「High」,確認中,確認要,https://forest.watch.impress.co.jp/docs/news/2059206.html
+2026-03-12 13:55:22,2025-10-22T00:00:00+09:00,窓の杜,Google,Chrome,,「Google Chrome」の脆弱性をLLMが発見 ～スクリプトエンジン「V8」に不適切な実装,確認中,確認要,https://forest.watch.impress.co.jp/docs/news/2056880.html
+2026-03-12 13:55:22,2025-10-15T00:00:00+09:00,窓の杜,Google,Chrome,,「Google Chrome」のセーフブラウジングに脆弱性、修正版が公開,確認中,確認要,https://forest.watch.impress.co.jp/docs/news/2054965.html
+2026-03-12 13:55:22,2025-10-02T00:00:00+09:00,窓の杜,Google,Chrome,,「Google Chrome 141」では21件の脆弱性修正も ～最大深刻度は「High」,確認中,確認要,https://forest.watch.impress.co.jp/docs/news/2051901.html
+2026-03-12 13:55:22,2025-09-24T00:00:00+09:00,窓の杜,Google,Chrome,,「V8」にサイドチャネル脆弱性、AIが発見した脆弱性も ～「Google Chrome」にセキュリティ更新,確認中,確認要,https://forest.watch.impress.co.jp/docs/news/2049356.html
+2026-03-12 13:55:22,2025-09-18T00:00:00+09:00,窓の杜,Google,Chrome,,スクリプトエンジン「V8」にゼロデイ脆弱性、「Google Chrome」にセキュリティ更新,確認中,確認要,https://forest.watch.impress.co.jp/docs/news/2048179.html
+2026-03-12 13:55:22,2025-09-10T00:00:00+09:00,窓の杜,Google,Chrome,,「Google Chrome」に深刻度「Critical」の致命的な脆弱性、アップデートを,確認中,確認要,https://forest.watch.impress.co.jp/docs/news/2046101.html
+2026-03-12 13:55:22,2025-09-03T00:00:00+09:00,窓の杜,Google,Chrome,,危険なパスワードをAIが自動で更新 ～「Google Chrome 140」が一般公開,確認中,確認要,https://forest.watch.impress.co.jp/docs/news/2044202.html
+2026-03-12 13:55:22,2025-08-27T00:00:00+09:00,窓の杜,Google,Chrome,,「Google Chrome」に致命的な脆弱性、Googleの脆弱性調査AI「Big Sleep」が発見,確認中,確認要,https://forest.watch.impress.co.jp/docs/news/2042045.html
+2026-03-12 13:55:22,2025-08-20T00:00:00+09:00,窓の杜,Google,Chrome,,スクリプトエンジン「V8」に境界外書き込みの脆弱性 ～「Google Chrome」に更新,確認中,確認要,https://forest.watch.impress.co.jp/docs/news/2040257.html
+2026-03-12 13:55:22,2025-08-13T00:00:00+09:00,窓の杜,Google,Chrome,,「Google Chrome」に6件の脆弱性、セキュリティアップデートが公開,確認中,確認要,https://forest.watch.impress.co.jp/docs/news/2038711.html
+2026-03-12 13:55:22,2025-08-06T00:00:00+09:00,窓の杜,Google,Chrome,,CSSカスタム関数に対応した「Google Chrome 139」が公開 ～Web検索を支援するAIモードも拡充,確認中,確認要,https://forest.watch.impress.co.jp/docs/news/2037234.html
+2026-03-12 13:55:22,2025-07-30T00:00:00+09:00,窓の杜,Google,Chrome,,「Google Chrome」に脆弱性、セキュリティアップデートが公開,確認中,確認要,https://forest.watch.impress.co.jp/docs/news/2035111.html
+2026-03-12 13:55:22,2025-07-23T00:00:00+09:00,窓の杜,Google,Chrome,,「Google Chrome」のスクリプトエンジン「V8」に脆弱性、セキュリティ更新がリリース,確認中,確認要,https://forest.watch.impress.co.jp/docs/news/2033170.html
+2026-03-12 13:55:22,2025-07-16T00:00:00+09:00,窓の杜,Google,Chrome,,「Google Chrome 138」にまたゼロデイ脆弱性、今すぐアップデートを,確認中,確認要,https://forest.watch.impress.co.jp/docs/news/2031539.html
+2026-03-12 13:55:22,2025-07-01T00:00:00+09:00,窓の杜,Google,Chrome,,「Google Chrome 138」にゼロデイ脆弱性、今すぐアップデートを,確認中,確認要,https://forest.watch.impress.co.jp/docs/news/2027216.html
+2026-03-12 13:55:22,2025-06-25T00:00:00+09:00,窓の杜,Google,Chrome,,「Google Chrome 138」が公開 ～翻訳や要約などのAI APIを搭載、古いAndroid対応は打ち切り,確認中,確認要,https://forest.watch.impress.co.jp/docs/news/2025519.html
+2026-03-12 13:55:22,2025-06-24T00:00:00+09:00,窓の杜,Google,Chrome,,「Google Chrome 138」で「Android 8.0」「Android 9.0」対応は打ち切り,確認中,確認要,https://forest.watch.impress.co.jp/docs/news/2025074.html
+2026-03-12 13:55:22,2025-06-18T00:00:00+09:00,窓の杜,Google,Chrome,,「Google Chrome」に3件の脆弱性、スクリプトエンジン「V8」の整数オーバーフローなど,確認中,確認要,https://forest.watch.impress.co.jp/docs/news/2023490.html
+2026-03-12 13:55:22,2025-06-11T00:00:00+09:00,窓の杜,Google,Chrome,,「Google Chrome」に2件の脆弱性、修正版がリリース,確認中,確認要,https://forest.watch.impress.co.jp/docs/news/2021596.html
+2026-03-12 13:55:22,2025-06-03T00:00:00+09:00,窓の杜,Google,Chrome,,「Google Chrome」にゼロデイ脆弱性 ～「V8」における境界外読み取り・書き込み,確認中,確認要,https://forest.watch.impress.co.jp/docs/news/2019448.html
+2026-03-12 13:55:22,2025-05-28T00:00:00+09:00,窓の杜,Google,Chrome,,「Google Chrome 137」が公開 ～「Gemini in Chrome」搭載、CSSでif()関数が利用可能に,確認中,確認要,https://forest.watch.impress.co.jp/docs/news/2017754.html
+2026-03-12 13:55:22,2025-05-23T00:00:00+09:00,窓の杜,Google,Chrome,,「Google Chrome」に8件の脆弱性、最大深刻度は「High」,確認中,確認要,https://forest.watch.impress.co.jp/docs/news/2016522.html
+2026-03-12 13:55:22,2025-05-15T00:00:00+09:00,窓の杜,Google,Chrome,,「Google Chrome」にゼロデイ脆弱性、アカウント乗っ取りに悪用できてしまう可能性,確認中,確認要,https://forest.watch.impress.co.jp/docs/news/2014230.html
+2026-03-12 13:55:22,2025-05-07T00:00:00+09:00,窓の杜,Google,Chrome,,「Google Chrome」にセキュリティアップデート ～WebAudioに解放後メモリ利用の問題,確認中,確認要,https://forest.watch.impress.co.jp/docs/news/2012042.html
+2026-03-12 13:55:22,2025-04-30T00:00:00+09:00,窓の杜,Google,Chrome,,「Google Chrome 136」が公開 ～新しい静的メソッド RegExp.escape() などを導入,確認中,確認要,https://forest.watch.impress.co.jp/docs/news/2010997.html
+2026-03-12 13:55:22,2025-04-23T00:00:00+09:00,窓の杜,Google,Chrome,,「Google Chrome」にセキュリティアップデート ～1件の脆弱性を修正,確認中,確認要,https://forest.watch.impress.co.jp/docs/news/2009250.html
+2026-03-12 13:55:22,2025-04-16T00:00:00+09:00,窓の杜,Google,Chrome,,「Google Chrome」に致命的な脆弱性、コーデックにヒープバッファーオーバーフロー,確認中,確認要,https://forest.watch.impress.co.jp/docs/news/2007149.html
+2026-03-12 13:55:22,2025-04-10T00:00:00+09:00,窓の杜,Google,Chrome,,「Google Chrome」のサイト分離に解放後メモリ利用の脆弱性,確認中,確認要,https://forest.watch.impress.co.jp/docs/news/2005551.html
+2026-03-12 13:55:22,2025-04-02T00:00:00+09:00,窓の杜,Google,Chrome,,「Google Chrome 135」が公開 ～スクリプトなし、CSSだけでカルーセルUIを実現,確認中,確認要,https://forest.watch.impress.co.jp/docs/news/2003381.html
+2026-03-12 13:55:22,2025-03-26T00:00:00+09:00,窓の杜,Google,Chrome,,Windows版「Google Chrome」にゼロデイ脆弱性、すでに悪用の報告あり ～すぐに更新を,確認中,確認要,https://forest.watch.impress.co.jp/docs/news/2000627.html
+2026-03-12 13:55:22,2025-03-20T00:00:00+09:00,窓の杜,Google,Chrome,,「Google Chrome」の「Google レンズ」機能に深刻度最高の致命的脆弱性 ～修正版が公開,確認中,確認要,https://forest.watch.impress.co.jp/docs/news/1671636.html
+2026-03-12 13:55:22,2025-03-12T00:00:00+09:00,窓の杜,Google,Chrome,,Mac版にゼロデイ脆弱性 ～「Google Chrome」にセキュリティ更新,確認中,確認要,https://forest.watch.impress.co.jp/docs/news/1669502.html
+2026-03-12 13:55:22,2025-03-05T00:00:00+09:00,窓の杜,Google,Chrome,,「Google Chrome 134」が公開 ～AIを活用したセキュリティ強化や14件の脆弱性修正,確認中,確認要,https://forest.watch.impress.co.jp/docs/news/1667833.html
+2026-03-12 13:55:22,2025-02-26T00:00:00+09:00,窓の杜,Google,Chrome,,「Google Chrome」にセキュリティ更新、Windows環境にはv133.0.6943.141/.142が展開中,確認中,確認要,https://forest.watch.impress.co.jp/docs/news/1665624.html
+2026-03-12 13:55:22,2025-02-19T00:00:00+09:00,窓の杜,Google,Chrome,,「Google Chrome」にヒープバッファオーバーフローなどの脆弱性、修正版が公開,確認中,確認要,https://forest.watch.impress.co.jp/docs/news/1663938.html
+2026-03-12 13:55:22,2025-02-13T00:00:00+09:00,窓の杜,Google,Chrome,,「Google Chrome」にセキュリティアップデート ～スクリプトエンジン「V8」などに欠陥,確認中,確認要,https://forest.watch.impress.co.jp/docs/news/1662394.html
+2026-03-12 13:55:23,2026-03-09T15:08:52+09:00,JVN iPedia,Google,Chrome,Google Google Chrome 145.0.7632.159 未満,GoogleのGoogle Chromeにおけるデストラクタメソッドを呼び出さないオブジェクトの使用に関する脆弱性,8.8,調査中,https://jvndb.jvn.jp/ja/contents/2026/JVNDB-2026-006428.html
+2026-03-12 13:55:23,2026-03-09T15:03:14+09:00,JVN iPedia,Google,Chrome,Google Google Chrome 145.0.7632.159 未満 Google Chrome 145.0.7632.160 未満,GoogleのGoogle Chromeにおける複数の脆弱性,8.8,調査中,https://jvndb.jvn.jp/ja/contents/2026/JVNDB-2026-006316.html
+2026-03-12 13:55:23,2026-03-09T15:03:11+09:00,JVN iPedia,Google,Chrome,Google Google Chrome 145.0.7632.159 未満,GoogleのGoogle Chromeにおける境界外書き込みに関する脆弱性,8.8,調査中,https://jvndb.jvn.jp/ja/contents/2026/JVNDB-2026-006315.html
+2026-03-12 13:55:23,2026-03-09T15:03:08+09:00,JVN iPedia,Google,Chrome,Google Google Chrome 145.0.7632.159 未満,GoogleのGoogle Chromeにおける複数の脆弱性,8.8,調査中,https://jvndb.jvn.jp/ja/contents/2026/JVNDB-2026-006314.html
+2026-03-12 13:55:24,2026-03-09T15:03:05+09:00,JVN iPedia,Google,Chrome,Google Google Chrome 145.0.7632.159 未満 Google Chrome 145.0.7632.160 未満,GoogleのGoogle Chromeにおける境界外読み取りに関する脆弱性,8.8,調査中,https://jvndb.jvn.jp/ja/contents/2026/JVNDB-2026-006313.html
+2026-03-12 13:55:24,2026-03-09T15:03:03+09:00,JVN iPedia,Google,Chrome,Google Google Chrome 145.0.7632.159 未満 Google Chrome 145.0.7632.160 未満,GoogleのGoogle Chromeにおけるアクセス制御に関する脆弱性,8.8,調査中,https://jvndb.jvn.jp/ja/contents/2026/JVNDB-2026-006312.html
+2026-03-12 13:55:24,2026-03-09T15:03:00+09:00,JVN iPedia,Google,Chrome,Google Google Chrome 145.0.7632.159 未満 Google Chrome 145.0.7632.160 未満,GoogleのGoogle Chromeにおけるアクセス制御に関する脆弱性,8.8,調査中,https://jvndb.jvn.jp/ja/contents/2026/JVNDB-2026-006311.html
+2026-03-12 13:55:24,2026-03-09T15:02:57+09:00,JVN iPedia,Google,Chrome,Google Google Chrome 145.0.7632.159 未満 Google Chrome 145.0.7632.160 未満,GoogleのGoogle Chromeにおけるアクセス制御に関する脆弱性,8.8,調査中,https://jvndb.jvn.jp/ja/contents/2026/JVNDB-2026-006310.html
+2026-03-12 13:55:24,2026-03-09T15:02:54+09:00,JVN iPedia,Google,Chrome,Google Google Chrome 145.0.7632.159 未満 Google Chrome 145.0.7632.160 未満,GoogleのGoogle Chromeにおける複数の脆弱性,8.8,調査中,https://jvndb.jvn.jp/ja/contents/2026/JVNDB-2026-006309.html
+2026-03-12 13:55:24,2026-03-09T15:02:51+09:00,JVN iPedia,Google,Chrome,Google Google Chrome 145.0.7632.159 未満 Google Chrome 145.0.7632.160 未満,GoogleのGoogle Chromeにおける入力確認に関する脆弱性,9.6,調査中,https://jvndb.jvn.jp/ja/contents/2026/JVNDB-2026-006308.html
+2026-03-12 14:27:39,"Wed, 11 Mar 2026 23:25:40 +0000",Security NEXT,Google,Chrome,,「Chrome 146」が公開 - 「クリティカル」含む29件の脆弱性を修正,確認中,確認要,https://www.security-next.com/182030
+2026-03-12 14:27:39,2026-03-04T15:27:10Z,Publickey,Google,Chrome,,Google、Chromeのリリースサイクルを2週間に短縮すると発表。Webの進化がさらに高速に,確認中,確認要,https://www.publickey1.jp/blog/26/googlechrome2web.html
+2026-03-12 16:05:18,2026-03-12T08:15:03+09:00,ScanNetSecurity (インシデント),-,-,-,ポーランド軍施設に中国製車両立入禁止／ドイツ鉄道 DDoS 攻撃で障害 ほか [Scan PREMIUM Monthly Executive Summary 2026年2月度],情報漏えい/インシデント,確認要,https://scan.netsecurity.ne.jp/article/2026/03/12/54828.html
+2026-03-12 16:05:18,2026-03-12T08:05:11+09:00,ScanNetSecurity (インシデント),-,-,-,個人情報流出のある誤送付は 11 件 ～ 横浜市立大学 令和 7 年度 第 3 四半期における事務処理ミスを公表,情報漏えい/インシデント,確認要,https://scan.netsecurity.ne.jp/article/2026/03/12/54826.html
+2026-03-12 16:05:18,2026-03-12T08:05:08+09:00,ScanNetSecurity (インシデント),-,-,-,「地域生活支援システム」に入力された約 500 名分のデータが滅失、異なる場所に保存する設定を行っていたことが原因,情報漏えい/インシデント,確認要,https://scan.netsecurity.ne.jp/article/2026/03/12/54825.html
+2026-03-12 16:05:18,2026-03-12T08:05:06+09:00,ScanNetSecurity (インシデント),-,-,-,じほうが利用するクラウドメールサービスに不正ログイン、アドレス帳に登録されたアドレスにフィッシングメール送信,情報漏えい/インシデント,確認要,https://scan.netsecurity.ne.jp/article/2026/03/12/54824.html
+2026-03-12 16:05:18,2026-03-12T08:05:03+09:00,ScanNetSecurity (インシデント),-,-,-,KAGOYA CLOUD VPS 一部サーバでの障害、ブラジルの IP アドレスからの攻撃的なアクセスが原因,情報漏えい/インシデント,確認要,https://scan.netsecurity.ne.jp/article/2026/03/12/54823.html
+2026-03-12 16:05:18,2026-03-11T08:05:11+09:00,ScanNetSecurity (インシデント),-,-,-,フォレンジック調査完了は 2026 年 3 月末頃を予定 ～ ビューティガレージECサイトに不正アクセス,情報漏えい/インシデント,確認要,https://scan.netsecurity.ne.jp/article/2026/03/11/54816.html
+2026-03-12 16:05:18,2026-03-11T08:05:08+09:00,ScanNetSecurity (インシデント),-,-,-,みずほリサーチ&テクノロジーズが経済産業省から受託したアンケート情報を混在して環境省に納品、ホームページで公開,情報漏えい/インシデント,確認要,https://scan.netsecurity.ne.jp/article/2026/03/11/54815.html
+2026-03-12 16:05:18,2026-03-11T08:05:06+09:00,ScanNetSecurity (インシデント),-,-,-,JAあきた北ライフサービスに不正アクセス、個人情報が外部流出した可能性,情報漏えい/インシデント,確認要,https://scan.netsecurity.ne.jp/article/2026/03/11/54814.html
+2026-03-12 16:05:18,2026-03-11T08:05:03+09:00,ScanNetSecurity (インシデント),-,-,-,美濃工業へのランサムウェア攻撃、個人情報が漏えいした可能性を完全に否定することはできない状況,情報漏えい/インシデント,確認要,https://scan.netsecurity.ne.jp/article/2026/03/11/54813.html
+2026-03-12 16:05:18,2026-03-10T08:05:13+09:00,ScanNetSecurity (インシデント),-,-,-,厚生労働省初動対応チームの派遣を受け対応 ～ 白梅豊岡病院にランサムウェア攻撃,情報漏えい/インシデント,確認要,https://scan.netsecurity.ne.jp/article/2026/03/10/54802.html
+2026-03-12 16:05:18,2026-03-10T08:05:11+09:00,ScanNetSecurity (インシデント),-,-,-,アドバンテストのネットワークに不正アクセス、ランサムウェア展開可能性,情報漏えい/インシデント,確認要,https://scan.netsecurity.ne.jp/article/2026/03/10/54801.html
+2026-03-12 16:05:18,2026-03-10T08:05:09+09:00,ScanNetSecurity (インシデント),-,-,-,フィッシングで管理アカウント情報を窃取 ～ 「NSバイオジャパンオンラインショップ」に不正アクセス,情報漏えい/インシデント,確認要,https://scan.netsecurity.ne.jp/article/2026/03/10/54800.html
+2026-03-12 16:05:18,2026-03-10T08:05:06+09:00,ScanNetSecurity (インシデント),-,-,-,目的は暗号資産のマイニング等 ～ 寄附金Web申請クラウドサービス「Academic Support Navi」への不正アクセス,情報漏えい/インシデント,確認要,https://scan.netsecurity.ne.jp/article/2026/03/10/54799.html
+2026-03-12 16:05:18,2026-03-09T08:05:11+09:00,ScanNetSecurity (インシデント),-,-,-,既知の脆弱性を悪用しサーバに侵入 ～ ブロードバンドタワーにサイバー攻撃,情報漏えい/インシデント,確認要,https://scan.netsecurity.ne.jp/article/2026/03/09/54789.html
+2026-03-12 16:05:18,2026-03-09T08:05:07+09:00,ScanNetSecurity (インシデント),-,-,-,約13万人の患者情報が漏えい ～ 日本医科大学武蔵小杉病院へのランサムウェア攻撃,情報漏えい/インシデント,確認要,https://scan.netsecurity.ne.jp/article/2026/03/09/54788.html
+2026-03-12 16:05:18,2026-03-09T08:05:03+09:00,ScanNetSecurity (インシデント),-,-,-,誤操作の発覚を恐れて委託先社員がログから記録を削除・変更したことが原因 ～ JAL「手荷物当日配送サービス」システム障害,情報漏えい/インシデント,確認要,https://scan.netsecurity.ne.jp/article/2026/03/09/54787.html
+2026-03-12 16:05:18,2026-03-06T08:05:14+09:00,ScanNetSecurity (インシデント),-,-,-,データ削除実施時に発覚 ～ JR仙台病院で廃棄予定のパソコンとSSDを紛失,情報漏えい/インシデント,確認要,https://scan.netsecurity.ne.jp/article/2026/03/06/54779.html
+2026-03-12 16:05:18,2026-03-06T08:05:11+09:00,ScanNetSecurity (インシデント),-,-,-,"東海大学委託先 東海ソフト開発へのランサムウェア攻撃、漏えいの対象者数は最大で延べ 193,118 人に",情報漏えい/インシデント,確認要,https://scan.netsecurity.ne.jp/article/2026/03/06/54778.html
+2026-03-12 16:05:18,2026-03-06T08:05:08+09:00,ScanNetSecurity (インシデント),-,-,-,シンシアへのランサムウェア攻撃、新たなセキュリティフレームワークでシステムを再構築し 2 月 9 日から通常業務再開,情報漏えい/インシデント,確認要,https://scan.netsecurity.ne.jp/article/2026/03/06/54777.html
+2026-03-12 16:05:18,2026-03-06T08:05:04+09:00,ScanNetSecurity (インシデント),-,-,-,独立行政法人の元職員、在籍中に取得した個人情報を外部に持ち出し,情報漏えい/インシデント,確認要,https://scan.netsecurity.ne.jp/article/2026/03/06/54776.html
+2026-03-12 16:05:18,2026-03-05T08:05:13+09:00,ScanNetSecurity (インシデント),-,-,-,システム改修時の担当者間の作業範囲や役割分担の認識にずれ ～ Sony Music Shopサイトで個人情報が閲覧可能に,情報漏えい/インシデント,確認要,https://scan.netsecurity.ne.jp/article/2026/03/05/54765.html

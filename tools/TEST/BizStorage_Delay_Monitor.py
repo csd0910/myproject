@@ -92,7 +92,19 @@ def safe_click(driver, by, value, timeout=10):
         element = WebDriverWait(driver, timeout).until(
             EC.element_to_be_clickable((by, value))
         )
-        element.click()
+        try:
+            # 画面外にあってクリックできないのを防ぐためスクロール
+            driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", element)
+            time.sleep(0.1)
+        except:
+            pass
+
+        try:
+            element.click()
+        except:
+            driver.execute_script("arguments[0].click();", element)
+            # 確実にJavaScriptイベントを発火させるため、念のため少し待つ
+        time.sleep(0.1)
         return element
     except TimeoutException:
         raise Exception(f"Timeout: クリック待機エラー ({by}={value}) が見つからない・押せる状態になりませんでした")
@@ -117,6 +129,7 @@ def execute_web_transmission():
     options = Options()
     # 動作を可視化する場合はheadless指定を外す（テスト時は画面表示があったほうが安全）
     # options.add_argument('--headless')
+    options.add_argument('--window-size=1920,1080') # 描画安定化のためサイズ指定
     options.add_argument('--disable-gpu')
     # セキュリティソフト干渉回避のため、いくつかオプションを追加
     options.add_argument('--no-sandbox')
@@ -143,7 +156,7 @@ def execute_web_transmission():
         safe_click(driver, By.XPATH, "/html/body/form[1]/div[1]/div/div[3]/div[2]/span/input")
 
         # ログイン後、エラーメッセージ（ログイン回数上限等）が出ていないかチェック
-        time.sleep(3)
+        time.sleep(1.0)
         try:
             error_elems = driver.find_elements(By.CLASS_NAME, "UA001_message")
             for elem in error_elems:
@@ -155,9 +168,7 @@ def execute_web_transmission():
 
         # 2. メニュー遷移 (ShareDisk -> ファイル送信)
         print_timestamp("ログイン成功。送信メニューへ移動...")
-        time.sleep(2) # 画面遷移の安定化のため適度なスリープ
         safe_click(driver, By.XPATH, "/html/body/form/div[1]/div[1]/div[3]/div[3]/div/ul/li[2]/a") # ShareDisk
-        time.sleep(1)
         safe_click(driver, By.XPATH, "/html/body/form/div[2]/div/div[2]/div[1]/div/div/ul/li[1]/a") # ファイル送信
 
         # 3. ファイル送信フォーム入力
@@ -166,20 +177,20 @@ def execute_web_transmission():
         safe_click(driver, By.ID, "uploadFiles")
 
         # エクスプローラのダイアログが確実に開ききるのを待つ
-        time.sleep(3)
+        time.sleep(1.5)
         print_timestamp("ファイルアップロードダイアログにパスを貼り付け(ペースト)で確実に入力中...")
         try:
             # クリップボードにパスをコピー
             pyperclip.copy(UPLOAD_FILE_PATH)
-            time.sleep(1)
+            time.sleep(0.5)
 
             # Ctrl+V で貼り付け
             pywinauto_send_keys('^v')
-            time.sleep(1)
+            time.sleep(0.5)
 
             # Enter を押して確定
             pywinauto_send_keys('{ENTER}')
-            time.sleep(3) # 入力ダイアログが閉じてファイルがロードされるのを待機
+            time.sleep(2.0) # 入力ダイアログが閉じてファイルがロードされるのを待機
 
         except Exception as win_e:
             print_timestamp(f"ファイル選択ダイアログの操作に失敗しました: {win_e}")
@@ -191,42 +202,43 @@ def execute_web_transmission():
 
         # 宛先メアド、氏名等
         print_timestamp("宛先等の情報入力中...")
-        time.sleep(1.5)
+        time.sleep(0.5)
         safe_send_keys(driver, By.NAME, "USER_MAIL", DEST_EMAIL)
-        time.sleep(1.5)
+        time.sleep(0.5)
         safe_send_keys(driver, By.NAME, "USER_NAME", SENDER_NAME)
-        time.sleep(1.5)
+        time.sleep(0.5)
 
         # 「リストへ追加」ボタン
         safe_click(driver, By.XPATH, "//input[@name='Submit2' and not(@id='contentComfirm')]")
-        time.sleep(2.5) # リスト追加のJS反映を待機
+        time.sleep(1.5) # リスト追加のJS反映を待機
 
         # 件名入力
         print_timestamp("件名・本文・パスワード入力中...")
         safe_send_keys(driver, By.NAME, "SD_SUBJECT", subject_text)
-        time.sleep(1.5)
+        time.sleep(0.5)
 
         # コメント（本文）入力
         try:
             safe_send_keys(driver, By.XPATH, "//textarea", "遅延計測用の自動送信テストです。", timeout=3)
         except:
             pass
-        time.sleep(1.5)
+        time.sleep(0.5)
 
         # パスワード設定 (自動生成ではなく固定パスワードを指定)
         try:
             safe_send_keys(driver, By.NAME, "DL_PASS1", "Test1234@", timeout=3)
         except:
             pass
-        time.sleep(2.0)
+        time.sleep(0.5)
 
         # 送信実行 (送信確認 -> 送信実行)
         print_timestamp("送信確認ボタンをクリック...")
-        safe_click(driver, By.ID, "contentComfirm")
+        confirm_xpath = "/html/body/form/div[1]/div/div[29]/div[1]/input[2] | //input[@id='contentComfirm']"
+        safe_click(driver, By.XPATH, confirm_xpath, timeout=10)
 
         # ▼ここから追加・修正：クリック後、画面が切り替わる（またはDOMが再描画される）のを待つ
         print_timestamp("送信確認画面へ遷移中...")
-        time.sleep(5.0) # 画面遷移の猶予を少し長めに取る
+        time.sleep(1.5) # 画面遷移の猶予を少し長めに取る
 
         # 画面がリロードされた場合、iframeのコンテキストが外れることがあるため再度入り直す
         try:
@@ -236,14 +248,31 @@ def execute_web_transmission():
             pass # すでにフレーム内にいるか、フレーム構造が変わっている場合はスキップ
 
         print_timestamp("最終送信を実行します...")
-        time.sleep(1.5)
+        time.sleep(0.1)
+
+        # 画面上のボタンを取得してログに出す（デバッグ用・後で消してOK）
         try:
-            # 汎用的に「送信」または「実行」を含むボタン(idがcontentComfirmではないもの)をクリック
-            safe_click(driver, By.XPATH, "//input[contains(@value, '送信') or contains(@value, '実行')][not(@id='contentComfirm')]", timeout=10)
+            btns = driver.find_elements(By.XPATH, "//*[@type='submit' or @type='button' or contains(@class, 'btn') or contains(@class, 'button')]")
+            btn_texts = [b.get_attribute('value') or b.text for b in btns if b.is_displayed()]
+            print_timestamp(f"[Debug] 画面上の操作可能ボタン: {btn_texts}")
+        except:
+            pass
+
+        try:
+            # 汎用的に「送信」または「実行」を含むボタン、もしくは確実に「送信」と推測できるものをクリック
+            # input, button, a タグでテキストやvalueに「送信」を含むものを狙う
+            target_xpath = (
+                "/html/body/form/div[1]/div/div[29]/div[1]/input[2] | "
+                "//input[@value='送信を実行する'] | "
+                "//input[@name='Submit2' and contains(@onclick, 'SD804')] | "
+                "//input[(contains(@value, '送信') or contains(@value, '実行')) and not(@id='contentComfirm')] | "
+                "//button[(contains(., '送信') or contains(., '実行')) and not(@id='contentComfirm')] | "
+                "//a[(contains(., '送信') or contains(., '実行')) and not(@id='contentComfirm')]"
+            )
+            safe_click(driver, By.XPATH, target_xpath, timeout=10)
         except Exception as e:
-            # それでも見つからない場合の最後のフォールバック(ダンプから推測される一般的なSubmitボタン)
-            print_timestamp(f"汎用ロケータで失敗したためフォールバックを使用します: {e}")
-            safe_click(driver, By.XPATH, "//input[@type='submit' or @type='button'][not(@id='reset') and not(@id='contentComfirm') and not(@name='setTemplate')]", timeout=5)
+            # それでも見つからない場合
+            raise Exception(f"送信の最終ボタンが見つかりませんでした。画面に無いかXPathが異なります: {e}")
 
         # クリック後、処理が完了するまで待機
         time.sleep(4.0)
