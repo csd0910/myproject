@@ -5,7 +5,25 @@
     },
     "[Green paper]": {
       "comments": "#3f53d6ec"
-    }
+    },
+    "textMateRules": [
+        {
+            "scope": ["comment", "punctuation"],
+            "settings": { "foreground": "#994C00", "fontStyle": "italic" }
+        },
+        {
+            "scope": ["keyword", "storage", "entity.name.function"],
+            "settings": { "foreground": "#FF5500" }
+        },
+        {
+            "scope": ["string", "variable", "entity.name.type"],
+            "settings": { "foreground": "#FFFF00" }
+        },
+        {
+            "scope": ["constant", "number"],
+            "settings": { "foreground": "#E6FF00" }
+        }
+    ]
   },
   "terminal.integrated.defaultProfile.windows": "PowerShell",
   "terminal.integrated.profiles.windows": {
@@ -274,5 +292,45 @@
   "workbench.secondarySideBar.defaultVisibility": "hidden",
   "workbench.settings.applyToAllProfiles": [],
   "open-in-browser.default": "Chrome",
-  "openInBrowser.path": "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe"
+  "openInBrowser.path": "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+  "workbench.colorTheme": "Default Dark+",
+  "workbench.colorCustomizations": {
+    "foreground": "#FFAA00",
+    "descriptionForeground": "#FF9900",
+    "errorForeground": "#FF003C",
+    "textLink.foreground": "#FFFF00",
+    "textLink.activeForeground": "#E6FF00",
+    "focusBorder": "#FF5500",
+    "button.background": "#CC4400",
+    "button.foreground": "#000000",
+    "button.hoverBackground": "#FF5500",
+    "input.background": "#050505",
+    "input.foreground": "#FFFF00",
+    "sideBar.background": "#050505",
+    "sideBar.foreground": "#FFAA00",
+    "sideBarTitle.foreground": "#FF7700",
+    "activityBar.background": "#000000",
+    "activityBar.foreground": "#E6FF00",
+    "activityBar.inactiveForeground": "#884400",
+    "activityBarBadge.background": "#FF5500",
+    "activityBarBadge.foreground": "#000000",
+    "terminal.background": "#050505",
+    "terminal.foreground": "#FF9900",
+    "terminalCursor.foreground": "#E6FF00",
+    "panel.background": "#050505",
+    "panelTitle.activeForeground": "#FFFF00",
+    "editor.background": "#000000",
+    "editor.foreground": "#FF9900", 
+    "editorLineNumber.foreground": "#663300",
+    "editorLineNumber.activeForeground": "#FF7700",
+    "editorError.foreground": "#FF003C",
+    "editorWarning.foreground": "#FFFF00",
+    "editorInfo.foreground": "#E6FF00",
+    "editor.selectionBackground": "#4D2200",
+    "list.activeSelectionBackground": "#331600",
+    "list.activeSelectionForeground": "#E6FF00",
+    "list.hoverForeground": "#FFFF00",
+    "statusBar.background": "#000000",
+    "statusBar.foreground": "#FFAA00"
+  }
 }
