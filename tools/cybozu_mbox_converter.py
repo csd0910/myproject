@@ -9,6 +9,7 @@ import email.utils
 from email.message import EmailMessage
 import mailbox
 import threading
+import time
 
 class CybozuMboxConverterApp:
     def __init__(self, root):
@@ -121,7 +122,6 @@ class CybozuMboxConverterApp:
         output_mbox_path = os.path.join(target_dir, "cybozu_sent_migration.mbox")
         
         try:
-            # 既にmboxが存在する場合は上書きするため一旦消す(または追記でも可)
             if os.path.exists(output_mbox_path):
                 os.remove(output_mbox_path)
                 
@@ -135,8 +135,6 @@ class CybozuMboxConverterApp:
             for filepath in txt_files:
                 if not self.is_running:
                     break
-                    
-                # 自分自身の生成データ(履歴ファイル等)はスキップ
                 if "抽出済み履歴" in filepath or "README" in filepath:
                     continue
                     
@@ -146,112 +144,90 @@ class CybozuMboxConverterApp:
                 except Exception:
                     continue
                 
-                # ブロックの分割解析（=======線で区切られているので、それを親メールとする）
-                # 結合版（社内メール等）では複数件が格納されている可能性がある。
-                # ただしテキスト形式の揺れを考慮し、先頭のブロックとコメントに切り分ける。
+                # ====== の線で区切られた「各メールの独立した塊」をすべてリスト化する
+                # これにより、結合版ルールの当時のテキストであっても一切ロスせずに全件取りこぼしなく抽出できます
+                email_blocks = re.split(r'={20,}', text_content)
                 
-                # 基本要素を取得
-                date_str = ""
-                sender = ""
-                to_address = ""
-                subject = "無題"
-                
-                match_dt = re.search(r'【(?:日時|最終更新/日時)】\s*([^\n]+)', text_content)
-                if match_dt: date_str = match_dt.group(1).strip()
-                
-                match_sender = re.search(r'【(?:差出人|送信者)】\s*([^\n]+)', text_content)
-                if match_sender: sender = match_sender.group(1).strip()
-                
-                match_to = re.search(r'【宛先】\s*([^\n]+)', text_content)
-                if match_to: to_address = match_to.group(1).strip()
-                
-                match_subj = re.search(r'【件名】\s*([^\n]+)', text_content)
-                if match_subj: subject = match_subj.group(1).strip()
-                
-                # 本体メールとコメント群の分割
-                parts = re.split(r'={20,}', text_content)
-                main_body_raw = parts[0]
-                
-                # 本文ブロックの割り出し
-                main_body = ""
-                if "【本文】" in main_body_raw:
-                    main_body = main_body_raw.split("【本文】")[-1].strip()
-                else:
-                    main_body = main_body_raw # ヘッダしかないような例外時
-                
-                main_body = self.remove_noise(main_body)
-                
-                # メッセージオブジェクト構築(親)
-                msg = EmailMessage()
-                
-                # ---- From と To の RFC互換の厳密な整形 ----
-                # サイボウズの送信済みなど、差出人が省略されている・または「自分」等の場合はしっかりと自分の名前・メールを埋める
-                final_from = f'"{my_name}" <{from_email}>'
-                if sender and "自分" not in sender:
-                    if "<" in sender or "@" in sender:
-                        final_from = sender
-                    else:
-                        final_from = f'"{sender}" <{from_email}>' # 相手の名前だけが存在する場合はダミーアドレスを補完
-                msg['From'] = final_from
-                
-                # 宛先が存在すればそれを、無ければ社内メールとみなし「自分宛て」としてダミーアドレスをセット
-                final_to = f'"{my_name}" <{from_email}>'
-                if to_address:
-                    if "<" in to_address or "@" in to_address:
-                        final_to = to_address
-                    else:
-                        final_to = f'"{to_address}" <dummy_to@cybozu.local>'
-                msg['To'] = final_to
-                
-                msg['Subject'] = subject
-                msg['Date'] = self.parse_cybozu_date_to_rfc(date_str)
-                
-                parent_message_id = self.generate_message_id()
-                msg['Message-ID'] = parent_message_id
-                
-                msg.set_content(f"【抽出元: サイボウズOffice】\n送信者/差出人: {sender}\n\n{main_body}")
-                mbox.add(msg)
-                message_count += 1
-                
-                # 結合されたコメント（返信）等の処理
-                if len(parts) > 1:
-                    comments_raw = parts[1]
-                    # コメント部分の正規表現抽出 "番号 : \n 名前 \n 日時 \n 本文"
-                    comment_matches = list(re.finditer(r'^(\d+)\s*:\s*\n+([^\n]+)\s*\n+(\d{4}/\d{1,2}/\d{1,2}[^\n]*)\s*\n', comments_raw, flags=re.MULTILINE))
+                for block in email_blocks:
+                    block = block.strip()
+                    if not block:
+                        continue
+                        
+                    # このブロックが通常のメール（親）としての体裁を持っているか確認
+                    match_dt = re.search(r'【(?:日時|最終更新/日時)】[\s:：]*([^\n]+)', block)
+                    if not match_dt:
+                        # 全文が単なる改行やゴミデータ、あるいは「社内メールのコメントの塊」である場合は例外処理
+                        # 社内メールのコメントを拾う
+                        comment_matches = list(re.finditer(r'^(\d+)\s*:\s*\n+([^\n]+)\s*\n+(\d{4}/\d{1,2}/\d{1,2}[^\n]*)\s*\n', block, flags=re.MULTILINE))
+                        if comment_matches:
+                            for idx, c_match in enumerate(comment_matches):
+                                c_num = c_match.group(1)
+                                c_name = c_match.group(2).strip(" \t:：")
+                                c_date = c_match.group(3).strip()
+                                
+                                start_pos = c_match.end()
+                                end_pos = comment_matches[idx+1].start() if idx + 1 < len(comment_matches) else len(block)
+                                c_body = block[start_pos:end_pos].strip()
+                                c_body = self.remove_noise(c_body)
+                                
+                                c_msg = EmailMessage()
+                                # メアドが含まれない名前単体会避用
+                                safe_c_name = c_name if ("<" in c_name or "@" in c_name) else f'"{c_name}" <{from_email}>'
+                                c_msg['From'] = safe_c_name
+                                c_msg['To'] = f'"自分" <{from_email}>'
+                                c_msg['Subject'] = "Re: 社内メールコメント"
+                                c_msg['Date'] = self.parse_cybozu_date_to_rfc(c_date)
+                                c_msg['Message-ID'] = self.generate_message_id()
+                                c_msg.set_content(f"【サイボウズ コメント番号 {c_num}】\n発言者: {c_name}\n\n{c_body}")
+                                mbox.add(c_msg)
+                                message_count += 1
+                        continue
+
+                    # 正規のメールブロックの場合
+                    date_str = match_dt.group(1).replace("\r", "").replace("\n", "").strip(" \t:：")
                     
-                    for i in range(len(comment_matches)):
-                        c_match = comment_matches[i]
-                        c_num = c_match.group(1)
-                        c_name = c_match.group(2).strip()
-                        c_date = c_match.group(3).strip()
-                        
-                        # 本文は開始位置から次のコメントの開始位置まで
-                        start_pos = c_match.end()
-                        end_pos = comment_matches[i+1].start() if i + 1 < len(comment_matches) else len(comments_raw)
-                        c_body = comments_raw[start_pos:end_pos].strip()
-                        c_body = self.remove_noise(c_body)
-                        
-                        c_msg = EmailMessage()
-                        # コメント（返信）の発言者を From として設定
-                        c_final_from = f'"{my_name}" <{from_email}>'
-                        if c_name and "自分" not in c_name:
-                            if "<" in c_name or "@" in c_name:
-                                c_final_from = c_name
-                            else:
-                                c_final_from = f'"{c_name}" <{from_email}>'
-                        c_msg['From'] = c_final_from
-                        
-                        # 親メールの送信者または自分宛てにする
-                        c_msg['To'] = final_from # 返信アクションなので親のFrom(送信者)に対してToを向けるのが自然
-                        c_msg['Subject'] = "Re: " + subject
-                        c_msg['Date'] = self.parse_cybozu_date_to_rfc(c_date)
-                        c_msg['Message-ID'] = self.generate_message_id()
-                        c_msg['In-Reply-To'] = parent_message_id
-                        c_msg['References'] = parent_message_id
-                        
-                        c_msg.set_content(f"【サイボウズ コメント番号 {c_num}】\n発言者: {c_name}\n\n{c_body}")
-                        mbox.add(c_msg)
-                        message_count += 1
+                    sender = "Unknown Sender"
+                    match_sender = re.search(r'【(?:差出人|送信者)】[\s:：]*([^\n]+)', block)
+                    if match_sender:
+                        # 末尾の\rやゴミテキストを完全に清掃
+                        sender = match_sender.group(1).replace("\r", "").replace("\n", "").replace("アドレス帳に登録する", "").strip(" \t:：")
+                    
+                    to_address = "Unknown Recipient"
+                    match_to = re.search(r'【宛先】[\s:：]*([^\n]+)', block)
+                    if match_to:
+                        to_address = match_to.group(1).replace("\r", "").replace("\n", "").replace("アドレス帳に登録する", "").strip(" \t:：")
+                    
+                    subject = "無題"
+                    match_subj = re.search(r'【件名】[\s:：]*([^\n]+)', block)
+                    if match_subj: subject = match_subj.group(1).replace("\r", "").replace("\n", "").strip(" \t:：")
+                    
+                    # 本文の切り出し
+                    main_body = ""
+                    if "【本文】" in block:
+                        main_body = block.split("【本文】")[-1].strip()
+                    else:
+                        main_body = block # ヘッダしかない場合
+                    
+                    main_body = self.remove_noise(main_body)
+                    
+                    # メール作成
+                    msg = EmailMessage()
+                    
+                    # Thunderbirdの拡張機能クラッシュを防ぐため、メアドを含まない場合は必ずダミーアドレスで包む
+                    safe_sender = sender if ("<" in sender or "@" in sender) else f'"{sender}" <{from_email}>'
+                    safe_to = to_address if ("<" in to_address or "@" in to_address) else f'"{to_address}" <dummy_to@cybozu.local>'
+                    
+                    msg['From'] = safe_sender
+                    msg['To'] = safe_to
+                    msg['Subject'] = subject
+                    msg['Date'] = self.parse_cybozu_date_to_rfc(date_str)
+                    
+                    parent_message_id = self.generate_message_id()
+                    msg['Message-ID'] = parent_message_id
+                    
+                    msg.set_content(f"【抽出元: サイボウズOffice】\n\n{main_body}")
+                    mbox.add(msg)
+                    message_count += 1
 
                 file_count += 1
                 self.count_var.set(f"完了: {file_count} ファイル (合計 {message_count} メッセージ)")
