@@ -243,7 +243,7 @@ class CybozuExternalEmailExporterApp:
                     break
 
                 self.driver.get(current_list_url)
-                time.sleep(0.5)
+                time.sleep(1.0)
 
                 # 「次の◯件」を見つけてページング
                 has_next_page = False
@@ -255,7 +255,8 @@ class CybozuExternalEmailExporterApp:
                         self.driver.get(next_href)
                     else:
                         next_btn.click()
-                    self._random_sleep()
+                    # ページめくり時はDOMの描画が間に合わずスキップされる現象を防ぐため確実な固定待機を入れる
+                    time.sleep(1.5)
                     has_next_page = True
                 except Exception:
                     # 万が一上のXPathが見つからなかった場合の最後の砦（フォールバック）
@@ -269,7 +270,7 @@ class CybozuExternalEmailExporterApp:
                                         self.driver.get(href)
                                     else:
                                         a.click()
-                                    self._random_sleep()
+                                    time.sleep(1.5)
                                     has_next_page = True
                                     break
                     except Exception:
