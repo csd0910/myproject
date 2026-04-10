@@ -305,7 +305,7 @@ class CybozuEmailExporterApp:
                             else:
                                 a.click()
                                 
-                            self._random_sleep()
+                            time.sleep(1.5) # ページめくり時にロードが完了するのを確実に待つ
                             has_next_page = True
                             break
                 except Exception as e:
