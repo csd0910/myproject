@@ -302,6 +302,9 @@ def generate_reports(excel_path, csv_paths, output_dir):
             shift_info = f"{get_val(row, col_status)} {get_val(row, col_jiyu)}".strip().replace('nan', '')
             flags = []
             
+            is_early_detected = False
+            early_time_str = ""
+            
             # --- 異常検知ロジック ---
             if ('休' in shift_info):
                 flags.append(f"【休日稼働】シフトは「{shift_info}」ですがPCが稼働しています")
@@ -316,9 +319,16 @@ def generate_reports(excel_path, csv_paths, output_dir):
                 if start_str and start_str != 'nan':
                     try:
                         work_start = pd.to_datetime(f"{date_str} {start_str}")
-                        if row['PC電源ON'] < work_start - pd.Timedelta(minutes=10):
+                        if row['PC電源ON'] < work_start:
                             diff = int((work_start - row['PC電源ON']).total_seconds() / 60)
-                            flags.append(f"【早出疑義】出勤打刻より {diff}分早く PCが起動({row['PC電源ON'].strftime('%H:%M')})しています")
+                            if diff >= 10:
+                                flags.append(f"【早出疑義】出勤打刻より {diff}分早く PCが起動({row['PC電源ON'].strftime('%H:%M')})しています")
+                                is_early_detected = True
+                            
+                            diff_sec_e = (work_start - row['PC電源ON']).total_seconds()
+                            h_e, rem_e = divmod(int(diff_sec_e), 3600)
+                            m_e, _ = divmod(rem_e, 60)
+                            early_time_str = f"{row['PC電源ON'].strftime('%H:%M')} ～ {work_start.strftime('%H:%M')}（約{h_e}時間{m_e:02d}分）"
                     except: pass
 
                 if end_str and end_str != 'nan':
@@ -365,11 +375,23 @@ def generate_reports(excel_path, csv_paths, output_dir):
             m, _ = divmod(rem, 60)
             est_time_str = f"{calc_start.strftime('%H:%M')} ～ {calc_end.strftime('%H:%M')}（約{h}時間{m:02d}分）"
             
+            # --- Wordヘッダー情報の書き込み ---
             doc.add_paragraph(f"対象者：{target_fullname}")
             doc.add_paragraph(f"{row['日付_master'].strftime('%Y/%m/%d')}（{yobi}）")
+            
+            # 早出検知時は出勤打刻時間を追記
+            if is_early_detected and start_str and start_str != 'nan':
+                doc.add_paragraph(f"出勤打刻時間：{start_str}")
+                
             doc.add_paragraph(f"退勤打刻時間：{end_time_display}")
             doc.add_paragraph(f"PCの稼働：{row['PC電源ON'].strftime('%H:%M')} ～ {row['PC電源OFF'].strftime('%H:%M')}（最終）")
-            doc.add_paragraph(f"作業していたと推測される時間：{est_time_str}")
+            
+            # 早出検知時は項目を分ける
+            if is_early_detected:
+                doc.add_paragraph(f"【出勤打刻前に作業していたと推測される時間】：{early_time_str}")
+                doc.add_paragraph(f"【退勤打刻後に作業していたと推測される時間】：{est_time_str}")
+            else:
+                doc.add_paragraph(f"作業していたと推測される時間：{est_time_str}")
             
             doc.add_heading('判定結果', level=2)
             if not flags: doc.add_paragraph("・問題なし（適正な稼働）")
@@ -417,7 +439,7 @@ def generate_reports(excel_path, csv_paths, output_dir):
             time.sleep(1)
 
         if processed_count == 0:
-            print(f"    -> [スキップ] このファイルのログには、マスタ上で赤文字となっている監査対象日が含まれていませんでした。")
+            print(f"    -> [スキップ] このファイルのログには、マスタのAC列に〇がついている監査対象日が含まれていませんでした。")
 
     print("\n全てのログファイルの処理が完了しました！出力先フォルダをご確認ください。")
 
