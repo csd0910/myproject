@@ -235,10 +235,43 @@ def generate_reports(excel_path, csv_path, output_dir):
         # --- Word作成 ---
         doc = Document()
         doc.add_heading('残業調査報告書', 0)
-        doc.add_paragraph(f"対象者：成川 社員")
-        doc.add_paragraph(f"日付：{date_str}  (シフト: {shift_info})")
-        doc.add_paragraph(f"退勤打刻時間：{get_val(row, col_end)}")
-        doc.add_paragraph(f"PC稼働時刻：{row['PC電源ON'].strftime('%H:%M')} ～ {row['PC電源OFF'].strftime('%H:%M')}")
+        
+        # 曜日の取得
+        yobi = ["月", "火", "水", "木", "金", "土", "日"][row['日付_master'].weekday()]
+        
+        # 退勤打刻時間の表示文字
+        end_str = get_val(row, col_end)
+        is_holiday = ('休' in shift_info)
+        if end_str and end_str != 'nan':
+            end_time_display = end_str
+        elif is_holiday:
+            end_time_display = "休日"
+        else:
+            end_time_display = "記録なし"
+
+        # 作業していたと推測される時間の計算
+        calc_start = row['PC電源ON']
+        calc_end = row['PC電源OFF']
+        
+        if not is_holiday and end_str and end_str != 'nan':
+            try:
+                work_end_dt = pd.to_datetime(f"{date_str} {end_str}")
+                if row['PC電源OFF'] > work_end_dt:
+                    calc_start = work_end_dt
+            except: pass
+
+        diff_sec = (calc_end - calc_start).total_seconds()
+        if diff_sec < 0: diff_sec = 0
+        h, rem = divmod(int(diff_sec), 3600)
+        m, _ = divmod(rem, 60)
+        est_time_str = f"{calc_start.strftime('%H:%M')} ～ {calc_end.strftime('%H:%M')}（約{h}時間{m:02d}分）"
+        
+        # フォーマットに合わせた出力
+        doc.add_paragraph(f"対象者：{get_val(row, name_col)}")
+        doc.add_paragraph(f"{row['日付_master'].strftime('%Y/%m/%d')}（{yobi}）")
+        doc.add_paragraph(f"退勤打刻時間：{end_time_display}")
+        doc.add_paragraph(f"PCの稼働：{row['PC電源ON'].strftime('%H:%M')} ～ {row['PC電源OFF'].strftime('%H:%M')}（最終）")
+        doc.add_paragraph(f"作業していたと推測される時間：{est_time_str}")
         
         doc.add_heading('判定結果', level=2)
         if not flags: doc.add_paragraph("・問題なし（適正な稼働）")
