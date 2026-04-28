@@ -77,16 +77,18 @@ def get_audit_target_dates(excel_path, sheet_name='管理部提出用'):
             l_cell = ws.cell(row=row_idx, column=l_col_idx)
             
             def is_colored(cell):
-                if not cell.fill or not cell.fill.fgColor: return False
-                if cell.fill.fgColor.type == 'rgb':
-                    rgb = str(cell.fill.fgColor.rgb)
-                    if rgb and rgb not in ['00000000', 'FFFFFFFF', '0', 'None']:
+                if not cell.value: return False
+                if not cell.font or not cell.font.color: return False
+                
+                if cell.font.color.type == 'rgb':
+                    rgb = str(cell.font.color.rgb).upper()
+                    # 黒(FF000000, 00000000) 以外であれば「色が変更されている(赤など)」と判定
+                    if rgb and rgb not in ['00000000', 'FF000000', '0', 'NONE']:
                         return True
-                elif cell.fill.fgColor.type == 'indexed':
-                    if cell.fill.fgColor.indexed not in [64, 65]:
+                elif cell.font.color.type == 'indexed':
+                    # インデックス8は黒、それ以外(10の赤など)ならTrue
+                    if cell.font.color.indexed not in [8, 64, 65]:
                         return True
-                elif cell.fill.fgColor.type == 'theme':
-                    return True
                 return False
 
             if is_colored(h_cell) or is_colored(l_cell):
