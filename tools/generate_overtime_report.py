@@ -264,8 +264,19 @@ def generate_reports(excel_path, csv_path, output_dir):
         safe_date = date_str.replace('/', '')
         filename = f"残業調査報告書_成川_{safe_date}.docx"
         filepath = os.path.join(output_dir, filename)
-        doc.save(filepath)
-        print(f" -> 保存完了: {filename}")
+        
+        try:
+            doc.save(filepath)
+            print(f" -> 保存完了: {filename}")
+        except PermissionError:
+            # 既にWordなどでファイルが開かれていて上書きできない場合の回避策
+            alt_filename = f"残業調査報告書_成川_{safe_date}_再生成.docx"
+            alt_filepath = os.path.join(output_dir, alt_filename)
+            try:
+                doc.save(alt_filepath)
+                print(f" -> [警告] ファイルが使用中のため、別名で保存しました: {alt_filename}")
+            except Exception as e:
+                print(f" -> [エラー] 保存に失敗しました: {e}")
         
         # 次の日付の処理に行く前にウェイトを入れる
         time.sleep(1)
