@@ -44,7 +44,7 @@ def select_paths():
 # 解析補助関数
 # ---------------------------------------------------------
 def get_audit_target_dates(excel_path, sheet_name='管理部提出用'):
-    """ExcelのH列(8)かL列(12)に背景色(赤など)が塗られている「監査対象行」の氏名と日付を抽出する"""
+    """ExcelのA/H/L列に文字色(赤など)が塗られている「監査対象行」の氏名と日付(MM/DD)を抽出する"""
     try:
         wb = openpyxl.load_workbook(excel_path, data_only=True)
         if sheet_name not in wb.sheetnames:
@@ -91,6 +91,10 @@ def get_audit_target_dates(excel_path, sheet_name='管理部提出用'):
                     # インデックス8は黒、それ以外(10の赤など)ならTrue
                     if cell.font.color.indexed not in [8, 64, 65]:
                         return True
+                elif cell.font.color.type == 'theme':
+                    # テーマカラーの4以上はアクセントカラー(赤青等)であることが多い
+                    if cell.font.color.theme >= 4:
+                        return True
                 return False
 
             if is_colored(a_cell) or is_colored(h_cell) or is_colored(l_cell):
@@ -98,14 +102,15 @@ def get_audit_target_dates(excel_path, sheet_name='管理部提出用'):
                 date_val = ws.cell(row=row_idx, column=date_col_idx).value
                 if name_val and date_val:
                     try:
-                        dt = pd.to_datetime(date_val).strftime('%Y/%m/%d')
-                        name_clean = name_val.replace(' ', '').replace('　', '')
+                        # 年のズレによる不一致を防ぐため %m/%d だけで抽出
+                        dt = pd.to_datetime(date_val).strftime('%m/%d')
+                        name_clean = name_val.replace(' ', '').replace('　', '').replace('社員', '')
                         targets.add((name_clean, dt))
                     except:
                         pass
         return targets
     except Exception as e:
-        print(f"監査対象日（セルの色）の抽出に失敗しました: {e}")
+        print(f"監査対象日（文字色）の抽出に失敗しました: {e}")
         return set()
 
 def extract_app_name(path):
@@ -229,9 +234,9 @@ def generate_reports(excel_path, csv_paths, output_dir):
     # セルに色が塗られている「監査対象」の氏名と日付を抽出
     audit_targets = get_audit_target_dates(excel_path)
     if not audit_targets:
-        print("[警告] マスタから赤色のセル（監査対象）が見つかりませんでした。全件処理します。")
+        print("[警告] マスタから赤文字のセル（監査対象）が見つかりませんでした。全件処理します。")
     else:
-        print(f"監査対象として {len(audit_targets)} 件の色付きデータを検出しました！")
+        print(f"監査対象として {len(audit_targets)} 件の色付きデータを検出しました！ (例: {list(audit_targets)[:3]})")
     
     # 1. マスタ読み込みと整形
     df_master = pd.read_excel(excel_path, sheet_name='管理部提出用')
@@ -260,7 +265,7 @@ def generate_reports(excel_path, csv_paths, output_dir):
         df_target_master = df_master[df_master[name_col].str.contains(target_name_guess, na=False)].copy()
         
         if len(df_target_master) == 0:
-            print(f"  -> [スキップ] 勤怠マスタから「{target_name_guess}」に一致する社員が見つかりませんでした。")
+            print(f"  -> [スキップ] 勤怠マスタから対象者「{target_name_guess}」が見つかりませんでした。")
             continue
             
         date_col = find_col(df_target_master, ['日付'], 2)
@@ -305,12 +310,13 @@ def generate_reports(excel_path, csv_paths, output_dir):
                 continue
                 
             date_str = row['日付_master'].strftime('%Y/%m/%d')
+            date_md = row['日付_master'].strftime('%m/%d') # 年ズレ防止用
             target_fullname = get_val(row, name_col)
-            target_fullname_clean = target_fullname.replace(' ', '').replace('　', '')
+            target_fullname_clean = target_fullname.replace(' ', '').replace('　', '').replace('社員', '')
             
-            # --- 監査対象（赤色セル）のみを狙い撃ち ---
-            if audit_targets and (target_fullname_clean, date_str) not in audit_targets:
-                # この日はH列もL列も色が塗られていないためスキップ
+            # --- 監査対象（赤文字）のみを狙い撃ち ---
+            if audit_targets and (target_fullname_clean, date_md) not in audit_targets:
+                print(f"    -> [スキップ] {date_str} はマスタで赤文字(監査対象)として検知されませんでした。")
                 continue
                 
             processed_count += 1
@@ -347,7 +353,7 @@ def generate_reports(excel_path, csv_paths, output_dir):
             day_logs = df_log[df_log['日付_log'] == row['日付_log']]
             app_summary = day_logs.groupby('アプリ分類')['操作時間'].sum().sort_values(ascending=False)
             
-            print(f"  [{date_str}] Gemini APIでAIサマリーを生成中... (監査対象日)")
+            print(f"    [{date_str}] Gemini APIでAIサマリーを生成中... (監査対象)")
             time.sleep(2)
             ai_details, ai_summary = generate_summary_with_ai(day_logs, col_title, col_path)
             
@@ -419,20 +425,20 @@ def generate_reports(excel_path, csv_paths, output_dir):
             
             try:
                 doc.save(filepath)
-                print(f"    -> 保存完了: {filename}")
+                print(f"      -> 保存完了: {filename}")
             except PermissionError:
                 alt_filename = f"残業調査報告書_{target_name_short}_{safe_date}_再生成.docx"
                 alt_filepath = os.path.join(output_dir, alt_filename)
                 try:
                     doc.save(alt_filepath)
-                    print(f"    -> [警告] ファイルが使用中のため、別名で保存しました: {alt_filename}")
+                    print(f"      -> [警告] ファイルが使用中のため、別名で保存しました: {alt_filename}")
                 except Exception as e:
-                    print(f"    -> [エラー] 保存に失敗しました: {e}")
+                    print(f"      -> [エラー] 保存に失敗しました: {e}")
             
             time.sleep(1)
 
         if processed_count == 0:
-            print(f"    -> [スキップ] このファイルの対象者には、監査対象（赤色セル）の日付がありませんでした。")
+            print(f"    -> [スキップ] このファイルのログには、マスタ上で赤文字となっている監査対象日が含まれていませんでした。")
 
     print("\n全てのログファイルの処理が完了しました！出力先フォルダをご確認ください。")
 
