@@ -69,10 +69,12 @@ def get_audit_target_dates(excel_path, sheet_name='管理部提出用'):
             date_col_idx = 3
             
         targets = set()
+        a_col_idx = 1  # A列 (PC電源ON時刻)
         h_col_idx = 8  # H列
         l_col_idx = 12 # L列
         
         for row_idx in range(2, ws.max_row + 1):
+            a_cell = ws.cell(row=row_idx, column=a_col_idx)
             h_cell = ws.cell(row=row_idx, column=h_col_idx)
             l_cell = ws.cell(row=row_idx, column=l_col_idx)
             
@@ -91,7 +93,7 @@ def get_audit_target_dates(excel_path, sheet_name='管理部提出用'):
                         return True
                 return False
 
-            if is_colored(h_cell) or is_colored(l_cell):
+            if is_colored(a_cell) or is_colored(h_cell) or is_colored(l_cell):
                 name_val = str(ws.cell(row=row_idx, column=name_col_idx).value or '').strip()
                 date_val = ws.cell(row=row_idx, column=date_col_idx).value
                 if name_val and date_val:
