@@ -75,13 +75,11 @@ def get_audit_target_dates(excel_path, sheet_name='管理部提出用'):
             ac_cell = ws.cell(row=row_idx, column=ac_col_idx)
             val = str(ac_cell.value).strip() if ac_cell.value else ''
             
-            # 丸記号（〇、○、O）などが入力されていれば監査対象とする
             if val in ['〇', '○', 'o', 'O', '丸', '対象']:
                 name_val = str(ws.cell(row=row_idx, column=name_col_idx).value or '').strip()
                 date_val = ws.cell(row=row_idx, column=date_col_idx).value
                 if name_val and date_val:
                     try:
-                        # 年のズレによる不一致を防ぐため %m/%d だけで抽出
                         dt = pd.to_datetime(date_val).strftime('%m/%d')
                         name_clean = name_val.replace(' ', '').replace('　', '').replace('社員', '')
                         targets.add((name_clean, dt))
@@ -92,33 +90,7 @@ def get_audit_target_dates(excel_path, sheet_name='管理部提出用'):
         print(f"監査対象日（AC列の〇）の抽出に失敗しました: {e}")
         return set()
 
-def extract_app_name(path):
-    path = str(path).upper()
-    if pd.isna(path) or path.strip() == '' or path == 'NAN': 
-        return 'その他（システム処理・待機等）'
-    
-    filename = path.split('\\')[-1]
-    
-    if 'EXCEL.EXE' in filename or '.XLS' in filename:
-        return 'Excel作業（EXCEL.EXE）'
-    elif 'CHROME' in filename or 'MSEDGE' in filename or 'HTTP' in path:
-        return 'サイボウズ・Web（msedge.exe / chrome.exe）'
-    elif 'WINWORD.EXE' in filename:
-        return 'Word作業（WINWORD.EXE）'
-    else:
-        return 'その他（バックグラウンド処理・他）'
-
-def parse_duration(duration_str):
-    if pd.isna(duration_str): return pd.Timedelta(seconds=0)
-    try:
-        parts = str(duration_str).split(':')
-        if len(parts) == 3:
-            return pd.Timedelta(hours=int(parts[0]), minutes=int(parts[1]), seconds=int(parts[2]))
-    except: pass
-    return pd.Timedelta(seconds=0)
-
 def format_est_time(diff_sec):
-    """秒数を「約〇時間〇分」または「約〇分」の自然な日本語フォーマットに変換する"""
     if diff_sec <= 0: return "約0分"
     h, rem = divmod(int(diff_sec), 3600)
     m, _ = divmod(rem, 60)
@@ -205,13 +177,15 @@ def generate_summary_with_ai(log_df, col_title, col_path):
             return details, summary
             
         except Exception as e:
-            if '503' in str(e) or 'UNAVAILABLE' in str(e):
+            if '429' in str(e) or 'RESOURCE_EXHAUSTED' in str(e):
+                print(f"  -> [API制限] Gemini APIの無料枠制限（回数上限）に達しました。AI生成をスキップします。")
+                return "AI生成スキップ（API制限到達）", "API利用制限により要約を生成できませんでした。"
+            elif '503' in str(e) or 'UNAVAILABLE' in str(e):
                 if attempt < max_retries - 1:
                     print(f"  -> [API混雑] サーバー混雑のため、5秒待機して再実行します... (試行 {attempt+1}/{max_retries})")
                     time.sleep(5)
                 else:
-                    print(f"  -> [APIエラー詳細] 複数回のリトライに失敗しました: {e}")
-                    return "AI生成エラー: サーバー混雑", "現在AIサーバーが非常に混雑しています。時間を空けて再度お試しください。"
+                    return "AI生成エラー: サーバー混雑", "現在AIサーバーが非常に混雑しています。"
             else:
                 print(f"  -> [APIエラー詳細] {e}")
                 return f"AI生成エラー: {str(e)}", "エラーのため生成できませんでした"
@@ -222,26 +196,22 @@ def generate_summary_with_ai(log_df, col_title, col_path):
 def generate_reports(excel_path, csv_paths, output_dir):
     print("勤怠マスタの読み込みを開始します（色の解析中...）")
     
-    # セルに色が塗られている「監査対象」の氏名と日付を抽出
     audit_targets = get_audit_target_dates(excel_path)
     if not audit_targets:
         print("[警告] マスタのAC列に「〇」（監査対象）が見つかりませんでした。全件処理します。")
     else:
         print(f"監査対象として {len(audit_targets)} 件の「〇」データを検出しました！ (例: {list(audit_targets)[:3]})")
     
-    # 1. マスタ読み込みと整形
     df_master = pd.read_excel(excel_path, sheet_name='管理部提出用')
     df_master.columns = [str(c).strip().replace('\u3000', '').replace(' ', '') for c in df_master.columns]
     name_col = find_col(df_master, ['氏名', '名前'], 1)
     
     print(f"\n合計 {len(csv_paths)} 個のログファイルを連続処理します。\n")
 
-    # 2. 複数のCSVファイルをループで処理
     for csv_path in csv_paths:
         filename_csv = os.path.basename(csv_path)
         print(f"========== 処理開始: {filename_csv} ==========")
         
-        # ファイル名から対象者を推測（マスタの全氏名と照合して安全に取得）
         target_name_guess = None
         for name in df_master[name_col].dropna().unique():
             name_clean = str(name).replace(' ', '').replace('　', '').replace('社員', '')
@@ -249,7 +219,6 @@ def generate_reports(excel_path, csv_paths, output_dir):
                 target_name_guess = str(name)
                 break
                 
-        # フォールバック
         if not target_name_guess:
             target_name_guess = filename_csv.split('_')[0] if '_' in filename_csv else filename_csv[:2]
             
@@ -268,25 +237,40 @@ def generate_reports(excel_path, csv_paths, output_dir):
             print(f"  -> [エラー] CSV読み込み失敗: {e}")
             continue
 
+        # ヘッダー名に含まれるゴミを掃除
         df_log.columns = [str(c).strip().replace('\u3000', '').replace(' ', '') for c in df_log.columns]
         
         col_datetime = find_col(df_log, ['日時'], 6)
-        col_duration = find_col(df_log, ['期間', '操作時間'], 10)
         col_path = find_col(df_log, ['パス', 'URL', 'ＵＲＬ'], 11)
-        col_title = find_col(df_log, ['タイトル'], 12)
+        
+        # O列（14列目）をタイトルとして確実にとる
+        if len(df_log.columns) > 14:
+            col_title = df_log.columns[14]
+        else:
+            col_title = find_col(df_log, ['タイトル'], 14)
         
         try:
             df_log['日時'] = pd.to_datetime(df_log[col_datetime])
+            df_log = df_log.sort_values('日時').reset_index(drop=True)
             df_log['日付_log'] = df_log['日時'].dt.normalize()
+            
+            # --- ユーザーの要望: G列(日時)の差分から操作時間を自力で計算する ---
+            df_log['次ログ日時'] = df_log['日時'].shift(-1)
+            df_log['次ログ日付'] = df_log['日付_log'].shift(-1)
+            df_log['操作秒数'] = (df_log['次ログ日時'] - df_log['日時']).dt.total_seconds().fillna(0)
+            
+            # 日またぎ、または負の値の場合は0秒とする
+            df_log.loc[df_log['日付_log'] != df_log['次ログ日付'], '操作秒数'] = 0
+            df_log.loc[df_log['操作秒数'] < 0, '操作秒数'] = 0
+            
+            # 操作と操作の間が空きすぎている場合（例: 5分以上）は、PC放置とみなして5分(300秒)で打ち切る
+            df_log['操作秒数'] = df_log['操作秒数'].apply(lambda x: min(x, 300))
+            
         except Exception as e:
-            print(f"  -> [エラー] 日時データが不正です: {e}")
+            print(f"  -> [エラー] 日時データの計算に失敗しました: {e}")
             continue
 
-        df_log['操作時間'] = df_log[col_duration].apply(parse_duration)
-        df_log['アプリ分類'] = df_log[col_path].apply(extract_app_name)
-        
         daily_log = df_log.groupby('日付_log').agg(PC電源ON=('日時', 'min'), PC電源OFF=('日時', 'max')).reset_index()
-        
         merged_df = pd.merge(df_target_master, daily_log, left_on='日付_master', right_on='日付_log', how='left')
         
         col_status = find_col(df_target_master, ['勤務日種別', '区分'], 2)
@@ -294,18 +278,16 @@ def generate_reports(excel_path, csv_paths, output_dir):
         col_start = find_col(df_target_master, ['打刻・出勤', '出勤'], 3)
         col_end = find_col(df_target_master, ['打刻・退勤', '退勤'], 4)
 
-        # 3. ログが存在する日ごとにWordを作成
         processed_count = 0
         for index, row in merged_df.iterrows():
             if pd.isna(row['PC電源ON']):
                 continue
                 
             date_str = row['日付_master'].strftime('%Y/%m/%d')
-            date_md = row['日付_master'].strftime('%m/%d') # 年ズレ防止用
+            date_md = row['日付_master'].strftime('%m/%d')
             target_fullname = get_val(row, name_col)
             target_fullname_clean = target_fullname.replace(' ', '').replace('　', '').replace('社員', '')
             
-            # --- 監査対象（AC列の〇印）のみを狙い撃ち ---
             if audit_targets and (target_fullname_clean, date_md) not in audit_targets:
                 print(f"    -> [スキップ] {date_str} はマスタのAC列に〇がないためスキップしました。")
                 continue
@@ -317,7 +299,6 @@ def generate_reports(excel_path, csv_paths, output_dir):
             is_early_detected = False
             early_time_str = ""
             
-            # --- 異常検知ロジック ---
             if ('休' in shift_info):
                 flags.append(f"【休日稼働】シフトは「{shift_info}」ですがPCが稼働しています")
             
@@ -350,10 +331,12 @@ def generate_reports(excel_path, csv_paths, output_dir):
                     except: pass
 
             day_logs = df_log[df_log['日付_log'] == row['日付_log']]
-            app_summary = day_logs.groupby('アプリ分類')['操作時間'].sum().sort_values(ascending=False)
+            
+            # --- ユーザー要望: O列（タイトル）がある項目だけをまとめる ---
+            valid_logs = day_logs[day_logs[col_title].notna() & (day_logs[col_title].astype(str).str.strip() != '') & (day_logs[col_title].astype(str) != 'nan')]
+            app_summary = valid_logs.groupby(col_title)['操作秒数'].sum().sort_values(ascending=False)
             
             print(f"    [{date_str}] Gemini APIでAIサマリーを生成中... (監査対象)")
-            time.sleep(2)
             ai_details, ai_summary = generate_summary_with_ai(day_logs, col_title, col_path)
             
             doc = Document()
@@ -382,18 +365,15 @@ def generate_reports(excel_path, csv_paths, output_dir):
             diff_sec = (calc_end - calc_start).total_seconds()
             est_time_str = f"{calc_start.strftime('%H:%M')} ～ {calc_end.strftime('%H:%M')}（{format_est_time(diff_sec)}）"
             
-            # --- Wordヘッダー情報の書き込み ---
             doc.add_paragraph(f"対象者：{target_fullname}")
             doc.add_paragraph(f"{row['日付_master'].strftime('%Y/%m/%d')}（{yobi}）")
             
-            # 早出検知時は出勤打刻時間を追記
             if is_early_detected and start_str and start_str != 'nan':
                 doc.add_paragraph(f"出勤打刻時間：{start_str}")
                 
             doc.add_paragraph(f"退勤打刻時間：{end_time_display}")
             doc.add_paragraph(f"PCの稼働：{row['PC電源ON'].strftime('%H:%M')} ～ {row['PC電源OFF'].strftime('%H:%M')}（最終）")
             
-            # 早出検知時は項目を分ける
             if is_early_detected:
                 doc.add_paragraph(f"【出勤打刻前に作業していたと推測される時間】：{early_time_str}")
                 doc.add_paragraph(f"【退勤打刻後に作業していたと推測される時間】：{est_time_str}")
@@ -405,22 +385,26 @@ def generate_reports(excel_path, csv_paths, output_dir):
             else:
                 for f in flags: doc.add_paragraph(f"・{f}")
                     
-            doc.add_heading('PC稼働状況（アプリ別集計）', level=2)
+            doc.add_heading('主な操作内容（タイトル別集計）', level=2)
             table = doc.add_table(rows=1, cols=2)
             table.style = 'Table Grid'
-            table.rows[0].cells[0].text = 'アプリケーション'
+            table.rows[0].cells[0].text = '操作タイトル'
             table.rows[0].cells[1].text = '合計時間（概算）'
             
             count = 0
-            for app_name, td in app_summary.items():
-                if count >= 5 or td.total_seconds() == 0: break
+            for app_name, total_sec in app_summary.items():
+                if count >= 10 or total_sec == 0: break
                 row_cells = table.add_row().cells
-                row_cells[0].text = app_name
                 
-                h_app, rem_app = divmod(int(td.total_seconds()), 3600)
+                # タイトルが長すぎる場合は切り詰め
+                title_text = str(app_name)
+                if len(title_text) > 40:
+                    title_text = title_text[:38] + "..."
+                row_cells[0].text = title_text
+                
+                h_app, rem_app = divmod(int(total_sec), 3600)
                 m_app, s_app = divmod(rem_app, 60)
                 
-                # アプリ別集計も「60分未満なら分表示」に合わせて自然な日本語にする
                 if h_app == 0:
                     row_cells[1].text = f"{m_app}分{s_app}秒"
                 elif m_app == 0 and s_app == 0:
