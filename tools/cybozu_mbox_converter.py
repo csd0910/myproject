@@ -172,7 +172,17 @@ class CybozuMboxConverterApp:
                 # 自分自身のMBOX
                 mbox_file = os.path.join(current_sbd_path, safe_name)
                 if node_id in self.folder_data:
-                    self._convert_to_mbox(self.folder_data[node_id]["actual_src"], mbox_file, name_text)
+                    actual_src = self.folder_data[node_id]["actual_src"]
+                    self._convert_to_mbox(actual_src, mbox_file, name_text)
+                    
+                    # 【追加要望】各元のフォルダ直下にも「フォルダ名.mbox」を配置する
+                    try:
+                        direct_mbox_file = os.path.join(actual_src, f"{safe_name}.mbox")
+                        if os.path.exists(mbox_file) and os.path.getsize(mbox_file) > 0:
+                            shutil.copy2(mbox_file, direct_mbox_file)
+                    except Exception as e:
+                        self.log(f"  -> 個別フォルダへの.mbox配置に失敗: {e}")
+                        
                     self.tree.item(node_id, values=(self.tree.item(node_id, "values")[0], "完了"))
                 else:
                     if not os.path.exists(mbox_file): open(mbox_file, "wb").close()
@@ -241,11 +251,19 @@ class CybozuMboxConverterApp:
                 try:
                     with open(txt, "r", encoding="utf-8", errors="replace") as f: content = f.read()
                     subject, sender, dt = "No Subject", "unknown@example.com", ""
-                    ms = re.search(r'【件名】\s*([^\n]+)', content); subject = ms.group(1).strip() if ms else subject
-                    ms = re.search(r'【差出人】\s*([^\n]+)', content); sender = ms.group(1).strip() if ms else sender
-                    ms = re.search(r'【日時】\s*([^\n]+)', content); dt = ms.group(1).strip() if ms else ""
+                    ms = re.search(r'(?:【件名】|Subject:)[\s:：]*([^\n]+)', content); subject = ms.group(1).strip() if ms else subject
+                    ms = re.search(r'(?:【(?:差出人|送信者)】|From:)[\s:：]*([^\n]+)', content); sender = ms.group(1).replace("アドレス帳に登録する", "").strip() if ms else sender
+                    ms = re.search(r'(?:【(?:日時|最終更新/日時)】|Date:)[\s:：]*([^\n]+)', content); dt = ms.group(1).strip() if ms else ""
                     msg = EmailMessage(); msg['Subject'] = subject; msg['From'] = sender
                     msg['Date'] = self._parse_date(dt); msg.set_content(content)
+                    
+                    # 【追加】各メールの単独EMLファイルもテキストと同じ場所に出力する
+                    eml_path = os.path.splitext(txt)[0] + ".eml"
+                    try:
+                        with open(eml_path, "wb") as ef:
+                            ef.write(msg.as_bytes())
+                    except: pass
+                    
                     mbox_user = sender.split('<')[-1].strip('> ')
                     mf.write(f"From {mbox_user} {datetime.now().strftime('%a %b %d %H:%M:%S %Y')}\n".encode('ascii','replace'))
                     mf.write(msg.as_bytes()); mf.write(b"\n\n")
