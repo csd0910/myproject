@@ -43,14 +43,20 @@ def select_paths():
 # 解析補助関数
 # ---------------------------------------------------------
 def extract_app_name(path):
-    path = str(path)
-    if pd.isna(path) or path.strip() == '': return '不明'
-    filename = path.split('\\')[-1].upper()
-    if 'CHROME' in filename or 'MSEDGE' in filename: return 'Webブラウザ'
-    elif 'EXCEL.EXE' in filename: return 'Excel作業'
-    elif 'WINWORD.EXE' in filename: return 'Word作業'
-    elif 'EXPLORER.EXE' in filename: return 'エクスプローラー'
-    else: return filename
+    path = str(path).upper()
+    if pd.isna(path) or path.strip() == '' or path == 'NAN': 
+        return 'その他（システム処理・待機等）'
+    
+    filename = path.split('\\')[-1]
+    
+    if 'EXCEL.EXE' in filename or '.XLS' in filename:
+        return 'Excel作業（EXCEL.EXE）'
+    elif 'CHROME' in filename or 'MSEDGE' in filename or 'HTTP' in path:
+        return 'サイボウズ・Web（msedge.exe / chrome.exe）'
+    elif 'WINWORD.EXE' in filename:
+        return 'Word作業（WINWORD.EXE）'
+    else:
+        return 'その他（バックグラウンド処理・他）'
 
 def parse_duration(duration_str):
     if pd.isna(duration_str): return pd.Timedelta(seconds=0)
