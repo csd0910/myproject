@@ -44,7 +44,7 @@ def select_paths():
 # 解析補助関数
 # ---------------------------------------------------------
 def get_audit_target_dates(excel_path, sheet_name='管理部提出用'):
-    """ExcelのA/H/L列に文字色(赤など)が塗られている「監査対象行」の氏名と日付(MM/DD)を抽出する"""
+    """ExcelのAC列(29)に「〇」が入力されている「監査対象行」の氏名と日付(MM/DD)を抽出する"""
     try:
         wb = openpyxl.load_workbook(excel_path, data_only=True)
         if sheet_name not in wb.sheetnames:
@@ -69,35 +69,14 @@ def get_audit_target_dates(excel_path, sheet_name='管理部提出用'):
             date_col_idx = 3
             
         targets = set()
-        a_col_idx = 1  # A列 (PC電源ON時刻)
-        h_col_idx = 8  # H列
-        l_col_idx = 12 # L列
+        ac_col_idx = 29  # AC列 (A=1, Z=26, AA=27, AB=28, AC=29)
         
         for row_idx in range(2, ws.max_row + 1):
-            a_cell = ws.cell(row=row_idx, column=a_col_idx)
-            h_cell = ws.cell(row=row_idx, column=h_col_idx)
-            l_cell = ws.cell(row=row_idx, column=l_col_idx)
+            ac_cell = ws.cell(row=row_idx, column=ac_col_idx)
+            val = str(ac_cell.value).strip() if ac_cell.value else ''
             
-            def is_colored(cell):
-                if not cell.value: return False
-                if not cell.font or not cell.font.color: return False
-                
-                if cell.font.color.type == 'rgb':
-                    rgb = str(cell.font.color.rgb).upper()
-                    # 黒(FF000000, 00000000) 以外であれば「色が変更されている(赤など)」と判定
-                    if rgb and rgb not in ['00000000', 'FF000000', '0', 'NONE']:
-                        return True
-                elif cell.font.color.type == 'indexed':
-                    # インデックス8は黒、それ以外(10の赤など)ならTrue
-                    if cell.font.color.indexed not in [8, 64, 65]:
-                        return True
-                elif cell.font.color.type == 'theme':
-                    # テーマカラーの4以上はアクセントカラー(赤青等)であることが多い
-                    if cell.font.color.theme >= 4:
-                        return True
-                return False
-
-            if is_colored(a_cell) or is_colored(h_cell) or is_colored(l_cell):
+            # 丸記号（〇、○、O）などが入力されていれば監査対象とする
+            if val in ['〇', '○', 'o', 'O', '丸', '対象']:
                 name_val = str(ws.cell(row=row_idx, column=name_col_idx).value or '').strip()
                 date_val = ws.cell(row=row_idx, column=date_col_idx).value
                 if name_val and date_val:
@@ -110,7 +89,7 @@ def get_audit_target_dates(excel_path, sheet_name='管理部提出用'):
                         pass
         return targets
     except Exception as e:
-        print(f"監査対象日（文字色）の抽出に失敗しました: {e}")
+        print(f"監査対象日（AC列の〇）の抽出に失敗しました: {e}")
         return set()
 
 def extract_app_name(path):
@@ -234,9 +213,9 @@ def generate_reports(excel_path, csv_paths, output_dir):
     # セルに色が塗られている「監査対象」の氏名と日付を抽出
     audit_targets = get_audit_target_dates(excel_path)
     if not audit_targets:
-        print("[警告] マスタから赤文字のセル（監査対象）が見つかりませんでした。全件処理します。")
+        print("[警告] マスタのAC列に「〇」（監査対象）が見つかりませんでした。全件処理します。")
     else:
-        print(f"監査対象として {len(audit_targets)} 件の色付きデータを検出しました！ (例: {list(audit_targets)[:3]})")
+        print(f"監査対象として {len(audit_targets)} 件の「〇」データを検出しました！ (例: {list(audit_targets)[:3]})")
     
     # 1. マスタ読み込みと整形
     df_master = pd.read_excel(excel_path, sheet_name='管理部提出用')
@@ -314,9 +293,9 @@ def generate_reports(excel_path, csv_paths, output_dir):
             target_fullname = get_val(row, name_col)
             target_fullname_clean = target_fullname.replace(' ', '').replace('　', '').replace('社員', '')
             
-            # --- 監査対象（赤文字）のみを狙い撃ち ---
+            # --- 監査対象（AC列の〇印）のみを狙い撃ち ---
             if audit_targets and (target_fullname_clean, date_md) not in audit_targets:
-                print(f"    -> [スキップ] {date_str} はマスタで赤文字(監査対象)として検知されませんでした。")
+                print(f"    -> [スキップ] {date_str} はマスタのAC列に〇がないためスキップしました。")
                 continue
                 
             processed_count += 1
