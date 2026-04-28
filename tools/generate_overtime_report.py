@@ -245,7 +245,18 @@ def generate_reports(excel_path, csv_paths, output_dir):
         filename_csv = os.path.basename(csv_path)
         print(f"========== 処理開始: {filename_csv} ==========")
         
-        target_name_guess = filename_csv.split('_')[0] if '_' in filename_csv else filename_csv[:2]
+        # ファイル名から対象者を推測（マスタの全氏名と照合して安全に取得）
+        target_name_guess = None
+        for name in df_master[name_col].dropna().unique():
+            name_clean = str(name).replace(' ', '').replace('　', '').replace('社員', '')
+            if name_clean and name_clean in filename_csv.replace(' ', '').replace('　', ''):
+                target_name_guess = str(name)
+                break
+                
+        # フォールバック
+        if not target_name_guess:
+            target_name_guess = filename_csv.split('_')[0] if '_' in filename_csv else filename_csv[:2]
+            
         df_target_master = df_master[df_master[name_col].str.contains(target_name_guess, na=False)].copy()
         
         if len(df_target_master) == 0:
