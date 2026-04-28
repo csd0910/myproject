@@ -3,6 +3,7 @@ import tkinter as tk
 from tkinter import filedialog, messagebox
 import os
 import time
+import openpyxl
 from docx import Document
 from dotenv import load_dotenv
 from google import genai
@@ -42,6 +43,67 @@ def select_paths():
 # ---------------------------------------------------------
 # 解析補助関数
 # ---------------------------------------------------------
+def get_audit_target_dates(excel_path, sheet_name='管理部提出用'):
+    """ExcelのH列(8)かL列(12)に背景色(赤など)が塗られている「監査対象行」の氏名と日付を抽出する"""
+    try:
+        wb = openpyxl.load_workbook(excel_path, data_only=True)
+        if sheet_name not in wb.sheetnames:
+            return set()
+        ws = wb[sheet_name]
+        
+        name_col_idx = None
+        date_col_idx = None
+        
+        for row in ws.iter_rows(min_row=1, max_row=5):
+            for cell in row:
+                val = str(cell.value).strip() if cell.value else ''
+                if '氏名' in val or '名前' in val:
+                    name_col_idx = cell.column
+                if '日付' in val:
+                    date_col_idx = cell.column
+            if name_col_idx and date_col_idx:
+                break
+                
+        if not name_col_idx or not date_col_idx:
+            name_col_idx = 2
+            date_col_idx = 3
+            
+        targets = set()
+        h_col_idx = 8  # H列
+        l_col_idx = 12 # L列
+        
+        for row_idx in range(2, ws.max_row + 1):
+            h_cell = ws.cell(row=row_idx, column=h_col_idx)
+            l_cell = ws.cell(row=row_idx, column=l_col_idx)
+            
+            def is_colored(cell):
+                if not cell.fill or not cell.fill.fgColor: return False
+                if cell.fill.fgColor.type == 'rgb':
+                    rgb = str(cell.fill.fgColor.rgb)
+                    if rgb and rgb not in ['00000000', 'FFFFFFFF', '0', 'None']:
+                        return True
+                elif cell.fill.fgColor.type == 'indexed':
+                    if cell.fill.fgColor.indexed not in [64, 65]:
+                        return True
+                elif cell.fill.fgColor.type == 'theme':
+                    return True
+                return False
+
+            if is_colored(h_cell) or is_colored(l_cell):
+                name_val = str(ws.cell(row=row_idx, column=name_col_idx).value or '').strip()
+                date_val = ws.cell(row=row_idx, column=date_col_idx).value
+                if name_val and date_val:
+                    try:
+                        dt = pd.to_datetime(date_val).strftime('%Y/%m/%d')
+                        name_clean = name_val.replace(' ', '').replace('　', '')
+                        targets.add((name_clean, dt))
+                    except:
+                        pass
+        return targets
+    except Exception as e:
+        print(f"監査対象日（セルの色）の抽出に失敗しました: {e}")
+        return set()
+
 def extract_app_name(path):
     path = str(path).upper()
     if pd.isna(path) or path.strip() == '' or path == 'NAN': 
@@ -68,10 +130,8 @@ def parse_duration(duration_str):
     return pd.Timedelta(seconds=0)
 
 def load_csv_safely(filepath):
-    """NAS経由など様々な環境からのファイルに対応するため、複数の文字コードを試す"""
     for enc in ['cp932', 'utf-8', 'utf-8-sig', 'shift_jis']:
         try:
-            # engine='python' にすることで一部の不正な文字があってもエラーにならずパースできることがある
             return pd.read_csv(filepath, encoding=enc, engine='python', on_bad_lines='skip')
         except Exception:
             pass
@@ -160,21 +220,27 @@ def generate_summary_with_ai(log_df, col_title, col_path):
 # メイン処理（レポート一括生成）
 # ---------------------------------------------------------
 def generate_reports(excel_path, csv_paths, output_dir):
-    print("勤怠マスタの読み込みを開始します...")
+    print("勤怠マスタの読み込みを開始します（色の解析中...）")
+    
+    # セルに色が塗られている「監査対象」の氏名と日付を抽出
+    audit_targets = get_audit_target_dates(excel_path)
+    if not audit_targets:
+        print("[警告] マスタから赤色のセル（監査対象）が見つかりませんでした。全件処理します。")
+    else:
+        print(f"監査対象として {len(audit_targets)} 件の色付きデータを検出しました！")
     
     # 1. マスタ読み込みと整形
     df_master = pd.read_excel(excel_path, sheet_name='管理部提出用')
     df_master.columns = [str(c).strip().replace('\u3000', '').replace(' ', '') for c in df_master.columns]
     name_col = find_col(df_master, ['氏名', '名前'], 1)
     
-    print(f"合計 {len(csv_paths)} 個のログファイルを連続処理します。\n")
+    print(f"\n合計 {len(csv_paths)} 個のログファイルを連続処理します。\n")
 
     # 2. 複数のCSVファイルをループで処理
     for csv_path in csv_paths:
         filename_csv = os.path.basename(csv_path)
         print(f"========== 処理開始: {filename_csv} ==========")
         
-        # ファイル名から対象者を推測（例: 成川_ログ検索結果 -> 成川）
         target_name_guess = filename_csv.split('_')[0] if '_' in filename_csv else filename_csv[:2]
         df_target_master = df_master[df_master[name_col].str.contains(target_name_guess, na=False)].copy()
         
@@ -186,7 +252,6 @@ def generate_reports(excel_path, csv_paths, output_dir):
         df_target_master['日付_master'] = pd.to_datetime(df_target_master[date_col])
         
         try:
-            # NAS等の様々な文字コードに対応した安全な読み込み
             df_log = load_csv_safely(csv_path)
         except Exception as e:
             print(f"  -> [エラー] CSV読み込み失敗: {e}")
@@ -219,12 +284,21 @@ def generate_reports(excel_path, csv_paths, output_dir):
         col_end = find_col(df_target_master, ['打刻・退勤', '退勤'], 4)
 
         # 3. ログが存在する日ごとにWordを作成
+        processed_count = 0
         for index, row in merged_df.iterrows():
             if pd.isna(row['PC電源ON']):
                 continue
                 
             date_str = row['日付_master'].strftime('%Y/%m/%d')
-            target_fullname = get_val(row, name_col) # マスタ上のフルネーム
+            target_fullname = get_val(row, name_col)
+            target_fullname_clean = target_fullname.replace(' ', '').replace('　', '')
+            
+            # --- 監査対象（赤色セル）のみを狙い撃ち ---
+            if audit_targets and (target_fullname_clean, date_str) not in audit_targets:
+                # この日はH列もL列も色が塗られていないためスキップ
+                continue
+                
+            processed_count += 1
             shift_info = f"{get_val(row, col_status)} {get_val(row, col_jiyu)}".strip().replace('nan', '')
             flags = []
             
@@ -255,16 +329,13 @@ def generate_reports(excel_path, csv_paths, output_dir):
                             flags.append(f"【残業疑義】退勤打刻より {diff}分遅くまで PCが稼働({row['PC電源OFF'].strftime('%H:%M')})しています")
                     except: pass
 
-            # --- アプリ集計 ---
             day_logs = df_log[df_log['日付_log'] == row['日付_log']]
             app_summary = day_logs.groupby('アプリ分類')['操作時間'].sum().sort_values(ascending=False)
             
-            # --- AI要約 ---
-            print(f"  [{date_str}] Gemini APIでAIサマリーを生成中...")
+            print(f"  [{date_str}] Gemini APIでAIサマリーを生成中... (監査対象日)")
             time.sleep(2)
             ai_details, ai_summary = generate_summary_with_ai(day_logs, col_title, col_path)
             
-            # --- Word作成 ---
             doc = Document()
             doc.add_heading('残業調査報告書', 0)
             
@@ -326,7 +397,6 @@ def generate_reports(excel_path, csv_paths, output_dir):
             doc.add_heading('サマリー', level=2)
             doc.add_paragraph(ai_summary)
             
-            # --- 保存処理 ---
             target_name_short = target_fullname.replace('社員', '').replace(' ', '').replace('　', '')
             safe_date = date_str.replace('/', '')
             filename = f"残業調査報告書_{target_name_short}_{safe_date}.docx"
@@ -345,6 +415,9 @@ def generate_reports(excel_path, csv_paths, output_dir):
                     print(f"    -> [エラー] 保存に失敗しました: {e}")
             
             time.sleep(1)
+
+        if processed_count == 0:
+            print(f"    -> [スキップ] このファイルの対象者には、監査対象（赤色セル）の日付がありませんでした。")
 
     print("\n全てのログファイルの処理が完了しました！出力先フォルダをご確認ください。")
 
