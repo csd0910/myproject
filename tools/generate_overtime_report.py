@@ -117,6 +117,18 @@ def parse_duration(duration_str):
     except: pass
     return pd.Timedelta(seconds=0)
 
+def format_est_time(diff_sec):
+    """秒数を「約〇時間〇分」または「約〇分」の自然な日本語フォーマットに変換する"""
+    if diff_sec <= 0: return "約0分"
+    h, rem = divmod(int(diff_sec), 3600)
+    m, _ = divmod(rem, 60)
+    if h == 0:
+        return f"約{m}分"
+    elif m == 0:
+        return f"約{h}時間"
+    else:
+        return f"約{h}時間{m:02d}分"
+
 def load_csv_safely(filepath):
     for enc in ['cp932', 'utf-8', 'utf-8-sig', 'shift_jis']:
         try:
@@ -326,9 +338,7 @@ def generate_reports(excel_path, csv_paths, output_dir):
                                 is_early_detected = True
                             
                             diff_sec_e = (work_start - row['PC電源ON']).total_seconds()
-                            h_e, rem_e = divmod(int(diff_sec_e), 3600)
-                            m_e, _ = divmod(rem_e, 60)
-                            early_time_str = f"{row['PC電源ON'].strftime('%H:%M')} ～ {work_start.strftime('%H:%M')}（約{h_e}時間{m_e:02d}分）"
+                            early_time_str = f"{row['PC電源ON'].strftime('%H:%M')} ～ {work_start.strftime('%H:%M')}（{format_est_time(diff_sec_e)}）"
                     except: pass
 
                 if end_str and end_str != 'nan':
@@ -370,10 +380,7 @@ def generate_reports(excel_path, csv_paths, output_dir):
                 except: pass
 
             diff_sec = (calc_end - calc_start).total_seconds()
-            if diff_sec < 0: diff_sec = 0
-            h, rem = divmod(int(diff_sec), 3600)
-            m, _ = divmod(rem, 60)
-            est_time_str = f"{calc_start.strftime('%H:%M')} ～ {calc_end.strftime('%H:%M')}（約{h}時間{m:02d}分）"
+            est_time_str = f"{calc_start.strftime('%H:%M')} ～ {calc_end.strftime('%H:%M')}（{format_est_time(diff_sec)}）"
             
             # --- Wordヘッダー情報の書き込み ---
             doc.add_paragraph(f"対象者：{target_fullname}")
@@ -409,9 +416,18 @@ def generate_reports(excel_path, csv_paths, output_dir):
                 if count >= 5 or td.total_seconds() == 0: break
                 row_cells = table.add_row().cells
                 row_cells[0].text = app_name
+                
                 h_app, rem_app = divmod(int(td.total_seconds()), 3600)
                 m_app, s_app = divmod(rem_app, 60)
-                row_cells[1].text = f"{h_app:02}:{m_app:02}:{s_app:02}"
+                
+                # アプリ別集計も「60分未満なら分表示」に合わせて自然な日本語にする
+                if h_app == 0:
+                    row_cells[1].text = f"{m_app}分{s_app}秒"
+                elif m_app == 0 and s_app == 0:
+                    row_cells[1].text = f"{h_app}時間"
+                else:
+                    row_cells[1].text = f"{h_app}時間{m_app:02d}分"
+                    
                 count += 1
                 
             doc.add_heading('作業詳細', level=2)
