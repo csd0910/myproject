@@ -67,6 +67,16 @@ def parse_duration(duration_str):
     except: pass
     return pd.Timedelta(seconds=0)
 
+def load_csv_safely(filepath):
+    """NAS経由など様々な環境からのファイルに対応するため、複数の文字コードを試す"""
+    for enc in ['cp932', 'utf-8', 'utf-8-sig', 'shift_jis']:
+        try:
+            # engine='python' にすることで一部の不正な文字があってもエラーにならずパースできることがある
+            return pd.read_csv(filepath, encoding=enc, engine='python', on_bad_lines='skip')
+        except Exception:
+            pass
+    raise Exception("対応する文字コード(cp932, utf-8等)で読み込めませんでした。")
+
 def find_col(df, keywords, fallback_index=None):
     for col in df.columns:
         for kw in keywords:
@@ -176,7 +186,8 @@ def generate_reports(excel_path, csv_paths, output_dir):
         df_target_master['日付_master'] = pd.to_datetime(df_target_master[date_col])
         
         try:
-            df_log = pd.read_csv(csv_path, encoding='shift_jis')
+            # NAS等の様々な文字コードに対応した安全な読み込み
+            df_log = load_csv_safely(csv_path)
         except Exception as e:
             print(f"  -> [エラー] CSV読み込み失敗: {e}")
             continue
@@ -188,8 +199,13 @@ def generate_reports(excel_path, csv_paths, output_dir):
         col_path = find_col(df_log, ['パス', 'URL', 'ＵＲＬ'], 11)
         col_title = find_col(df_log, ['タイトル'], 12)
         
-        df_log['日時'] = pd.to_datetime(df_log[col_datetime])
-        df_log['日付_log'] = df_log['日時'].dt.normalize()
+        try:
+            df_log['日時'] = pd.to_datetime(df_log[col_datetime])
+            df_log['日付_log'] = df_log['日時'].dt.normalize()
+        except Exception as e:
+            print(f"  -> [エラー] 日時データが不正です: {e}")
+            continue
+
         df_log['操作時間'] = df_log[col_duration].apply(parse_duration)
         df_log['アプリ分類'] = df_log[col_path].apply(extract_app_name)
         
