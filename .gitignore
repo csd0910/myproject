@@ -17,3 +17,9 @@ __pycache__/
 build/
 dist/
 *.spec
+
+# 秘密情報・一時ファイル
+.env
+*.mbox
+*.txt
+!tools/TEST/pdf_extract.txt
