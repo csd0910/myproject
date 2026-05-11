@@ -5,6 +5,7 @@ import os
 import time
 import openpyxl
 from docx import Document
+from docx.enum.text import WD_ALIGN_PARAGRAPH
 from dotenv import load_dotenv
 from google import genai
 
@@ -126,7 +127,8 @@ def get_val(row, col_name, fallback_index=None):
 # ---------------------------------------------------------
 # Gemini API 連携関数
 # ---------------------------------------------------------
-def generate_summary_with_ai(log_df, col_title, col_path):
+def generate_summary_with_ai(log_df, col_title, col_path, is_early=False, is_overtime=False, 
+                            start_str="記録なし", end_str="記録なし", pc_on_str="記録なし", pc_off_str="記録なし", last_human_op_str="記録なし"):
     if not client:
         return "APIキー未設定のため生成スキップ", "APIキー未設定"
     
@@ -144,18 +146,36 @@ def generate_summary_with_ai(log_df, col_title, col_path):
         return "具体的な作業ログなし", "特記事項なし"
         
     prompt = f"""
-あなたは企業の監査担当です。以下のPC操作ログから、作業の詳細と総括サマリーを生成してください。
-【操作ログ】
+あなたは企業の監査担当です。以下のPC操作ログと基本情報から、調査報告書用の「作業詳細」と「サマリー」を生成してください。
+
+【基本情報】
+・出勤打刻時刻：{start_str}
+・退勤打刻時刻：{end_str}
+・PC電源ON時刻：{pc_on_str}
+・PC電源OFF時刻：{pc_off_str}
+・人間による実操作（タイトルありログ）の最終時刻：{last_human_op_str}
+・15分以上の早出疑義があるか：{'はい' if is_early else 'いいえ'}
+・15分以上の残業疑義があるか：{'はい' if is_overtime else 'いいえ'}
+
+【操作ログ抜粋（時間外の可能性が高い時間帯を中心に抽出）】
 {log_text}
 
 【出力フォーマット指示】
-必ず以下の2つのセクションに分けて出力してください。不要な挨拶等は一切不要です。
+必ず以下の2つのセクションに分けて出力してください。
 
 ■作業詳細
-（Excelのファイル名やシステム名を元に、何を作業していたか箇条書きで簡潔に整理）
+（時間外のログを中心に、どのようなアプリやファイルを使用していたか箇条書きで簡潔に整理してください）
 
 ■サマリー
-（上記を踏まえ、どんな業務を行っていたかを客観的で厳格な2〜3行の自然な日本語で総括してください）
+以下の形式に沿って、客観的かつ厳格に記述してください。
+
+（記述例1：早出・残業ありの場合）
+「出勤の打刻時間は {start_str} となっているが、PCは {pc_on_str} に起動し、[具体的な作業内容]などの作業が確認されました。これにより、出勤時刻より[差分時間]早く時間外作業が行われています。また、退勤の打刻時間は {end_str} となっているが、PCは {pc_off_str} まで稼働しており、打刻後に時間外作業が行われている事実が確認されました。この時間帯には、主に[具体的な作業内容]が行われていました。」
+
+（記述例2：15分以内のため認められない場合）
+「退勤の打刻時間は {end_str} となっているが、PCは {pc_off_str} に電源OFFされており、実操作の最終時刻も {last_human_op_str} であることから、15分以内で作業を終了しており残業は認められません。」
+
+※判定結果は、必ず「15分ルール」に基づいて、「早出/残業と認められるか、あるいは認められないか」を明確に結論づけてください。
 """
     max_retries = 3
     for attempt in range(max_retries):
@@ -275,8 +295,9 @@ def generate_reports(excel_path, csv_paths, output_dir):
         
         col_status = find_col(df_target_master, ['勤務日種別', '区分'], 2)
         col_jiyu = find_col(df_target_master, ['事由'], 11)
-        col_start = find_col(df_target_master, ['打刻・出勤', '出勤'], 3)
-        col_end = find_col(df_target_master, ['打刻・退勤', '退勤'], 4)
+        # K列(10)を出勤、L列(11)を退勤として優先的に取得
+        col_start = find_col(df_target_master, ['打刻・出勤', '出勤'], 10)
+        col_end = find_col(df_target_master, ['打刻・退勤', '退勤'], 11)
 
         processed_count = 0
         for index, row in merged_df.iterrows():
@@ -296,7 +317,10 @@ def generate_reports(excel_path, csv_paths, output_dir):
             shift_info = f"{get_val(row, col_status)} {get_val(row, col_jiyu)}".strip().replace('nan', '')
             flags = []
             
+            work_start = pd.NaT
+            work_end = pd.NaT
             is_early_detected = False
+            is_overtime_detected = False
             early_time_str = ""
             
             if ('休' in shift_info):
@@ -314,33 +338,63 @@ def generate_reports(excel_path, csv_paths, output_dir):
                         work_start = pd.to_datetime(f"{date_str} {start_str}")
                         if row['PC電源ON'] < work_start:
                             diff = int((work_start - row['PC電源ON']).total_seconds() / 60)
-                            if diff >= 10:
-                                flags.append(f"【早出疑義】出勤打刻より {diff}分早く PCが起動({row['PC電源ON'].strftime('%H:%M')})しています")
+                            if diff >= 15: # 15分以上前なら早出
+                                flags.append(f"【早出疑義】出勤打刻の {diff}分前 からPC稼働({row['PC電源ON'].strftime('%H:%M')})が確認されました。")
                                 is_early_detected = True
                             
                             diff_sec_e = (work_start - row['PC電源ON']).total_seconds()
-                            early_time_str = f"{row['PC電源ON'].strftime('%H:%M')} ～ {work_start.strftime('%H:%M')}（{format_est_time(diff_sec_e)}）"
+                            early_time_str = f"{row['PC電源ON'].strftime('%H:%M')} ～ {work_start.strftime('%H:%M')}（約{format_est_time(diff_sec_e)}）"
                     except: pass
 
                 if end_str and end_str != 'nan':
                     try:
                         work_end = pd.to_datetime(f"{date_str} {end_str}")
-                        if row['PC電源OFF'] > work_end + pd.Timedelta(minutes=10):
-                            diff = int((row['PC電源OFF'] - work_end).total_seconds() / 60)
-                            flags.append(f"【残業疑義】退勤打刻より {diff}分遅くまで PCが稼働({row['PC電源OFF'].strftime('%H:%M')})しています")
+                        if pd.notna(work_end):
+                            # 翌朝（最大12時間後）まで連続したログがあるか確認
+                            actual_pc_off = row['PC電源OFF']
+                            if actual_pc_off > work_end + pd.Timedelta(minutes=15):
+                                diff = int((actual_pc_off - work_end).total_seconds() / 60)
+                                flags.append(f"【残業疑義】退勤打刻の {diff}分後 までPC稼働({actual_pc_off.strftime('%H:%M')})が確認されました。")
+                                is_overtime_detected = True
+                                diff_sec_o = (actual_pc_off - work_end).total_seconds()
+                                est_time_str = f"{work_end.strftime('%H:%M')} ～ {actual_pc_off.strftime('%H:%M')}（約{format_est_time(diff_sec_o)}）"
+                            else:
+                                is_overtime_detected = False
                     except: pass
 
             day_logs = df_log[df_log['日付_log'] == row['日付_log']]
             
             # --- ユーザー要望: O列（タイトル）がある項目だけをまとめる ---
             valid_logs = day_logs[day_logs[col_title].notna() & (day_logs[col_title].astype(str).str.strip() != '') & (day_logs[col_title].astype(str) != 'nan')]
-            app_summary = valid_logs.groupby(col_title)['操作秒数'].sum().sort_values(ascending=False)
+            app_summary = valid_logs.groupby(col_title)['操作秒数'].sum().sort_values(ascending=False) if '操作秒数' in valid_logs.columns else {}
+
+            # --- 実操作の最終時刻を特定し、更新処理を判定 ---
+            if not valid_logs.empty:
+                last_human_op_dt = valid_logs['日時'].max()
+                last_human_op_str = last_human_op_dt.strftime('%H:%M')
+                
+                final_pc_dt = day_logs['日時'].max()
+                # 実操作終了からPC終了まで10分以上の開きがある場合
+                if (final_pc_dt - last_human_op_dt).total_seconds() > 600:
+                    flags.append(f"【システム更新判定】実操作（タイトルありログ）は {last_human_op_str} までとなっております。")
+                    flags.append(f"　それ以降のPC起動（{final_pc_dt.strftime('%H:%M')}まで）は、操作はしていないが更新処理などでPCを起動したままにしていたようだと推測され、実業務は認められませんでした。")
+            else:
+                if not day_logs.empty:
+                    flags.append("【システム稼働判定】PCの起動は確認されましたが、人間による実操作（ログタイトルあり）は確認されませんでした。更新処理等の可能性があります。")
             
             print(f"    [{date_str}] Gemini APIでAIサマリーを生成中... (監査対象)")
-            ai_details, ai_summary = generate_summary_with_ai(day_logs, col_title, col_path)
+            pc_on_str = row['PC電源ON'].strftime('%H:%M:%S')
+            pc_off_str = row['PC電源OFF'].strftime('%H:%M:%S')
+            ai_details, ai_summary = generate_summary_with_ai(
+                day_logs, col_title, col_path, 
+                is_early_detected, is_overtime_detected,
+                start_time_display, end_time_display,
+                pc_on_str, pc_off_str, last_human_op_str if 'last_human_op_str' in locals() else "記録なし"
+            )
             
             doc = Document()
-            doc.add_heading('残業調査報告書', 0)
+            title_p = doc.add_heading('残業調査報告書', 0)
+            title_p.alignment = WD_ALIGN_PARAGRAPH.CENTER
             
             yobi = ["月", "火", "水", "木", "金", "土", "日"][row['日付_master'].weekday()]
             
@@ -368,17 +422,22 @@ def generate_reports(excel_path, csv_paths, output_dir):
             doc.add_paragraph(f"対象者：{target_fullname}")
             doc.add_paragraph(f"{row['日付_master'].strftime('%Y/%m/%d')}（{yobi}）")
             
-            if is_early_detected and start_str and start_str != 'nan':
-                doc.add_paragraph(f"出勤打刻時間：{start_str}")
+            # 打刻情報の表示
+            start_time_display = start_str if start_str and start_str != 'nan' else "記録なし"
+            doc.add_paragraph(f"出勤打刻時間：{start_time_display}")
                 
             doc.add_paragraph(f"退勤打刻時間：{end_time_display}")
             doc.add_paragraph(f"PCの稼働：{row['PC電源ON'].strftime('%H:%M')} ～ {row['PC電源OFF'].strftime('%H:%M')}（最終）")
             
             if is_early_detected:
-                doc.add_paragraph(f"【出勤打刻前に作業していたと推測される時間】：{early_time_str}")
-                doc.add_paragraph(f"【退勤打刻後に作業していたと推測される時間】：{est_time_str}")
+                doc.add_paragraph(f"【出勤前の時間外と推測される時間】：{early_time_str}")
             else:
-                doc.add_paragraph(f"作業していたと推測される時間：{est_time_str}")
+                doc.add_paragraph(f"【出勤前の時間外と推測される時間】：なし")
+
+            if is_overtime_detected:
+                doc.add_paragraph(f"【退勤後の時間外と推測される時間】：{est_time_str}")
+            else:
+                doc.add_paragraph(f"【退勤後の時間外と推測される時間】：なし")
             
             doc.add_heading('判定結果', level=2)
             if not flags: doc.add_paragraph("・問題なし（適正な稼働）")
