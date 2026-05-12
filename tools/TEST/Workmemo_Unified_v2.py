@@ -127,9 +127,9 @@ class HistoryWindow(tk.Toplevel):
             headings = ("No", "日付", "依頼部署", "件名", "状況", "内容抜粋")
             widths = (40, 90, 100, 120, 80, 250)
         elif self.mode == MODES[1]: # ヘルプデスク
-            columns = ("no", "date", "dept", "client", "status", "problem")
-            headings = ("No", "日付", "依頼元", "依頼主", "状況", "内容抜粋")
-            widths = (40, 90, 100, 80, 80, 250)
+            columns = ("no", "start", "end", "biz_days", "status", "problem")
+            headings = ("No", "発生日時", "終了日時", "日数", "状況", "内容抜粋")
+            widths = (40, 110, 110, 40, 80, 250)
         else: # 保守
             columns = ("no", "subject", "status", "date", "background")
             headings = ("No", "課題件名", "状況", "期間", "背景抜粋")
@@ -198,12 +198,13 @@ class HistoryWindow(tk.Toplevel):
                     p_val = str(row_dict.get("課題内容","")).replace("\n", " ")[:50]
                     vals = (row_dict.get("No",""), dt_val, d_val, subj_val, stat_val, p_val)
                 elif self.mode == MODES[1]:
-                    d_full = f"{row_dict.get('10.依頼部署','')}/{row_dict.get('11.依頼課','')}".strip("/").replace("\n", " ")
-                    dt_val = str(row_dict.get("3.日付",""))[:10]
-                    stat_val = str(row_dict.get("14.ステータス",""))
-                    problem = row_dict.get("15.質問・事象") or row_dict.get("15.質問事象・作業内容") or ""
+                    start_dt = str(row_dict.get("発生日時","")).replace("\n", " ")
+                    end_dt = str(row_dict.get("終了日時","")).replace("\n", " ")
+                    biz_days = str(row_dict.get("対応日数(営業日)",""))
+                    stat_val = str(row_dict.get("ステータス",""))
+                    problem = row_dict.get("問題事象・作業内容") or ""
                     p_val = str(problem).replace("\n", " ")[:50]
-                    vals = (row_dict.get("No",""), dt_val, d_full, row_dict.get("12.依頼主",""), stat_val, p_val)
+                    vals = (row_dict.get("No",""), start_dt, end_dt, biz_days, stat_val, p_val)
                 else:
                     subj_val = str(row_dict.get("課題件名","")).replace("\n", " ")
                     stat_val = str(row_dict.get("状況",""))
@@ -465,6 +466,11 @@ class UnifiedApp:
         self.lbl_excel_path = ttk.Label(header, text=f"保存先: {os.path.basename(self.config.get('excel_path', ''))}", foreground="blue", cursor="hand2")
         self.lbl_excel_path.pack(side=tk.RIGHT)
         self.lbl_excel_path.bind("<Button-1>", lambda e: self.open_excel())
+
+        # KPI表示 (3営業日以内対応率)
+        self.lbl_kpi = ttk.Label(main_frame, text="【今月の目標】 3営業日以内対応率 97%以上達成！", foreground="#d9534f", font=(self.font_name, 10, "bold"))
+        self.lbl_kpi.pack(fill=tk.X, pady=(0, 5))
+        self.update_kpi()
         
         # Format Selector
         mode_frame = ttk.Frame(main_frame)
@@ -496,6 +502,76 @@ class UnifiedApp:
         self.root.bind('<Control-Return>', lambda e: self.save_log())
         
         self.on_mode_change()
+
+    def update_kpi(self):
+        path = self.config.get("excel_path", os.path.join(DATA_DIR, "WorkLog_Unified.xlsx"))
+        if not os.path.exists(path) or load_workbook is None:
+            return
+
+        try:
+            wb = load_workbook(path, data_only=True)
+            mode = MODES[1] # ヘルプデスク
+            if mode not in wb.sheetnames: return
+            ws = wb[mode]
+            
+            rows = list(ws.iter_rows(values_only=True))
+            if len(rows) <= 1: return
+            
+            headers = rows[0]
+            col_idx = {h: i for i, h in enumerate(headers)}
+            
+            # 必要な列があるか確認 (新フォーマット)
+            if "発生日時" not in col_idx or "対応日数(営業日)" not in col_idx:
+                # 旧フォーマットの場合の計算は省略するか、対応させる
+                return
+
+            now = datetime.datetime.now()
+            current_month_str = now.strftime("%Y/%m")
+            
+            total_count = 0
+            within_3_days_count = 0
+            
+            for r in rows[1:]:
+                # 発生日時から月を判定
+                dt_val = str(r[col_idx["発生日時"]] or "")
+                if dt_val.startswith(current_month_str):
+                    # 完了しているもの（終了日時があるもの）を対象にする
+                    if r[col_idx["終了日時"]]:
+                        total_count += 1
+                        try:
+                            # 営業日数を取得
+                            # Excelで計算される前の可能性があるので、Pythonでも簡易計算する
+                            # NETWORKDAYS.INTL(..., 11)相当
+                            start_str = r[col_idx["発生日時"]]
+                            end_str = r[col_idx["終了日時"]]
+                            t1 = datetime.datetime.strptime(start_str.split(" ")[0], "%Y/%m/%d")
+                            t2 = datetime.datetime.strptime(end_str.split(" ")[0], "%Y/%m/%d")
+                            
+                            # 簡易的な営業日数（日曜除き）
+                            days = 0
+                            curr = t1
+                            while curr <= t2:
+                                if curr.weekday() != 6: # 6 is Sunday
+                                    days += 1
+                                curr += datetime.timedelta(days=1)
+                            
+                            if days <= 3:
+                                within_3_days_count += 1
+                        except:
+                            # 数式が既に計算されている場合はそれを使う
+                            biz_val = r[col_idx["対応日数(営業日)"]]
+                            if isinstance(biz_val, (int, float)) and biz_val <= 3:
+                                within_3_days_count += 1
+
+            if total_count > 0:
+                rate = (within_3_days_count / total_count) * 100
+                color = "#28a745" if rate >= 97 else "#d9534f" # 達成なら緑、未達なら赤
+                self.lbl_kpi.config(
+                    text=f"【今月の実績】 3営業日以内対応率: {rate:.1f}% ({within_3_days_count}/{total_count})",
+                    foreground=color
+                )
+        except Exception as e:
+            print(f"KPI calculation error: {e}")
 
     def on_mode_change(self, event=None):
         self.current_row_idx = None
@@ -582,22 +658,43 @@ class UnifiedApp:
         self.inputs = {}
         self.start_dt = None
         
-        # Time Entry
-        time_frame = tk.LabelFrame(f, text="時刻設定", bg="#f0f2f5", padx=5, pady=5)
+        # Time Entry (発生日時 / 終了日時)
+        time_frame = tk.LabelFrame(f, text="日時設定", bg="#f0f2f5", padx=5, pady=5)
         time_frame.pack(fill=tk.X, pady=5)
         
         now = datetime.datetime.now()
-        ttk.Label(time_frame, text="開始:").pack(side=tk.LEFT)
-        self.inputs["start_time"] = ttk.Entry(time_frame, width=8)
+        
+        # 発生日時
+        row_start = ttk.Frame(time_frame); row_start.pack(fill=tk.X, pady=2)
+        ttk.Label(row_start, text="発生日時:").pack(side=tk.LEFT)
+        self.inputs["start_date"] = ttk.Entry(row_start, width=12)
+        self.inputs["start_date"].insert(0, now.strftime("%Y/%m/%d"))
+        self.inputs["start_date"].pack(side=tk.LEFT, padx=5)
+        self.inputs["start_time"] = ttk.Entry(row_start, width=8)
         self.inputs["start_time"].insert(0, now.strftime("%H:%M"))
-        self.inputs["start_time"].pack(side=tk.LEFT, padx=5)
+        self.inputs["start_time"].pack(side=tk.LEFT, padx=2)
         
-        ttk.Label(time_frame, text="終了:").pack(side=tk.LEFT)
-        self.inputs["end_time"] = ttk.Entry(time_frame, width=8)
-        self.inputs["end_time"].insert(0, now.strftime("%H:%M"))
-        self.inputs["end_time"].pack(side=tk.LEFT, padx=5)
+        ttk.Button(row_start, text="👔履歴", width=7, command=self.open_history).pack(side=tk.RIGHT, padx=2)
+
+        # 終了日時
+        row_end = ttk.Frame(time_frame); row_end.pack(fill=tk.X, pady=2)
+        ttk.Label(row_end, text="終了日時:").pack(side=tk.LEFT)
+        self.inputs["end_date"] = ttk.Entry(row_end, width=12)
+        # 初期状態は空か当日か選べるが、完了時に入力する運用なら空でも良い。
+        # ユーザーの利便性を考え、とりあえず当日を入れておき、ステータスが完了でないなら消す運用にするか、
+        # あるいは「今完了」ボタンを付ける。
+        self.inputs["end_date"].pack(side=tk.LEFT, padx=5)
+        self.inputs["end_time"] = ttk.Entry(row_end, width=8)
+        self.inputs["end_time"].pack(side=tk.LEFT, padx=2)
         
-        ttk.Button(time_frame, text="👔履歴", width=7, command=self.open_history).pack(side=tk.RIGHT, padx=2)
+        def set_now():
+            curr = datetime.datetime.now()
+            self.inputs["end_date"].delete(0, tk.END)
+            self.inputs["end_date"].insert(0, curr.strftime("%Y/%m/%d"))
+            self.inputs["end_time"].delete(0, tk.END)
+            self.inputs["end_time"].insert(0, curr.strftime("%H:%M"))
+
+        ttk.Button(row_end, text="今完了", width=7, command=set_now).pack(side=tk.LEFT, padx=5)
 
         # Grid settings
         grid_f = ttk.Frame(f); grid_f.pack(fill=tk.X, pady=5)
@@ -633,15 +730,10 @@ class UnifiedApp:
         self.inputs["imp"] = ttk.Combobox(grid_f, values=self.config.get("helpdesk_importance", []), width=12)
         self.inputs["imp"].grid(row=2, column=3, padx=5, pady=2)
 
-        # Row 3: ステータス / 終了予定日
+        # Row 3: ステータス
         ttk.Label(grid_f, text="ステータス:").grid(row=3, column=0, sticky=tk.W, pady=2)
         self.inputs["status"] = ttk.Combobox(grid_f, values=self.config.get("status_list", []), width=12)
         self.inputs["status"].grid(row=3, column=1, padx=5, pady=2)
-
-        ttk.Label(grid_f, text="終了予定日:").grid(row=3, column=2, sticky=tk.W, pady=2)
-        self.inputs["target_date"] = ttk.Entry(grid_f, width=15)
-        self.inputs["target_date"].insert(0, datetime.date.today().strftime("%Y/%m/%d"))
-        self.inputs["target_date"].grid(row=3, column=3, padx=5, pady=2)
 
         # Texts
         text_fields = [("質問・事象", "problem", 6), ("対応内容", "solution", 6)]
@@ -741,27 +833,41 @@ class UnifiedApp:
                 self.inputs[key].insert("1.0", d.get(col, "") or "")
                 
         elif mode == MODES[1]: # ヘルプデスク
-            self.inputs["category"].set(g("1.分類"))
-            self.inputs["genre"].set(g("9.ジャンル"))
-            self.inputs["dept2"].set(g("10.依頼部署"))
+            self.inputs["category"].set(g("分類"))
+            self.inputs["genre"].set(g("ジャンル"))
+            self.inputs["dept2"].set(g("依頼部署"))
             self.update_sections_m2()
-            self.inputs["sect2"].set(g("11.依頼課"))
+            self.inputs["sect2"].set(g("依頼部署(課)"))
             self.inputs["client"].delete(0, tk.END)
-            self.inputs["client"].insert(0, g("12.依頼主"))
-            self.inputs["imp"].set(g("13.重要度"))
-            self.inputs["status"].set(g("14.ステータス"))
+            self.inputs["client"].insert(0, g("依頼主"))
+            self.inputs["imp"].set(g("重要度"))
+            self.inputs["status"].set(g("ステータス"))
             self.inputs["problem"].delete("1.0", tk.END)
             # 新旧両方のヘッダー名に対応
-            problem = d.get("15.質問・事象") or d.get("15.質問事象・作業内容") or ""
-            self.inputs["problem"].insert("1.0", g("15.質問・事象") or g("15.質問事象・作業内容"))
+            problem = d.get("問題事象・作業内容") or d.get("15.質問・事象") or d.get("15.質問事象・作業内容") or ""
+            self.inputs["problem"].insert("1.0", problem)
             self.inputs["solution"].delete("1.0", tk.END)
-            self.inputs["solution"].insert("1.0", g("16.対応内容"))
-            self.inputs["start_time"].delete(0, tk.END)
-            self.inputs["start_time"].insert(0, g("4.発生時刻"))
-            self.inputs["end_time"].delete(0, tk.END)
-            self.inputs["end_time"].insert(0, g("5.終了時刻"))
-            self.inputs["target_date"].delete(0, tk.END)
-            self.inputs["target_date"].insert(0, g("7.終了予定"))
+            self.inputs["solution"].insert("1.0", g("対応内容") or g("16.対応内容"))
+            
+            # 日時をパース
+            start_full = g("発生日時") or f"{g('3.日付')} {g('4.発生時刻')}".strip()
+            if " " in start_full:
+                sd, st = start_full.split(" ", 1)
+                self.inputs["start_date"].delete(0, tk.END)
+                self.inputs["start_date"].insert(0, sd)
+                self.inputs["start_time"].delete(0, tk.END)
+                self.inputs["start_time"].insert(0, st)
+            
+            end_full = g("終了日時") or f"{g('8.完了日付')} {g('5.終了時刻')}".strip()
+            if " " in end_full:
+                ed, et = end_full.split(" ", 1)
+                self.inputs["end_date"].delete(0, tk.END)
+                self.inputs["end_date"].insert(0, ed)
+                self.inputs["end_time"].delete(0, tk.END)
+                self.inputs["end_time"].insert(0, et)
+            else:
+                self.inputs["end_date"].delete(0, tk.END)
+                self.inputs["end_time"].delete(0, tk.END)
             
         elif mode == MODES[2]: # 保守
             self.inputs["subject"].delete(0, tk.END)
@@ -818,7 +924,7 @@ class UnifiedApp:
                     if m == MODES[0]:
                         ws_new.append(["No", "依頼日", "依頼部署", "課題件名", "課題内容", "対応内容", "期限", "状況", "備考", "進捗", "効果", "年度"])
                     elif m == MODES[1]:
-                        ws_new.append(["No", "1.分類", "2.担当者", "3.日付", "4.発生時刻", "5.終了時刻", "6.実作業時間", "7.終了予定", "8.完了日付", "9.ジャンル", "10.依頼部署", "11.依頼課", "12.依頼主", "13.重要度", "14.ステータス", "15.質問・事象", "16.対応内容"])
+                        ws_new.append(["No", "分類", "担当者", "発生日時", "終了日時", "対応日数(営業日)", "実作業時間", "ジャンル", "依頼部署", "依頼部署(課)", "依頼主", "重要度", "ステータス", "問題事象・作業内容", "対応内容"])
                     elif m == MODES[2]:
                         ws_new.append(["No", "課題件名", "背景", "対応内容", "開始日", "終了日", "状況", "備考", "進捗"])
             else:
@@ -850,30 +956,45 @@ class UnifiedApp:
                     str(now.year) if now.month >= 4 else str(now.year - 1)
                 ]
             elif mode == MODES[1]:
-                start_t = self.inputs["start_time"].get()
-                end_t = self.inputs["end_time"].get()
+                start_date = self.inputs["start_date"].get()
+                start_time = self.inputs["start_time"].get()
+                end_date = self.inputs["end_date"].get()
+                end_time = self.inputs["end_time"].get()
                 
+                # 日時を結合 (Excel形式で認識されやすいように)
+                try:
+                    occurrence_dt = f"{start_date} {start_time}"
+                    completion_dt = f"{end_date} {end_time}" if end_date and end_time else ""
+                except:
+                    occurrence_dt = ""
+                    completion_dt = ""
+
                 duration_str = ""
                 try:
-                    t1 = datetime.datetime.strptime(start_t, "%H:%M")
-                    t2 = datetime.datetime.strptime(end_t, "%H:%M")
-                    diff = t2 - t1
-                    mins = int(diff.total_seconds() / 60)
-                    if mins < 0: mins += 1440
-                    duration_str = f"{mins}分"
+                    t1 = datetime.datetime.strptime(f"{start_date} {start_time}", "%Y/%m/%d %H:%M")
+                    if end_date and end_time:
+                        t2 = datetime.datetime.strptime(f"{end_date} {end_time}", "%Y/%m/%d %H:%M")
+                        diff = t2 - t1
+                        mins = int(diff.total_seconds() / 60)
+                        if mins < 0: mins = 0
+                        duration_str = f"{mins}分"
                 except:
                     pass
+
+                # 計算式の行番号
+                row_num = next_no + 1 if not update else self.current_row_idx
+                # 営業日数計算式 (NETWORKDAYS.INTL の 11 は日曜日のみ休み = 土曜日は営業日)
+                # D列:発生日時, E列:終了日時
+                biz_days_formula = f'=IF($E{row_num}="", "", NETWORKDAYS.INTL($D{row_num}, $E{row_num}, 11))'
 
                 data = [
                     next_no if not update else self.current_row_idx - 1,
                     self.inputs["category"].get(),
                     self.config.get("user_name", ""),
-                    now.strftime("%Y/%m/%d"),
-                    start_t,
-                    end_t,
+                    occurrence_dt,
+                    completion_dt,
+                    biz_days_formula,
                     duration_str,
-                    self.inputs["target_date"].get(),
-                    now.strftime("%Y/%m/%d"),
                     self.inputs["genre"].get(),
                     self.inputs["dept2"].get(),
                     self.inputs["sect2"].get(),
@@ -908,6 +1029,9 @@ class UnifiedApp:
 
             wb.save(path)
             messagebox.showinfo("完了", msg)
+            
+            # 保存後はKPIを更新
+            self.update_kpi()
             
             # 保存後は状態をリセット
             self.on_mode_change()
