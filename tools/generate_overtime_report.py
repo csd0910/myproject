@@ -180,35 +180,29 @@ def generate_summary_with_ai(log_df, col_title, col_path, is_early=False, is_ove
     max_retries = 3
     for attempt in range(max_retries):
         try:
+            print(f"    [Gemini API] 生成リクエスト送信中 (gemini-2.5-flash) - 試行 {attempt + 1}/{max_retries}...")
             response = client.models.generate_content(
-                model='gemini-2.5-flash',
+                model="gemini-2.5-flash",
                 contents=prompt
             )
-            text = response.text
-            
-            details, summary = "詳細のパースに失敗しました。", "サマリーのパースに失敗しました。"
-            if "■作業詳細" in text and "■サマリー" in text:
-                parts = text.split("■サマリー")
+            full_text = response.text
+            if "■サマリー" in full_text:
+                parts = full_text.split("■サマリー")
                 details = parts[0].replace("■作業詳細", "").strip()
                 summary = parts[1].strip()
-            else:
-                summary = text.strip()
-                
-            return details, summary
+                return details, summary
+            return "（詳細生成失敗）", full_text
             
         except Exception as e:
-            if '429' in str(e) or 'RESOURCE_EXHAUSTED' in str(e):
-                print(f"  -> [API制限] Gemini APIの無料枠制限（回数上限）に達しました。AI生成をスキップします。")
-                return "AI生成スキップ（API制限到達）", "API利用制限により要約を生成できませんでした。"
-            elif '503' in str(e) or 'UNAVAILABLE' in str(e):
+            err_msg = str(e).upper()
+            # 503 (UNAVAILABLE) や 429 (RESOURCE_EXHAUSTED) の場合にリトライ
+            if any(code in err_msg for code in ["503", "UNAVAILABLE", "429", "RESOURCE_EXHAUSTED", "QUOTA"]):
                 if attempt < max_retries - 1:
-                    print(f"  -> [API混雑] サーバー混雑のため、5秒待機して再実行します... (試行 {attempt+1}/{max_retries})")
-                    time.sleep(5)
-                else:
-                    return "AI生成エラー: サーバー混雑", "現在AIサーバーが非常に混雑しています。"
-            else:
-                print(f"  -> [APIエラー詳細] {e}")
-                return f"AI生成エラー: {str(e)}", "エラーのため生成できませんでした"
+                    wait_time = (attempt + 1) * 5
+                    print(f"      -> [API混雑] サーバーが混雑しています。{wait_time}秒後に再試行します...")
+                    time.sleep(wait_time)
+                    continue
+            return f"AI生成エラー: {e}", "要約の生成中にエラーが発生しました。時間を置いて再度お試しください。"
 
 # ---------------------------------------------------------
 # メイン処理（レポート一括生成）
@@ -382,6 +376,17 @@ def generate_reports(excel_path, csv_paths, output_dir):
                 if not day_logs.empty:
                     flags.append("【システム稼働判定】PCの起動は確認されましたが、人間による実操作（ログタイトルあり）は確認されませんでした。更新処理等の可能性があります。")
             
+            # --- 打刻表示用テキストの準備 (AIサマリーでも使用) ---
+            yobi = ["月", "火", "水", "木", "金", "土", "日"][row['日付_master'].weekday()]
+            is_holiday = ('休' in shift_info)
+            start_time_display = start_str if start_str and start_str != 'nan' else "記録なし"
+            if end_str and end_str != 'nan':
+                end_time_display = end_str
+            elif is_holiday:
+                end_time_display = "休日"
+            else:
+                end_time_display = "記録なし"
+
             print(f"    [{date_str}] Gemini APIでAIサマリーを生成中... (監査対象)")
             pc_on_str = row['PC電源ON'].strftime('%H:%M:%S')
             pc_off_str = row['PC電源OFF'].strftime('%H:%M:%S')
@@ -395,16 +400,6 @@ def generate_reports(excel_path, csv_paths, output_dir):
             doc = Document()
             title_p = doc.add_heading('残業調査報告書', 0)
             title_p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-            
-            yobi = ["月", "火", "水", "木", "金", "土", "日"][row['日付_master'].weekday()]
-            
-            is_holiday = ('休' in shift_info)
-            if end_str and end_str != 'nan':
-                end_time_display = end_str
-            elif is_holiday:
-                end_time_display = "休日"
-            else:
-                end_time_display = "記録なし"
 
             calc_start = row['PC電源ON']
             calc_end = row['PC電源OFF']
@@ -423,9 +418,7 @@ def generate_reports(excel_path, csv_paths, output_dir):
             doc.add_paragraph(f"{row['日付_master'].strftime('%Y/%m/%d')}（{yobi}）")
             
             # 打刻情報の表示
-            start_time_display = start_str if start_str and start_str != 'nan' else "記録なし"
             doc.add_paragraph(f"出勤打刻時間：{start_time_display}")
-                
             doc.add_paragraph(f"退勤打刻時間：{end_time_display}")
             doc.add_paragraph(f"PCの稼働：{row['PC電源ON'].strftime('%H:%M')} ～ {row['PC電源OFF'].strftime('%H:%M')}（最終）")
             
