@@ -23,3 +23,7 @@ dist/
 *.mbox
 *.txt
 !tools/TEST/pdf_extract.txt
+# Installer binaries
+WindowsKittingTool/インストーラー/*
+*.exe
+*.msi

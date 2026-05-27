@@ -15,6 +15,9 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
+import nas_logger
+NASLogger = nas_logger.NASLogger
+
 class CybozuEmailExporterApp:
     def __init__(self, root):
         self.root = root
@@ -143,17 +146,39 @@ class CybozuEmailExporterApp:
         time.sleep(random.uniform(0.1, 0.3))
 
     def _extraction_loop(self, save_dir):
+        start_time = time.time()
         try:
             # ページタイトル（フォルダ名）に大量の改行や空白が含まれる場合があるため綺麗にする
             raw_title = self.driver.title
+            
+            # 【新規追加】左側のフォルダツリーから、現在選択されている（太字 <b> になっている）フォルダ名を取得する
+            try:
+                # 受信箱（inbox16.png）や個別フォルダ（folder16.png）など画像名が変わっても対応できるよう、
+                # 「左ペイン(td[1])の中で、アイコン画像(img)を含む太字(b)」を条件に検索します。
+                folder_element = self.driver.find_element(By.XPATH, "//td[1]//span/b[img]")
+                if folder_element.text.strip():
+                    raw_title = folder_element.text.strip()
+            except Exception:
+                try:
+                    # ユーザー指定の絶対パスでもフォールバックとして検索
+                    folder_element = self.driver.find_element(By.XPATH, "/html/body/div[2]/div[4]/div/table/tbody/tr/td/table/tbody/tr/td[1]/div/div/div/div/div/table/tbody/tr/td[2]/span/b")
+                    if folder_element.text.strip():
+                        raw_title = folder_element.text.strip()
+                except Exception:
+                    pass
+            
             folder_name = re.sub(r'[\r\n]', '', raw_title)
             folder_name = re.sub(r'[\\/:*?"<>|]', '_', folder_name)
             folder_name = re.sub(r'\s+', ' ', folder_name).strip()
             
+            # 【新規追加】抽出元のフォルダ名で専用の保存先フォルダを自動作成
+            target_save_dir = os.path.join(save_dir, folder_name)
+            os.makedirs(target_save_dir, exist_ok=True)
+            
             self.status_var.set("ステータス: 抽出を開始しました（月別一覧と個別ファイルに保存します）。")
             
             # --- 差分スキップ用の履歴管理 ---
-            history_file = os.path.join(save_dir, f"{folder_name}_抽出済み履歴.txt")
+            history_file = os.path.join(target_save_dir, f"{folder_name}_抽出済み履歴.txt")
             processed_items = set()
             if os.path.exists(history_file):
                 with open(history_file, "r", encoding="utf-8") as f:
@@ -163,6 +188,10 @@ class CybozuEmailExporterApp:
             extracted_count = 0
             skipped_count = 0
             has_next_page = True
+            
+            # --- リアルなROI算出のための統計変数 ---
+            total_char_count = 0
+            total_comment_count = 0
             
             # --- 抽出ロジック（XPath適用）---
             mail_link_selector_xpath = "/html/body/div[2]/div[4]/div/table/tbody/tr/td/table/tbody/tr/td[3]/div/div/form/table/tbody/tr/td[3]/a"
@@ -256,6 +285,12 @@ class CybozuEmailExporterApp:
                         # 本文もコメントもすべて含めるため、親のtd要素（tr[2]/td）の中身を丸ごと取得します
                         body_element = self.driver.find_element(By.XPATH, "/html/body/div[2]/div[4]/div/table/tbody/tr/td/table/tbody/tr[2]/td")
                         body = body_element.text
+                        
+                        # 統計の加算（文字数とコメント数）
+                        total_char_count += len(body)
+                        comments_found = re.findall(r'^(\d+)\s*:\s*\n+([^\n]+)\s*\n+(\d{4}/\d{1,2}/\d{1,2}[^\n]+)', body, flags=re.MULTILINE)
+                        total_comment_count += len(comments_found)
+                        
                     except Exception:
                         body = "本文の取得に失敗（要素不一致）"
                     
@@ -263,7 +298,7 @@ class CybozuEmailExporterApp:
                         continue
 
                     # データの保存（月別CSV ＆ スレッド別TXT）
-                    self._save_data(save_dir, folder_name, subject, sender, date_str, body)
+                    self._save_data(target_save_dir, folder_name, subject, sender, date_str, body)
                     
                     # 履歴ファイルに記録（再開時の完全スキップ用）
                     processed_items.add(item_key)
@@ -315,10 +350,38 @@ class CybozuEmailExporterApp:
             if self.is_extracting:
                 self.status_var.set(f"完了: 合計 {extracted_count} 件のメールを保存・結合しました。")
                 
+            elapsed_time = time.time() - start_time
+                
+            # --- NASへの使用状況ログ送信（バックグラウンド実行） ---
+            try:
+                if NASLogger and extracted_count > 0:
+                    nas_path = r"\\10.85.33.230\01_全社共有\システム統括部\業改室\★大宮システム部\（NAS）伊藤\サイボウズ社内メール抽出使用状況"
+                    logger = NASLogger(nas_path, "frt_user", "Forest0720@")
+                    logger.log_usage(extracted_count, elapsed_time, total_char_count, total_comment_count)
+            except Exception:
+                pass
+
+                
         except Exception as e:
             err_msg = traceback.format_exc()
             print(err_msg)  # コンソールに詳細エラーを出す
             self.status_var.set(f"エラー終了: {str(e)}")
+            
+            # --- ローカルへエラーログを保存 ---
+            try:
+                with open("error_log.txt", "a", encoding="utf-8") as f:
+                    f.write(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] エラー発生:\n{err_msg}\n{'-'*50}\n")
+            except Exception:
+                pass
+                
+            # --- NASへエラーログを送信 ---
+            try:
+                if NASLogger:
+                    nas_path = r"\\10.85.33.230\01_全社共有\システム統括部\業改室\★大宮システム部\（NAS）伊藤\サイボウズ社内メール抽出使用状況"
+                    logger = NASLogger(nas_path, "frt_user", "Forest0720@")
+                    logger.log_error(err_msg)
+            except Exception:
+                pass
         finally:
             self.is_extracting = False
             self.root.after(0, lambda: self.btn_extract.config(state=tk.NORMAL))
