@@ -175,25 +175,28 @@ def step1_create_submission_list(csv_paths, master_path, output_dir):
                     
                     try:
                         dt = pd.to_datetime(dt_val)
-                        date_str = dt.strftime('%Y/%m/%d')
-                        time_str = dt.strftime('%H:%M:%S')
+                        # 翌日朝9:00までのログは前日の日付として扱う
+                        logical_dt = dt - pd.Timedelta(hours=9)
+                        date_str = logical_dt.strftime('%Y/%m/%d')
                         key = (date_str, comp_name)
                         
                         if key not in results:
-                            results[key] = ["", ""]
+                            results[key] = [None, None]
                             
                         if "電源ON" in op_type:
-                            if results[key][0] == "" or time_str < results[key][0]:
-                                results[key][0] = time_str
+                            if results[key][0] is None or dt < results[key][0]:
+                                results[key][0] = dt
                         elif "電源OFF" in op_type:
-                            if results[key][1] == "" or time_str > results[key][1]:
-                                results[key][1] = time_str
+                            if results[key][1] is None or dt > results[key][1]:
+                                results[key][1] = dt
                     except:
                         pass
         
         print("出力データを構築中...")
         output_data = []
-        for (date_str, comp_name), (time_on, time_off) in results.items():
+        for (date_str, comp_name), (time_on_dt, time_off_dt) in results.items():
+            time_on = time_on_dt.strftime('%H:%M:%S') if time_on_dt is not None else ""
+            time_off = time_off_dt.strftime('%H:%M:%S') if time_off_dt is not None else ""
             term_name = dict_terminal.get(comp_name, "(未登録)")
             dept_name = dict_dept.get(comp_name, "-")
             output_data.append([date_str, term_name, comp_name, dept_name, time_on, time_off])
@@ -283,7 +286,8 @@ def step2_generate_reports(excel_path, csv_paths, output_dir):
         try:
             df_log['日時'] = pd.to_datetime(df_log[col_datetime])
             df_log = df_log.sort_values('日時').reset_index(drop=True)
-            df_log['日付_log'] = df_log['日時'].dt.normalize()
+            # 翌朝9:00までのログを前日扱いにする
+            df_log['日付_log'] = (df_log['日時'] - pd.Timedelta(hours=9)).dt.normalize()
             
             df_log['次ログ日時'] = df_log['日時'].shift(-1)
             df_log['次ログ日付'] = df_log['日付_log'].shift(-1)
