@@ -144,53 +144,11 @@ def generate_summary_with_ai(log_df, col_title, col_path):
 
 
 # =========================================================
-# STEP-1: 生ログの個人別分割（クレンジング）
+# 【STEP-1】: 管理部提出用シートの作成 (VBA代替機能)
 # =========================================================
-def step1_split_logs(log_path, master_path, output_dir):
+def step1_create_submission_list(csv_paths, master_path, output_dir):
     try:
-        print("台帳を読み込んで氏名マッピングを作成しています...")
-        df_master = load_master_safe(master_path)
-        dict_terminal = {}
-        for _, row in df_master.iterrows():
-            if len(row) > 4:
-                comp_name = str(row.iloc[4]).strip().upper() # E列
-                if comp_name and comp_name != 'NAN':
-                    # D列の端末名(氏名)から空白を取り除いてクリーンにする
-                    dict_terminal[comp_name] = str(row.iloc[3]).replace(' ', '').replace('　', '') if len(row) > 3 else "不明"
-        
-        print("SKYSEA生ログを読み込んでいます...")
-        df_log = load_csv_safely(log_path)
-        
-        # ログに「氏名」を紐づける
-        def get_name(comp):
-            c = str(comp).strip().upper()
-            return dict_terminal.get(c, "台帳未登録_" + c)
-            
-        df_log['氏名_クレンジング用'] = df_log.iloc[:, 1].apply(get_name)
-        
-        print("氏名ごとに分割してCSVを出力しています...")
-        grouped = df_log.groupby('氏名_クレンジング用')
-        count = 0
-        for name, group in grouped:
-            if "台帳未登録_NAN" in name.upper() or not name:
-                continue
-            out_filename = f"{name}_クレンジング済ログ.csv"
-            out_filepath = os.path.join(output_dir, out_filename)
-            group.drop(columns=['氏名_クレンジング用']).to_csv(out_filepath, index=False, encoding='cp932', errors='ignore')
-            count += 1
-            print(f"  -> 保存: {out_filename}")
-            
-        messagebox.showinfo("STEP-1 完了", f"ログの個人別分割が完了しました！\n合計 {count} 名分のCSVファイルを出力しました。\n\n出力先: {output_dir}")
-        
-    except Exception as e:
-        messagebox.showerror("エラー", f"処理中にエラーが発生しました:\n{e}")
-
-# =========================================================
-# STEP-2: 管理部提出用一覧表の作成 (VBA代替)
-# =========================================================
-def step2_create_submission_list(csv_paths, master_path, output_dir):
-    try:
-        print("台帳を読み込んでいます...")
+        print("管理コンソール(台帳)を読み込んでいます...")
         df_master = load_master_safe(master_path)
         
         dict_terminal = {}
@@ -199,18 +157,18 @@ def step2_create_submission_list(csv_paths, master_path, output_dir):
             if len(row) > 4:
                 comp_name = str(row.iloc[4]).strip().upper() # E列: コンピューター名
                 if comp_name and comp_name != 'NAN':
-                    dict_terminal[comp_name] = str(row.iloc[3]) if len(row) > 3 else "" # D列: 端末機名
+                    dict_terminal[comp_name] = str(row.iloc[3]) if len(row) > 3 else "" # D列: 端末機名(氏名)
                     dict_dept[comp_name] = str(row.iloc[9]) if len(row) > 9 else ""     # J列: 部署名
         
-        print("分割済みCSVから電源ON/OFF時間を抽出中...")
+        print("SKYSEAログから電源ON/OFF時間を抽出中...")
         results = {}
         for csv_path in csv_paths:
             df_log = load_csv_safely(csv_path)
             for _, row in df_log.iterrows():
                 if len(row) > 11:
-                    dt_val = str(row.iloc[6]).strip()     # G列: 日時
+                    dt_val = str(row.iloc[6]).strip()            # G列: 日時
                     comp_name = str(row.iloc[1]).strip().upper() # B列: コンピューター名
-                    op_type = str(row.iloc[11])           # L列: 操作種別
+                    op_type = str(row.iloc[11])                  # L列: 操作種別
                     
                     if not dt_val or dt_val.lower() == 'nan' or not comp_name or comp_name.lower() == 'nan':
                         continue
@@ -236,11 +194,12 @@ def step2_create_submission_list(csv_paths, master_path, output_dir):
         print("出力データを構築中...")
         output_data = []
         for (date_str, comp_name), (time_on, time_off) in results.items():
-            term_name = dict_terminal.get(comp_name, "(台帳未登録)")
+            term_name = dict_terminal.get(comp_name, "(未登録)")
             dept_name = dict_dept.get(comp_name, "-")
             output_data.append([date_str, term_name, comp_name, dept_name, time_on, time_off])
             
         df_out = pd.DataFrame(output_data, columns=["日付", "端末機名", "コンピューター名", "部署名", "電源ON時間", "電源OFF時間"])
+        # VBAの書き出しに近い形でソート（日付・コンピューター名など）
         df_out = df_out.sort_values(by=["日付", "部署名", "コンピューター名"])
         
         out_filename = f"管理部提出用リスト_{time.strftime('%Y%m%d%H%M%S')}.xlsx"
@@ -255,6 +214,7 @@ def step2_create_submission_list(csv_paths, master_path, output_dir):
         for cell in ws[1]:
             cell.fill = fill_color
         
+        # 列幅の自動調整
         for col in ws.columns:
             max_length = 0
             column = col[0].column_letter
@@ -265,15 +225,15 @@ def step2_create_submission_list(csv_paths, master_path, output_dir):
             ws.column_dimensions[column].width = (max_length + 2)
 
         wb.save(out_filepath)
-        messagebox.showinfo("STEP-2 完了", f"【管理部提出用リスト(Excel)】を作成しました！\nまずはこのファイルを管理部へ提出してください。\n\n出力先: {out_filepath}")
+        messagebox.showinfo("STEP-1 完了", f"VBAと同じ動作で【管理部提出用シート】を作成しました！\nまずはこのファイルを提出してください。\n\n出力先: {out_filepath}")
         
     except Exception as e:
         messagebox.showerror("エラー", f"処理中にエラーが発生しました:\n{e}")
 
 # =========================================================
-# STEP-3: 残業調査報告書の自動生成 (従来の機能)
+# 【STEP-2】: 残業調査報告書の自動生成 (従来の機能)
 # =========================================================
-def step3_generate_reports(excel_path, csv_paths, output_dir):
+def step2_generate_reports(excel_path, csv_paths, output_dir):
     print("提出用シート(勤怠マスタ)の読み込みを開始します（色の解析中...）")
     
     audit_targets = get_audit_target_dates(excel_path)
@@ -421,7 +381,7 @@ def step3_generate_reports(excel_path, csv_paths, output_dir):
             time.sleep(1)
 
     print("\n全ての処理が完了しました！")
-    messagebox.showinfo("STEP-3 完了", "すべてのWord報告書の生成が完了しました！")
+    messagebox.showinfo("STEP-2 完了", "すべてのWord報告書の生成が完了しました！")
 
 # =========================================================
 # GUI 統合アプリケーション
@@ -430,64 +390,46 @@ class OvertimeSystemApp_V2:
     def __init__(self, root):
         self.root = root
         self.root.title("残業調査 オールインワンシステム Ver.2")
-        self.root.geometry("650x380")
+        self.root.geometry("600x300")
         self.root.attributes('-topmost', True)
         
         tk.Label(root, text="監査業務 オールインワン処理メニュー", font=("Meiryo", 14, "bold")).pack(pady=15)
         
-        btn1 = tk.Button(root, text="STEP-1: 生ログから個人別CSVにクレンジング＆分割", command=self.run_step1, width=60, height=2, bg="#e0f7fa", font=("Meiryo", 10))
-        btn1.pack(pady=8)
+        btn1 = tk.Button(root, text="STEP-1: 【管理部提出用シート】の自動作成 (VBA完全代替)", command=self.run_step1, width=55, height=2, bg="#e0f7fa", font=("Meiryo", 10))
+        btn1.pack(pady=10)
         
-        btn2 = tk.Button(root, text="STEP-2: 【管理部提出用シート】の作成 (ON/OFF一覧)", command=self.run_step2, width=60, height=2, bg="#fff9c4", font=("Meiryo", 10))
-        btn2.pack(pady=8)
-        
-        btn3 = tk.Button(root, text="STEP-3: 返却リストから残業調査報告書(Word)の自動生成", command=self.run_step3, width=60, height=2, bg="#fce4ec", font=("Meiryo", 10))
-        btn3.pack(pady=8)
+        btn2 = tk.Button(root, text="STEP-2: 残業調査報告書(Word)の自動生成", command=self.run_step2, width=55, height=2, bg="#fce4ec", font=("Meiryo", 10))
+        btn2.pack(pady=10)
 
     def run_step1(self):
-        messagebox.showinfo("STEP-1", "【1/3】SKYSEAから抽出した巨大な「生ログ(CSV)」を選択してください。")
-        log_csv = filedialog.askopenfilename(title="SKYSEA生ログ(CSV)", filetypes=[("CSV", "*.csv")])
+        messagebox.showinfo("STEP-1", "【1/3】SKYSEAから抽出した「生ログ(CSV/Excel)」を選択してください。(複数可)")
+        log_csv = filedialog.askopenfilenames(title="SKYSEA生ログ", filetypes=[("ログファイル", "*.csv *.xlsx *.xls")])
         if not log_csv: return
         
         messagebox.showinfo("STEP-1", "【2/3】「管理コンソールメイン画面(台帳)」のファイルを選択してください。")
         master_excel = filedialog.askopenfilename(title="管理コンソール台帳", filetypes=[("Excel/CSV", "*.xlsx *.xls *.csv")])
         if not master_excel: return
         
-        messagebox.showinfo("STEP-1", "【3/3】分割した個人別CSVを保存するフォルダを選択してください。")
+        messagebox.showinfo("STEP-1", "【3/3】完成した「管理部提出用リスト」を保存するフォルダを選択してください。")
         out_dir = filedialog.askdirectory(title="出力先フォルダ")
         if not out_dir: return
         
-        step1_split_logs(log_csv, master_excel, out_dir)
+        step1_create_submission_list(log_csv, master_excel, out_dir)
 
     def run_step2(self):
-        messagebox.showinfo("STEP-2", "【1/3】STEP-1で分割した「個人別CSV」をすべて選択してください。(複数選択可)\n※生ログを指定することも可能です。")
-        csvs = filedialog.askopenfilenames(title="PC操作ログ(CSV)", filetypes=[("CSV", "*.csv")])
-        if not csvs: return
-        
-        messagebox.showinfo("STEP-2", "【2/3】「管理コンソールメイン画面(台帳)」のファイルを選択してください。")
-        master_excel = filedialog.askopenfilename(title="管理コンソール台帳", filetypes=[("Excel/CSV", "*.xlsx *.xls *.csv")])
-        if not master_excel: return
-        
-        messagebox.showinfo("STEP-2", "【3/3】完成した「管理部提出用リスト(Excel)」を保存するフォルダを選択してください。")
-        out_dir = filedialog.askdirectory(title="出力先フォルダ")
-        if not out_dir: return
-        
-        step2_create_submission_list(csvs, master_excel, out_dir)
-
-    def run_step3(self):
-        messagebox.showinfo("STEP-3", "【1/3】管理部から返却された「〇」印付きの提出用リスト(Excel)を選択してください。")
+        messagebox.showinfo("STEP-2", "【1/3】管理部から返却された「〇」印付きの提出用リスト(Excel)を選択してください。")
         master_excel = filedialog.askopenfilename(title="管理部返却済みリスト(Excel)", filetypes=[("Excel", "*.xlsx *.xls *.xlsm")])
         if not master_excel: return
         
-        messagebox.showinfo("STEP-3", "【2/3】対象者の「PC操作ログ(CSV)」を選択してください。(複数可)")
+        messagebox.showinfo("STEP-2", "【2/3】対象者の「PC操作ログ(CSV)」を選択してください。(複数可)")
         csvs = filedialog.askopenfilenames(title="PC操作ログ(CSV)", filetypes=[("CSV", "*.csv")])
         if not csvs: return
         
-        messagebox.showinfo("STEP-3", "【3/3】報告書(Word)を保存する「出力先フォルダ」を選択してください。")
+        messagebox.showinfo("STEP-2", "【3/3】報告書(Word)を保存する「出力先フォルダ」を選択してください。")
         out_dir = filedialog.askdirectory(title="出力先フォルダ")
         if not out_dir: return
         
-        step3_generate_reports(master_excel, csvs, out_dir)
+        step2_generate_reports(master_excel, csvs, out_dir)
 
 def main():
     root = tk.Tk()
