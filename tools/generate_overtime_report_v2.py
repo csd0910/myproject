@@ -61,10 +61,11 @@ def get_audit_target_dates(excel_path, sheet_name='管理部提出用'):
             
             if val in ['〇', '○', 'o', 'O', '丸', '対象']:
                 name_val = str(ws.cell(row=row_idx, column=name_col_idx).value or '').strip()
-                date_val = ws.cell(row=row_idx, column=date_col_idx).value
+                date_val = str(ws.cell(row=row_idx, column=date_col_idx).value or '').strip()
                 if name_val and date_val:
                     try:
-                        dt = pd.to_datetime(date_val).strftime('%m/%d')
+                        clean_date = date_val.split('（')[0].split('(')[0].strip()
+                        dt = pd.to_datetime(clean_date).strftime('%m/%d')
                         name_clean = name_val.replace(' ', '').replace('　', '').replace('社員', '')
                         targets.add((name_clean, dt))
                     except: pass
@@ -177,7 +178,8 @@ def step1_create_submission_list(csv_paths, master_path, output_dir):
                         dt = pd.to_datetime(dt_val)
                         # 翌日朝9:00までのログは前日の日付として扱う
                         logical_dt = dt - pd.Timedelta(hours=9)
-                        date_str = logical_dt.strftime('%Y/%m/%d')
+                        yobi = ["月", "火", "水", "木", "金", "土", "日"][logical_dt.weekday()]
+                        date_str = logical_dt.strftime('%Y/%m/%d') + f"（{yobi}）"
                         key = (date_str, comp_name)
                         
                         if key not in results:
@@ -272,7 +274,8 @@ def step2_generate_reports(excel_path, csv_paths, output_dir):
             continue
             
         date_col = find_col(df_target_master, ['日付'], 0)
-        df_target_master['日付_master'] = pd.to_datetime(df_target_master[date_col])
+        clean_dates = df_target_master[date_col].astype(str).str.split('（').str[0].str.split('(').str[0].str.strip()
+        df_target_master['日付_master'] = pd.to_datetime(clean_dates, errors='coerce')
         
         try: df_log = load_csv_safely(csv_path)
         except Exception as e:
