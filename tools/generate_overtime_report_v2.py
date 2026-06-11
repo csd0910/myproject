@@ -176,8 +176,8 @@ def step1_create_submission_list(csv_paths, master_path, output_dir):
                     
                     try:
                         dt = pd.to_datetime(dt_val)
-                        # 翌日朝9:00までのログは前日の日付として扱う
-                        logical_dt = dt - pd.Timedelta(hours=9)
+                        # 翌朝5:00までのログは前日の日付として扱う
+                        logical_dt = dt - pd.Timedelta(hours=5)
                         yobi = ["月", "火", "水", "木", "金", "土", "日"][logical_dt.weekday()]
                         date_str = logical_dt.strftime('%Y/%m/%d') + f"（{yobi}）"
                         key = (date_str, comp_name)
@@ -289,8 +289,8 @@ def step2_generate_reports(excel_path, csv_paths, output_dir):
         try:
             df_log['日時'] = pd.to_datetime(df_log[col_datetime])
             df_log = df_log.sort_values('日時').reset_index(drop=True)
-            # 翌朝9:00までのログを前日扱いにする
-            df_log['日付_log'] = (df_log['日時'] - pd.Timedelta(hours=9)).dt.normalize()
+            # 翌朝5:00までのログを前日扱いにする
+            df_log['日付_log'] = (df_log['日時'] - pd.Timedelta(hours=5)).dt.normalize()
             
             df_log['次ログ日時'] = df_log['日時'].shift(-1)
             df_log['次ログ日付'] = df_log['日付_log'].shift(-1)
