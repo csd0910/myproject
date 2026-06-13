@@ -27,3 +27,7 @@ dist/
 WindowsKittingTool/インストーラー/*
 *.exe
 *.msi
+
+scratch/*_temp
+scratch/activity_cache_*
+scratch/edge_*

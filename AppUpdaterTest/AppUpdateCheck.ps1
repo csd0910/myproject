@@ -1,13 +1,12 @@
 ﻿<#
 .SYNOPSIS
   AppUpdateCheck - システム運営課 アプリ自動更新ツール
-  完全サイレントモード（ポップアップなし）+ NASログ出力
+  完全サイレントモード + NAS未接続時のログ自動転送機能付き
   ポップアップを使いたい場合は「# POPUP:」のコメントを外す
 #>
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 
-# NativeTaskName がある場合、wingetに加えアプリ固有の更新タスクも起動する
 $AppList = @(
     @{ Name = "Microsoft Edge";  Search = "Microsoft Edge";  WingetId = "Microsoft.Edge";              NativeTaskName = "MicrosoftEdgeUpdateTaskMachineUA" }
     @{ Name = "Google Chrome";   Search = "Google Chrome";   WingetId = "Google.Chrome.EXE";           NativeTaskName = "GoogleUpdateTaskMachineUA" }
@@ -26,7 +25,7 @@ $NasLogDir = "\\10.85.33.230\01_全社共有\システム統括部\業改室\★
 $NasUser   = "frt_user"
 $NasPass   = "Forest0720@"
 
-# POPUP: ポップアップが必要な場合はこの関数のコメントを外して使う
+# POPUP: ポップアップを使いたい場合はコメントを外す
 # function Show-Popup {
 #     param([string]$Title, [string]$Message, [int]$TimeoutSeconds, [string]$ButtonText)
 #     $form = New-Object System.Windows.Forms.Form
@@ -102,7 +101,29 @@ function Invoke-NativeUpdateTask {
     }
 }
 
-# --- 0. wingetソース最新化 ---
+# =====================================================
+# --- 0. NAS認証（最初に行い、以降の処理で使い回す）---
+# =====================================================
+if (-not (Test-Path $NasRoot)) {
+    $null = & net use $NasRoot $NasPass /user:$NasUser /persistent:no 2>&1
+}
+
+# --- 0a. 前回NAS未接続時の退避ログをNASに転送 ---
+# NASに接続できており、かつローカルに退避ログが残っている場合に自動転送して削除する
+$pendingLog = "$PSScriptRoot\pending_log.txt"
+if ((Test-Path $NasLogDir) -and (Test-Path $pendingLog)) {
+    try {
+        $uploadName = "${env:COMPUTERNAME}_offline_$(Get-Date -Format 'yyyyMMddHHmm').txt"
+        $pendingContent = [System.IO.File]::ReadAllText($pendingLog, [System.Text.Encoding]::UTF8)
+        $divider = "=" * 50
+        $header = "${divider}`r`n■ オフライン時の退避ログ（NAS接続回復後に転送）`r`n${divider}`r`n"
+        $utf8Bom = New-Object System.Text.UTF8Encoding($true)
+        [System.IO.File]::WriteAllText((Join-Path $NasLogDir $uploadName), $header + $pendingContent, $utf8Bom)
+        Remove-Item $pendingLog -Force
+    } catch { }
+}
+
+# --- 0b. wingetソース最新化（タイムラグ縮小）---
 winget source update --name winget --accept-source-agreements --disable-interactivity | Out-Null
 
 # --- 1. winget から状態取得 ---
@@ -159,8 +180,7 @@ foreach ($app in $AppList) {
 # } else {
 #     $note = "`n※すべて最新です。「OK」を押して閉じます。"
 # }
-# $statusMessage = $logLines -join "`n"
-# $msg = $HeaderText + "以下のアプリの状態を確認しました：`n`n" + $statusMessage + $note
+# $msg = $HeaderText + "以下のアプリの状態を確認しました：`n`n" + ($logLines -join "`n") + $note
 # Show-Popup -Title $TitleText -Message $msg -TimeoutSeconds 0 -ButtonText "OK" | Out-Null
 
 # --- 2. winget による自動更新 ---
@@ -174,7 +194,7 @@ foreach ($app in $AppsToAutoUpdate) {
     if ($proc.ExitCode -eq 0) { $successApps += $app.Name } else { $failApps += $app.Name }
 }
 
-# --- 3. 固有更新タスク起動（winget更新済み + winget最新の両方） ---
+# --- 3. 固有更新タスク起動 ---
 $nativeTargets = ($AppsToAutoUpdate | Where-Object { $_.NativeTaskName -ne "" }) + $AppsNativeOnly
 $nativeStarted = @()
 
@@ -200,7 +220,7 @@ foreach ($n in $nativeStarted) {
     }
 }
 
-# POPUP: 完了通知ポップアップ（使う場合はコメントを外す）
+# POPUP: 完了通知（使う場合はコメントを外す）
 # $totalAction = $successApps.Count + $failApps.Count + $nativeStarted.Count
 # if ($totalAction -gt 0 -or $AppsManualRequired.Count -gt 0) {
 #     $resultMsg = $HeaderText + "更新処理が完了しました。`n`n"
@@ -214,7 +234,7 @@ foreach ($n in $nativeStarted) {
 #     Show-Popup -Title $TitleText -Message $resultMsg -TimeoutSeconds 0 -ButtonText "OK" | Out-Null
 # }
 
-# --- 4. NASへログ直接書き込み ---
+# --- 4. NASへログ書き込み ---
 $computerName  = $env:COMPUTERNAME
 $execDateTime  = Get-Date -Format "yyyy/MM/dd HH:mm:ss"
 $fileTimestamp = Get-Date -Format "yyyyMMddHHmm"
@@ -234,9 +254,6 @@ $logContent += "【アプリ状態一覧】`r`n"
 foreach ($line in $logLines) { $logContent += "  ・${line}`r`n" }
 $logContent += "${divider}`r`n"
 
-if (-not (Test-Path $NasRoot)) {
-    $null = & net use $NasRoot $NasPass /user:$NasUser /persistent:no 2>&1
-}
 try {
     if (-not (Test-Path $NasLogDir)) {
         New-Item -ItemType Directory -Path $NasLogDir -Force | Out-Null
@@ -244,6 +261,7 @@ try {
     $utf8Bom = New-Object System.Text.UTF8Encoding($true)
     [System.IO.File]::WriteAllText((Join-Path $NasLogDir $logFileName), $logContent, $utf8Bom)
 } catch {
+    # NAS書き込み失敗時はローカルに退避（次回NAS接続時に自動転送される）
     $utf8Bom = New-Object System.Text.UTF8Encoding($true)
-    [System.IO.File]::AppendAllText("$PSScriptRoot\fallback_nas_error.txt", $logContent, $utf8Bom)
+    [System.IO.File]::AppendAllText("$PSScriptRoot\pending_log.txt", $logContent, $utf8Bom)
 }

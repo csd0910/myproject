@@ -105,8 +105,6 @@ class CybozuExternalEmailExporterApp:
             var trs = document.querySelectorAll('.dataListSummary tbody tr');
             trs.forEach(tr => {
                 if(tr.style.display === 'none' || tr.querySelector('th')) return;
-                var hasFlag = Array.from(tr.querySelectorAll('img')).some(i => (i.src||"").includes("star") || (i.src||"").includes("flag"));
-                if(hasFlag) return;
                 var a = tr.querySelector("a[href*='MailView'], a[href*='MailSent'], a[href*='mailId']");
                 if (a) {
                     var h = a.getAttribute('href') || "";

@@ -1,15 +1,13 @@
 @echo off
 chcp 65001 >nul
-echo =========================================
-echo アプリ更新チェックのセットアップ（テスト用）
+echo アプリ更新チェックのセットアップ（システム運営課）
 echo =========================================
 
 :: 管理者権限チェック
 openfiles >nul 2>&1
 if %errorlevel% neq 0 (
-    echo 【エラー】管理者権限がありません。右クリックから「管理者として実行」してください。
-    pause
-    exit /b
+    echo 【エラー】管理者権限がありません。
+    exit /b 1
 )
 
 set TARGET_DIR=C:\AppUpdaterTest
@@ -21,23 +19,21 @@ if not exist "%TARGET_DIR%" (
 )
 
 copy /Y "%~dp0AppUpdateCheck.ps1" "%TARGET_DIR%\AppUpdateCheck.ps1"
-copy /Y "%~dp0nas_logger.py" "%TARGET_DIR%\nas_logger.py"
+:: 完全サイレント実行用のVBSもコピー
+copy /Y "%~dp0RunSilent.vbs" "%TARGET_DIR%\RunSilent.vbs"
 
 echo.
 echo 2. タスクスケジューラに登録しています...
 :: 古いテスト用タスクを削除（念のため）
 schtasks /delete /tn "AppUpdateCheckTest" /f >nul 2>&1
-:: タスク名を変更して登録 (/f で上書きするため常に1つです)
-schtasks /create /tn "AppUpdater(システム運営課)" /tr "powershell.exe -WindowStyle Hidden -ExecutionPolicy Bypass -File %TARGET_DIR%\AppUpdateCheck.ps1" /sc onlogon /rl highest /f
+:: タスク名を変更して登録 (RunSilent.vbs を経由して完全非表示化)
+schtasks /create /tn "AppUpdater(システム運営課)" /tr "wscript.exe \"%TARGET_DIR%\RunSilent.vbs\"" /sc onlogon /rl highest /f
+
 if %errorlevel% neq 0 (
     echo 【エラー】登録に失敗しました。
-    pause
-    exit /b
+    exit /b 1
 )
 
 echo.
-echo テスト用のセットアップが完了しました！
+echo セットアップが完了しました！
 echo （タスク「AppUpdater(システム運営課)」として登録されました）
-echo.
-echo テストとして今すぐ実行する場合は、コマンドプロンプトで schtasks /run /tn "AppUpdater(システム運営課)" を実行してください。
-pause

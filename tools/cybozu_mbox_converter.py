@@ -44,16 +44,21 @@ class CybozuMboxConverterApp:
         self.tree.heading("#0", text="サイボウズのフォルダ構成"); self.tree.heading("count", text="メール通数"); self.tree.heading("status", text="状態")
         self.tree.column("count", width=100); self.tree.column("status", width=100); self.tree.pack(fill=tk.BOTH, expand=True)
 
-        # 3. 実行設定 (MBOXファイル作成)
-        exec_frame = ttk.LabelFrame(main_frame, text="3. MBOXデータの作成", padding=5)
+        # 3. 実行設定 (MBOXファイル ＆ EML小分け作成)
+        exec_frame = ttk.LabelFrame(main_frame, text="3. データの作成 (MBOX ＆ Gmail流し込み用EML小分け)", padding=5)
         exec_frame.pack(fill=tk.X, pady=5)
         
         ttk.Label(exec_frame, text="出力先フォルダ名:").grid(row=0, column=0, sticky=tk.E, pady=5)
         self.target_sub_var = tk.StringVar(value=f"Cybozu_Backup_{datetime.now().strftime('%m%d_%H%M')}")
         ttk.Entry(exec_frame, textvariable=self.target_sub_var, width=35).grid(row=0, column=1, sticky=tk.W, padx=10)
         
-        self.btn_convert = ttk.Button(exec_frame, text="ローカルにMBOXファイルを作成する", command=self.start_process, state=tk.DISABLED)
+        self.btn_convert = ttk.Button(exec_frame, text="変換・小分けを実行する", command=self.start_process, state=tk.DISABLED)
         self.btn_convert.grid(row=0, column=2, padx=5, pady=5)
+        
+        ttk.Label(exec_frame, text="EML小分け上限(MB):").grid(row=1, column=0, sticky=tk.E, pady=5)
+        self.chunk_size_var = tk.StringVar(value="200")
+        ttk.Entry(exec_frame, textvariable=self.chunk_size_var, width=10).grid(row=1, column=1, sticky=tk.W, padx=10)
+        ttk.Label(exec_frame, text="※Gmail同期時のタイムアウトを防ぐための1フォルダあたりの容量上限", font=("Meiryo", 8), foreground="gray").grid(row=1, column=2, sticky=tk.W)
         
         # 4. Thunderbirdへのエクスポート
         export_frame = ttk.LabelFrame(main_frame, text="4. Thunderbirdへエクスポート (ローカルフォルダにコピー)", padding=5)
@@ -159,12 +164,19 @@ class CybozuMboxConverterApp:
         self.log(f"  階層フォルダ: {self.current_output_sbd}")
         
         self.btn_convert.config(state=tk.DISABLED)
-        threading.Thread(target=self._process, args=(self.current_output_sbd,), daemon=True).start()
-
-    def _process(self, sbd_root):
+        
         try:
-            self.log(">>> MBOX作成処理中...")
-            self.status_var.set("MBOX作成中...")
+            chunk_limit_mb = int(self.chunk_size_var.get())
+        except:
+            chunk_limit_mb = 200
+        chunk_limit_bytes = chunk_limit_mb * 1024 * 1024
+        
+        threading.Thread(target=self._process, args=(self.current_output_sbd, chunk_limit_bytes), daemon=True).start()
+
+    def _process(self, sbd_root, chunk_limit_bytes):
+        try:
+            self.log(">>> データ作成処理中...")
+            self.status_var.set("データ作成中...")
             def run_node(node_id, current_sbd_path):
                 name_text = self.tree.item(node_id, "text")
                 safe_name = re.sub(r'[\\/:*?"<>|]', '_', name_text)
@@ -173,7 +185,7 @@ class CybozuMboxConverterApp:
                 mbox_file = os.path.join(current_sbd_path, safe_name)
                 if node_id in self.folder_data:
                     actual_src = self.folder_data[node_id]["actual_src"]
-                    self._convert_to_mbox(actual_src, mbox_file, name_text)
+                    self._convert_to_mbox(actual_src, mbox_file, name_text, chunk_limit_bytes)
                     
                     # 【追加要望】各元のフォルダ直下にも「フォルダ名.mbox」を配置する
                     try:
@@ -239,13 +251,22 @@ class CybozuMboxConverterApp:
         finally:
             self.btn_export.config(state=tk.NORMAL)
 
-    def _convert_to_mbox(self, src_dir, mbox_path, folder_name):
+    def _convert_to_mbox(self, src_dir, mbox_path, folder_name, chunk_limit_bytes):
         try:
             txt_files = [os.path.join(src_dir, f) for f in os.listdir(src_dir) if f.lower().endswith(".txt")]
         except: return
         
         if not txt_files: return
-        self.log(f"  [結合] {folder_name} ({len(txt_files)}通)")
+        self.log(f"  [処理中] {folder_name} ({len(txt_files)}通)")
+        
+        current_chunk = 1
+        current_chunk_size = 0
+        
+        def get_chunk_dir():
+            d = os.path.join(src_dir, f"【Gmail流し込み用】分割_{current_chunk}")
+            os.makedirs(d, exist_ok=True)
+            return d
+
         with open(mbox_path, "ab") as mf:
             for txt in txt_files:
                 try:
@@ -257,16 +278,28 @@ class CybozuMboxConverterApp:
                     msg = EmailMessage(); msg['Subject'] = subject; msg['From'] = sender
                     msg['Date'] = self._parse_date(dt); msg.set_content(content)
                     
-                    # 【追加】各メールの単独EMLファイルもテキストと同じ場所に出力する
-                    eml_path = os.path.splitext(txt)[0] + ".eml"
+                    eml_bytes = msg.as_bytes()
+                    eml_size = len(eml_bytes)
+                    
+                    # チャンクサイズ制限チェック
+                    if current_chunk_size + eml_size > chunk_limit_bytes and current_chunk_size > 0:
+                        current_chunk += 1
+                        current_chunk_size = 0
+                        
+                    # 【改修】200MBずつの小分けフォルダにEMLファイルを格納する
+                    eml_dir = get_chunk_dir()
+                    eml_filename = os.path.basename(os.path.splitext(txt)[0]) + ".eml"
+                    eml_path = os.path.join(eml_dir, eml_filename)
+                    
                     try:
                         with open(eml_path, "wb") as ef:
-                            ef.write(msg.as_bytes())
+                            ef.write(eml_bytes)
+                        current_chunk_size += eml_size
                     except: pass
                     
                     mbox_user = sender.split('<')[-1].strip('> ')
                     mf.write(f"From {mbox_user} {datetime.now().strftime('%a %b %d %H:%M:%S %Y')}\n".encode('ascii','replace'))
-                    mf.write(msg.as_bytes()); mf.write(b"\n\n")
+                    mf.write(eml_bytes); mf.write(b"\n\n")
                 except: continue
 
     def _parse_date(self, date_str):
