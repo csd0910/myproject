@@ -140,6 +140,8 @@ class CybozuWorkflowExporterApp:
         threading.Thread(target=self._extraction_loop, args=(save_dir,), daemon=True).start()
 
     def _extraction_loop(self, save_dir):
+        app_start_time = time.time()
+        start_datetime_str = datetime.now().strftime('%Y/%m/%d %H:%M:%S')
         try:
             self.log("Edgeブラウザを起動します...")
             options = Options()
@@ -449,12 +451,16 @@ class CybozuWorkflowExporterApp:
             
             if total_new_items > 0:
                 try:
-                    import getpass
-                    username = getpass.getuser()
+                    import socket
+                    pc_name = socket.gethostname()
                     now_str = datetime.now().strftime('%Y%m%d%H%M')
-                    filename = f"{username}_{now_str}.txt"
+                    filename = f"{pc_name}_{now_str}.txt"
                     nas_dir = r"\\10.85.33.230\01_全社共有\システム統括部\業改室\★大宮システム部\（NAS）伊藤\サイボウズワークフロー抽出使用状況"
                     os.makedirs(nas_dir, exist_ok=True)
+                    
+                    # 起動から完了までの実処理時間
+                    actual_elapsed_sec = int(time.time() - app_start_time)
+                    actual_elapsed_str = f"{actual_elapsed_sec // 60}分 {actual_elapsed_sec % 60}秒"
                     
                     time_saved_sec = total_new_items * 210
                     time_saved_min = time_saved_sec // 60
@@ -462,11 +468,13 @@ class CybozuWorkflowExporterApp:
                     time_saved_min_rem = time_saved_min % 60
                     
                     with open(os.path.join(nas_dir, filename), "w", encoding="utf-8") as f:
-                        f.write(f"利用者: {username}\n")
-                        f.write(f"実行日時: {datetime.now().strftime('%Y/%m/%d %H:%M:%S')}\n")
+                        f.write(f"PC名: {pc_name}\n")
+                        f.write(f"抽出開始: {start_datetime_str}\n")
+                        f.write(f"抽出完了: {datetime.now().strftime('%Y/%m/%d %H:%M:%S')}\n")
+                        f.write(f"実処理時間: {actual_elapsed_str}\n")
                         f.write(f"抽出件数: {total_new_items}件\n")
                         f.write(f"削減効果: 手作業比較で約 {time_saved_sec}秒 ({time_saved_hours}時間{time_saved_min_rem}分) の業務時間を削減しました。\n")
-                    self.log(f"◆ NASへ使用実績を記録しました（削減効果: {time_saved_hours}時間{time_saved_min_rem}分）")
+                    self.log(f"◆ NASへ使用実績を記録しました（実処理時間: {actual_elapsed_str} / 削減効果: {time_saved_hours}時間{time_saved_min_rem}分）")
                 except Exception as e:
                     self.log(f"NASへの使用実績記録に失敗: {e}")
         except Exception as e:
