@@ -1,0 +1,91 @@
+/* =================================================================
+  🌲 Forest WorkFlow UI Design System (style.css)
+================================================================= */
+
+/* スクロールバーのクリーン化 */
+.scroll-clean::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.scroll-clean::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scroll-clean::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 20px;
+}
+.scroll-clean::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Glassmorphism パネル */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+}
+
+/* ボタンのアニメーションと微細シャドウ */
+button {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+button:active {
+  transform: scale(0.97);
+}
+
+/* タイムラインのカスタムUI */
+.timeline-line {
+  position: absolute;
+  left: 19px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background-color: #e2e8f0;
+}
+.timeline-dot {
+  position: relative;
+  z-index: 10;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background-color: #fff;
+  border: 3px solid #e2e8f0;
+}
+.timeline-dot.active {
+  border-color: #10b981;
+  background-color: #ecfdf5;
+  color: #047857;
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.35);
+}
+
+/* ドロップゾーン（PDFアップロード用） */
+.drop-zone {
+  border: 2px dashed #cbd5e1;
+  border-radius: 12px;
+  background-color: #f8fafc;
+  transition: all 0.15s ease;
+}
+.drop-zone.dragover {
+  border-color: #10b981;
+  background-color: #f0fdf4;
+}
+
+/* スマホ対応のボトムナビ（モバイル表示時） */
+@media (max-width: 767.98px) {
+  body {
+    flex-direction: column !important;
+  }
+  
+  aside {
+    width: 100% !important;
+    height: auto !important;
+    flex-direction: row !important;
+    border-r: none !important;
+    border-b: 1px solid #1e293b;
+    position: relative;
+  }
+  
+  aside nav {
+    display: none !important; /* スマホ時はバーガーメニューにするか、下部タブにする */
+  }
+}

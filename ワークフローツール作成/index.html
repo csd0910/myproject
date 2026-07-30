@@ -1,0 +1,1511 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ForestWorkFlowSystem</title>
+  <!-- Tailwind CSS -->
+  <link href="tailwind.min.css" rel="stylesheet">
+  <style>
+    .table-container { 
+      overflow-x: auto; 
+      max-height: calc(100vh - 210px); 
+      overflow-y: auto; 
+      -webkit-overflow-scrolling: touch;
+    }
+    .table-container::-webkit-scrollbar, .scroll-clean::-webkit-scrollbar { width: 6px; height: 6px; }
+    .table-container::-webkit-scrollbar-track, .scroll-clean::-webkit-scrollbar-track { background: #f1f1f1; }
+    .table-container::-webkit-scrollbar-thumb, .scroll-clean::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+    th.sortable { cursor: pointer; user-select: none; }
+    th.sortable:hover { background-color: #e2e8f0 !important; }
+    .tab-active { border-bottom-color: #2563eb; color: #2563eb; font-weight: 800; }
+
+    .sticky-header-bg {
+      background-color: #f1f5f9 !important;
+      opacity: 1 !important;
+    }
+
+    th.resizable { position: relative; }
+    .resizer {
+      position: absolute;
+      right: 0;
+      top: 0;
+      width: 8px;
+      cursor: col-resize;
+      user-select: none;
+      height: 100%;
+      z-index: 40;
+      border-right: 2px solid transparent;
+    }
+    .resizer:hover, .resizer.resizing {
+      border-right: 3px solid #2563eb;
+      background-color: rgba(37, 99, 235, 0.2);
+    }
+  </style>
+</head>
+<body class="bg-slate-100 text-gray-800 font-sans antialiased h-screen flex flex-col text-sm">
+
+  <!-- 排他制御・書き込み待機用モーダル -->
+  <div id="loading-overlay" class="fixed inset-0 bg-slate-900 bg-opacity-75 z-50 hidden flex flex-col items-center justify-center p-6 text-white transition-all">
+    <div class="animate-spin rounded-full h-16 w-16 border-4 border-blue-500 border-t-transparent mb-6 shadow-lg"></div>
+    <h3 class="text-xl font-black tracking-wide" id="loading-title">データを書き込み・更新中...</h3>
+    <p class="text-sm text-slate-300 mt-2 text-center max-w-sm leading-relaxed" id="loading-desc">
+      他のユーザーの書き込みが重なっている場合は、順番待ちを行っています。<br>そのまま少々お待ちください。
+    </p>
+  </div>
+
+  <!-- 上部ナビゲーション -->
+  <header class="bg-gradient-to-r from-blue-900 to-indigo-900 text-white px-6 py-3.5 flex justify-between items-center shadow-md shrink-0">
+    <div class="flex items-center space-x-3">
+      <span class="text-2xl font-black tracking-wider">ForestWorkFlowSystem</span>
+      <span class="bg-blue-500 text-white text-xs px-2.5 py-1 rounded-full font-bold">v8.3 フォーム安全並び替え機能版</span>
+    </div>
+    <div class="text-base font-bold tracking-wide" id="user-display">読み込み中...</div>
+  </header>
+
+  <!-- メインレイアウト -->
+  <div class="flex flex-1 overflow-hidden">
+    
+    <!-- 左側メニュー -->
+    <aside id="sidebar-container" class="w-64 bg-white border-r border-slate-200 flex flex-col p-4 shrink-0 shadow-sm">
+      <button onclick="startNewWorkflow()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg shadow mb-6 flex items-center justify-center space-x-2 text-base transition-colors">
+        <span>＋ 稟議を申請する</span>
+      </button>
+
+      <nav class="space-y-1.5 flex-1">
+        <p class="text-xs font-bold text-slate-400 uppercase tracking-wider px-3 mb-2">ワークフローメニュー</p>
+        <button id="menu-pending" onclick="switchMenu('pending')" class="w-full text-left flex items-center justify-between px-3 py-2.5 rounded-md font-bold text-blue-700 bg-blue-50 text-sm">
+          <span>📥 未処理一覧（受信）</span>
+          <span id="badge-pending" class="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full hidden">0</span>
+        </button>
+        <button id="menu-sent" onclick="switchMenu('sent')" class="w-full text-left flex items-center justify-between px-3 py-2.5 rounded-md font-medium text-slate-700 hover:bg-slate-50 text-sm">
+          <span>📤 送信一覧（マイ申請）</span>
+        </button>
+        <button id="menu-received" onclick="switchMenu('received')" class="w-full text-left flex items-center justify-between px-3 py-2.5 rounded-md font-medium text-slate-700 hover:bg-slate-50 text-sm">
+          <span>📋 受信履歴（処理済）</span>
+        </button>
+        <button id="menu-returned" onclick="switchMenu('returned')" class="w-full text-left flex items-center justify-between px-3 py-2.5 rounded-md font-medium text-slate-700 hover:bg-slate-50 text-sm">
+          <span>↩️ 差し戻し・引き戻し・却下</span>
+          <span id="badge-returned" class="bg-amber-500 text-white text-xs px-2 py-0.5 rounded-full hidden">0</span>
+        </button>
+      </nav>
+      
+      <div class="pt-4 border-t border-slate-100 space-y-2">
+        <button onclick="switchMenu('admin-settings')" id="menu-admin-settings" class="hidden w-full text-left flex items-center px-3 py-2.5 rounded-md bg-slate-50 hover:bg-slate-100 text-xs font-bold shadow-sm border text-slate-700">
+          <span>⚙️ システム設定（管理者用）</span>
+        </button>
+      </div>
+    </aside>
+
+    <!-- 右側メイン表示エリア -->
+    <main class="flex-1 p-6 flex flex-col overflow-hidden bg-slate-50 relative">
+      <div id="message-container" class="hidden mb-4 p-3 rounded-md shadow-sm font-medium"></div>
+
+      <!-- ＝セクションA：ダッシュボード一覧＝ -->
+      <div id="section-dashboard" class="flex flex-1 flex-col overflow-hidden">
+        <div class="bg-white p-4 rounded-t-lg border-t border-x border-slate-200 flex flex-col sm:flex-row justify-between items-center gap-3 shrink-0">
+          <h2 id="view-title" class="text-xl font-bold text-slate-800">未処理一覧（受信）</h2>
+          <div class="flex items-center gap-3 w-full sm:w-auto">
+            <div class="relative w-full sm:w-80">
+              <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">🔍</span>
+              <input type="text" id="search-box" oninput="filterTable()" placeholder="日付、名称、申請者、番号で検索..." class="w-full pl-9 pr-3 py-2 text-sm rounded-md border border-slate-300 focus:outline-none">
+            </div>
+            <button onclick="downloadCSV()" style="background-color: #059669; color: #ffffff;" class="hover:opacity-90 font-bold px-4 py-2 rounded-lg shadow-sm transition-opacity text-xs flex items-center gap-1.5 shrink-0">
+              📥 CSV出力
+            </button>
+          </div>
+        </div>
+        <div class="bg-white rounded-b-lg border border-slate-200 shadow-sm flex-1 overflow-hidden flex flex-col">
+          <div class="table-container flex-1">
+            <table class="w-full text-left text-sm border-collapse relative" id="main-workflow-table" style="min-width: 1100px; table-layout: fixed;">
+              <colgroup>
+                <col id="col-0" style="width: 140px;">
+                <col id="col-1" style="width: 160px;">
+                <col id="col-2" style="width: 320px;">
+                <col id="col-3" style="width: 200px;">
+                <col id="col-4" style="width: 160px;">
+                <col id="col-5" style="width: 100px;">
+                <col id="col-6" style="width: 150px;">
+              </colgroup>
+              <thead class="sticky-header-bg text-slate-700 font-bold sticky top-0 border-b border-slate-300 shadow-sm z-20">
+                <tr class="sticky-header-bg">
+                  <th class="py-3.5 px-3 sortable resizable sticky-header-bg" onclick="sortTable('appNumber')">番号 <span id="sort-appNumber">▼</span><div class="resizer" data-col="0"></div></th>
+                  <th class="py-3.5 px-3 sortable resizable sticky-header-bg" onclick="sortTable('type')">種別 <span id="sort-type"></span><div class="resizer" data-col="1"></div></th>
+                  <th class="py-3.5 px-3 sortable resizable sticky-header-bg" onclick="sortTable('title')">申請フォーム名 (標題) <span id="sort-title"></span><div class="resizer" data-col="2"></div></th>
+                  <th class="py-3.5 px-3 sortable resizable sticky-header-bg" onclick="sortTable('applicant')">申請者 <span id="sort-applicant"></span><div class="resizer" data-col="3"></div></th>
+                  <th class="py-3.5 px-3 sortable resizable sticky-header-bg" onclick="sortTable('date')">申請日 <span id="sort-date"></span><div class="resizer" data-col="4"></div></th>
+                  <th class="py-3.5 px-3 resizable sticky-header-bg">状況<div class="resizer" data-col="5"></div></th>
+                  <th class="py-3.5 px-3 text-center sticky-header-bg">操作</th>
+                </tr>
+              </thead>
+              <tbody id="data-tbody" class="divide-y divide-slate-100 bg-white"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ＝セクションB：全画面申請フォームの選択＝ -->
+      <div id="section-form-selector" class="hidden bg-white rounded-xl border border-slate-200 shadow-md p-6 flex-1 flex flex-col overflow-hidden">
+        <div class="border-b border-slate-200 pb-3 mb-4 flex justify-between items-center shrink-0">
+          <div>
+            <h2 class="text-2xl font-black text-slate-800">申請データの作成 (申請フォームの選択)</h2>
+            <p class="text-sm text-slate-500 mt-1">申請を行うフォームを以下から選択してください。</p>
+          </div>
+          <button onclick="cancelToDashboard()" class="text-sm font-bold text-slate-600 bg-slate-100 px-4 py-2 rounded-lg hover:bg-slate-200">キャンセル</button>
+        </div>
+        <div class="flex-1 overflow-y-auto divide-y divide-slate-200 scroll-clean pr-2" id="master-form-selector-list"></div>
+      </div>
+
+      <!-- ＝セクションC-1：全画面申請内容・経路入力画面＝ -->
+      <div id="section-form-submitter" class="hidden bg-white rounded-xl border border-slate-200 shadow-md p-6 flex-1 flex flex-col overflow-hidden">
+        <div class="border-b border-slate-200 pb-3 mb-4 flex justify-between items-center shrink-0">
+          <div>
+            <h2 class="text-xl font-black text-slate-900" id="submit-form-name">稟議書</h2>
+            <p class="text-sm text-slate-500 mt-1" id="submit-form-desc"></p>
+          </div>
+          <button onclick="backToFormSelector()" class="text-sm font-bold text-blue-600 hover:underline">◀ フォーム選択へ戻る</button>
+        </div>
+        
+        <form id="full-ringi-form" onsubmit="proceedToConfirmationStep(event)" class="space-y-5 overflow-y-auto flex-1 pr-1 scroll-clean text-sm">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 p-4 rounded-lg border border-slate-200">
+            <div>
+              <label class="block text-sm font-bold text-slate-700 mb-1">申請標題 <span class="text-red-500">*</span></label>
+              <input type="text" id="ins-title" required placeholder="例：ノートPC追加購入の件" class="w-full rounded border border-slate-300 px-3 py-2 bg-white focus:outline-none text-sm">
+            </div>
+            <div>
+              <label class="block text-sm font-bold text-slate-700 mb-1">稟議書ファイル添付 (PDFのみ) <span class="text-red-500">*</span></label>
+              <input type="file" id="ins-pdf" accept="application/pdf" onchange="verifyFileFormat()" class="w-full text-xs text-slate-600 border border-slate-300 p-1.5 bg-white rounded shadow-sm">
+              <span id="existing-pdf-info" class="text-xs font-bold text-blue-600 block mt-1 hidden"></span>
+            </div>
+          </div>
+
+          <div>
+            <p class="text-sm font-black text-slate-700 mb-2 uppercase tracking-wider">▼ 申請経路の設定・担当者微調整</p>
+            <div class="grid grid-cols-1 xl:grid-cols-7 gap-4 bg-white border border-slate-200 p-4 rounded-lg shadow-sm">
+              <div class="xl:col-span-4 border border-slate-200 rounded-lg overflow-hidden">
+                <table class="w-full text-left border-collapse text-xs">
+                  <thead class="bg-slate-100 font-bold text-slate-700 border-b border-slate-200">
+                    <tr>
+                      <th class="p-2.5 border-r border-slate-200 w-24">経路種別</th>
+                      <th class="p-2.5 border-r border-slate-200 w-32">役割</th>
+                      <th class="p-2.5">処理者（追加・削除可能プール）</th>
+                    </tr>
+                  </thead>
+                  <tbody id="user-route-build-tbody" class="divide-y divide-slate-200"></tbody>
+                </table>
+              </div>
+
+              <div class="xl:col-span-3 bg-slate-50 p-3 rounded-lg border border-slate-200 flex flex-col h-72 space-y-2">
+                <div class="flex justify-between items-center">
+                  <span class="text-xs font-bold text-slate-700">👤 社員名簿プール</span>
+                  <label class="text-[11px] font-bold text-blue-700 cursor-pointer flex items-center space-x-1">
+                    <input type="checkbox" id="ins-all-dept-toggle" onchange="refreshUserDepartmentPool()" class="rounded text-blue-600">
+                    <span>他部署含む全社員</span>
+                  </label>
+                </div>
+                <input type="text" id="ins-user-filter" oninput="filterApplicantUserPool()" placeholder="🔍 社員名・部署名で絞り込み..." class="w-full border border-slate-300 rounded px-2 py-1 text-xs focus:outline-none">
+                <select id="ins-dept-pool" multiple size="6" class="w-full rounded border border-slate-300 p-1.5 bg-white text-slate-800 text-xs flex-1 focus:outline-none scroll-clean"></select>
+              </div>
+            </div>
+          </div>
+
+          <div class="pt-3 border-t border-slate-200 flex justify-end space-x-3 bg-white shrink-0">
+            <button type="button" onclick="cancelToDashboard()" class="px-5 py-2.5 bg-slate-100 text-slate-600 font-bold rounded-lg hover:bg-slate-200">キャンセル</button>
+            <button type="submit" class="px-7 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg shadow text-base">次に、内容を確認する ＞＞</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- ＝ C-2：送信前プレビュー・最終確認画面＝ -->
+      <div id="section-form-confirmation" class="hidden bg-white rounded-xl border border-slate-200 shadow-md p-6 flex-1 flex flex-col overflow-hidden">
+        <div class="border-b border-slate-200 pb-3 mb-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 shrink-0">
+          <div>
+            <h2 class="text-2xl font-black text-slate-800" id="conf-form-title">申請の作成（内容の確認）</h2>
+            <p class="text-sm text-slate-500 mt-1">以下の内容で申請データを作成します。間違いないかご確認ください。</p>
+          </div>
+          <div class="flex items-center space-x-1 text-xs text-slate-400 font-bold bg-slate-100 p-2 rounded-lg border border-slate-200 shrink-0">
+            <span class="px-2.5 py-1 rounded bg-slate-200 text-slate-600">step 1 入力</span>
+            <span>➔</span>
+            <span class="px-2.5 py-1 rounded bg-slate-200 text-slate-600">step 2 経路設定</span>
+            <span>➔</span>
+            <span class="px-2.5 py-1 rounded bg-blue-600 text-white shadow-sm">step 3 内容確認</span>
+          </div>
+        </div>
+
+        <div class="flex-1 overflow-y-auto scroll-clean space-y-6 text-sm pr-1">
+          <div>
+            <p class="text-sm font-black text-slate-600 mb-2 uppercase tracking-wider">▼ 申請内容</p>
+            <div class="border border-slate-200 rounded-lg overflow-hidden bg-white shadow-sm">
+              <table class="w-full text-left border-collapse text-sm">
+                <tbody class="divide-y divide-slate-200">
+                  <tr class="bg-slate-50/50"><th class="p-3.5 w-36 font-bold text-slate-600 border-r border-slate-200">標題</th><td class="p-3.5 font-bold text-slate-900 text-base" id="conf-title"></td></tr>
+                  <tr><th class="p-3.5 font-bold text-slate-600 border-r border-slate-200">申請者</th><td class="p-3.5 font-bold text-slate-700" id="conf-applicant"></td></tr>
+                  <tr class="bg-slate-50/50"><th class="p-3.5 font-bold text-slate-600 border-r border-slate-200">申請フォーム名</th><td class="p-3.5 text-slate-700" id="conf-form-name"></td></tr>
+                  <tr>
+                    <th class="p-3.5 font-bold text-slate-600 border-r border-slate-200">添付ファイル名</th>
+                    <td class="p-3.5 flex items-center justify-between gap-4">
+                      <span class="font-mono text-slate-800 break-all" id="conf-file-name"></span>
+                      <button type="button" onclick="previewSelectedLocalPdf()" class="bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-300 font-bold px-3 py-1.5 rounded shadow-sm text-xs transition-colors shrink-0 flex items-center space-x-1">
+                        <span>📄 プレビュー</span>
+                      </button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div>
+            <p class="text-sm font-black text-slate-600 mb-2 uppercase tracking-wider">▼ 申請経路</p>
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-3 items-start bg-slate-50 p-4 rounded-lg border border-slate-200 shadow-inner">
+              <div class="md:col-span-1 text-center font-black text-2xl text-slate-300 py-4 hidden md:block">↓</div>
+              <div class="md:col-span-11 border border-slate-200 rounded-lg overflow-hidden bg-white shadow-sm">
+                <table class="w-full text-left border-collapse text-xs">
+                  <thead class="bg-slate-100 font-bold text-slate-600 border-b border-slate-200">
+                    <tr>
+                      <th class="p-3 border-r border-slate-200 w-28 text-center">経路種別</th>
+                      <th class="p-3 border-r border-slate-200 w-48">役割</th>
+                      <th class="p-3">処理者（確定メンバー）</th>
+                    </tr>
+                  </thead>
+                  <tbody id="conf-route-tbody" class="divide-y divide-slate-200"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="pt-4 border-t border-slate-200 flex justify-between items-center bg-white shrink-0">
+          <button type="button" onclick="backToInputForm()" class="px-5 py-2.5 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded-lg shadow-sm text-sm transition-colors">
+            &lt;&lt; 前の画面へ戻る
+          </button>
+          <div class="flex space-x-3">
+            <button type="button" onclick="cancelToDashboard()" class="px-5 py-2.5 bg-slate-100 text-slate-600 font-bold rounded-lg hover:bg-slate-200 text-sm">キャンセル</button>
+            <button type="button" id="final-submit-btn" onclick="executeWorkflowSubmission()" class="px-8 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-black rounded-lg shadow-md text-base transition-all">
+              申請する
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ＝⚙️ 特設管理者コントロールセンター＝ -->
+      <div id="section-admin-panel" class="hidden bg-white rounded-xl border border-slate-200 shadow-md p-6 flex-1 flex flex-col overflow-hidden">
+        <div class="border-b border-slate-200 pb-3 mb-4 flex justify-between items-center gap-4 shrink-0">
+          <div class="flex items-center space-x-6 flex-1 min-w-0">
+            <h2 class="text-xl font-black text-slate-900 border-r border-slate-300 pr-4 shrink-0">⚙️ 管理パネル</h2>
+            <nav class="flex space-x-4 text-xs sm:text-sm font-bold overflow-x-auto whitespace-nowrap scroll-clean">
+              <button onclick="switchAdminTab('storage')" id="tab-adm-storage" class="py-2 px-1 border-b-2 border-transparent text-slate-500 hover:text-blue-600 transition-all tab-active">📁 01_FileLogDB / 02_Attachments ログ監視</button>
+              <button onclick="switchAdminTab('route')" id="tab-adm-route" class="py-2 px-1 border-b-2 border-transparent text-slate-500 hover:text-blue-600 transition-all">🛠️ 申請フォーム初期経路デザイナー</button>
+            </nav>
+          </div>
+          <button onclick="cancelToDashboard()" class="text-xs font-black text-white bg-blue-600 px-4 py-2 rounded-md hover:bg-blue-700 transition-colors shadow-md shrink-0 block">
+            🏠 一般画面へ戻る
+          </button>
+        </div>
+
+        <div id="sub-panel-storage" class="flex-1 flex flex-col overflow-hidden">
+          <p class="text-xs text-slate-400 mb-3">01_FileLogDB内のスプレッドシートデータや、02_Attachments内のPDF保管状況をリアルタイムに一元監視・直アクセスできます。</p>
+          <div class="border border-slate-200 rounded-lg overflow-x-auto bg-white flex-1 scroll-clean">
+            <table class="w-full text-left border-collapse text-xs">
+              <thead class="bg-slate-50 text-slate-600 font-bold border-b border-slate-200 sticky top-0 shadow-sm z-10">
+                <tr>
+                  <th class="p-3 border-r">対象月度</th>
+                  <th class="p-3 border-r">データベースファイル名 (01_FileLogDB)</th>
+                  <th class="p-3 border-r">添付ファイル保管サブフォルダ (02_Attachments)</th>
+                  <th class="p-3 border-r text-center">今月の累積稟議発生件数</th>
+                  <th class="p-3">最終更新日時</th>
+                </tr>
+              </thead>
+              <tbody id="storage-meta-tbody" class="divide-y divide-slate-200 text-slate-700"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div id="sub-panel-route" class="hidden flex-1 grid grid-cols-1 lg:grid-cols-3 gap-6 overflow-hidden">
+          <div class="border border-slate-200 rounded-lg p-3 flex flex-col overflow-hidden bg-slate-50 w-full">
+            <div class="flex justify-between items-center mb-2 shrink-0">
+              <span class="text-xs font-black text-slate-600">📦 登録フォーム一覧</span>
+              <div class="flex space-x-1.5">
+                <button onclick="copyCurrentFormInEditor()" style="background-color: #d97706; color: #ffffff; font-weight: 800;" class="hover:opacity-90 text-[11px] px-2 py-1 rounded shadow transition-opacity">📋 コピー</button>
+                <button onclick="createNewFormInEditor()" class="bg-green-600 text-white text-[11px] font-bold px-2 py-1 rounded shadow hover:bg-green-700 transition-colors">＋ 新規作成</button>
+              </div>
+            </div>
+            <!-- ①フォーム一覧（並び替えボタン付き） -->
+            <div class="flex-1 overflow-y-auto divide-y divide-slate-200 bg-white border border-slate-200 rounded scroll-clean" id="admin-form-list"></div>
+          </div>
+
+          <div class="lg:col-span-2 border border-slate-200 rounded-lg p-4 flex flex-col overflow-hidden bg-white shadow-inner relative">
+            <div class="space-y-3 flex-1 overflow-y-auto scroll-clean pr-1 text-xs pb-16">
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label class="block font-bold text-slate-600 mb-0.5">フォームID (一意)</label>
+                  <input type="text" id="adm-form-id" class="w-full border border-slate-300 rounded p-1.5 focus:outline-none">
+                </div>
+                <div>
+                  <label class="block font-bold text-slate-600 mb-0.5">フォーム名称</label>
+                  <input type="text" id="adm-form-name" placeholder="例: 申請①: 総務・人事関連" class="w-full border border-slate-300 rounded p-1.5 focus:outline-none">
+                </div>
+              </div>
+              
+              <div class="bg-blue-50/60 border border-blue-200 p-3 rounded-lg">
+                <label class="block font-bold text-blue-900 mb-1">📁 添付ファイル保存先フォルダ（02_Attachments 内）</label>
+                <div class="flex gap-2">
+                  <select id="adm-form-folder" class="flex-1 border border-slate-300 rounded p-1.5 bg-white text-slate-800 text-xs focus:outline-none font-medium"></select>
+                  <button type="button" onclick="promptCreateNewFolder()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-3 py-1.5 rounded text-xs shadow shrink-0">＋ 新規フォルダ作成</button>
+                </div>
+                <p class="text-[10px] text-slate-500 mt-1">※指定したフォルダ内に「月度フォルダ（例: 202607）」が自動作成され、添付PDFが保存・分類されます。</p>
+              </div>
+
+              <div>
+                <label class="block font-bold text-slate-600 mb-0.5">説明文・運用ルール注記</label>
+                <textarea id="adm-form-desc" rows="2" class="w-full border border-slate-300 rounded p-1.5 focus:outline-none"></textarea>
+              </div>
+
+              <div class="border-t border-slate-200 pt-3 flex flex-col flex-1">
+                <div class="flex justify-between items-center mb-1.5 shrink-0">
+                  <span class="font-black text-slate-700">▼ 経路ステップのテーブル定義（1行 ＝ 1工程）</span>
+                  <button type="button" onclick="addNewRowToAdminEditor()" class="bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-bold px-2.5 py-1 rounded shadow">＋ 経路ステップ(行)を追加</button>
+                </div>
+                
+                <div class="border border-slate-300 rounded overflow-x-auto bg-slate-50 p-2 max-h-[200px] overflow-y-auto scroll-clean">
+                  <table class="w-full text-left border-collapse text-[11px] min-w-[650px]">
+                    <thead class="text-slate-600 font-bold border-b border-slate-300">
+                      <tr>
+                        <th class="p-1 w-28">① 経路種別</th>
+                        <th class="p-1 w-32">② 役割 (マスタ)</th>
+                        <th class="p-1">③ デフォルト初期処理者候補</th>
+                        <th class="p-1 w-20 text-center">行操作</th>
+                      </tr>
+                    </thead>
+                    <tbody id="adm-table-rows-tbody" class="divide-y divide-slate-200"></tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div class="bg-slate-50 p-3 rounded border border-slate-200 grid grid-cols-1 md:grid-cols-2 gap-3 mt-2">
+                <div>
+                  <span class="font-bold text-slate-700 block mb-1">🔍 全社員名簿マスター</span>
+                  <input type="text" id="adm-user-filter" oninput="filterAdminUserPool()" placeholder="名前、部署名で絞り込み..." class="w-full border border-slate-300 rounded p-1 mb-1 text-[11px] focus:outline-none">
+                  <select id="adm-user-pool" multiple size="4" class="w-full border border-slate-300 rounded p-1 bg-white text-[11px] h-24 focus:outline-none scroll-clean"></select>
+                </div>
+                <div class="flex flex-col justify-end space-y-2">
+                  <p class="text-[10px] text-slate-400">【操作手順】上の初期処理者枠を選択した状態で、下の名簿から追加します。社員の個別並び替えは▲▼ボタンで行えます。</p>
+                  <button type="button" onclick="injectUserIntoSelectedAdminRow()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-1.5 rounded shadow text-[11px]">➔ 選択した工程 of 処理者として追加</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="absolute bottom-0 left-0 right-0 h-14 bg-slate-50 border-t border-slate-200 p-3 flex justify-end gap-2 z-30 rounded-b-lg">
+              <button onclick="executeSaveMasterForm()" style="background-color: #059669; color: #ffffff; font-weight: 900;" class="hover:opacity-90 text-xs px-8 py-2 rounded-lg shadow-md transition-opacity">このフォーム設定をマスターに完全保存</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- ダイアログ -->
+  <div id="action-modal" class="fixed inset-0 bg-slate-900 bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl shadow-2xl max-w-4xl w-full p-6 relative flex flex-col max-h-[92vh]">
+      <button onclick="closeActionModal()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 text-2xl font-bold">&times;</button>
+      <div class="bg-slate-900 text-white -mx-6 -mt-6 p-4 rounded-t-xl mb-4">
+        <h3 class="text-base font-bold flex items-center space-x-2"><span>📄</span><span id="modal-header-title">稟議書詳細</span></h3>
+      </div>
+      <div class="space-y-5 overflow-y-auto pr-1 flex-1 text-xs sm:text-sm scroll-clean">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-slate-50 p-4 rounded-lg border border-slate-200">
+          <div><p class="text-xs text-slate-400">申請者</p><p id="det-applicant" class="font-bold text-slate-700"></p></div>
+          <div><p class="text-xs text-slate-400">申請日時</p><p id="det-date" class="text-slate-600"></p></div>
+          <div><p class="text-xs text-slate-400">稟議種別</p><p id="det-type" class="text-slate-600"></p></div>
+          <div class="sm:col-span-2"><p class="text-xs text-slate-400">申請フォーム名 (標題)</p><p id="det-title" class="font-bold text-slate-800 text-base break-all"></p></div>
+          <div>
+            <p class="text-xs text-slate-400 mb-1">稟議書ファイル</p>
+            <div id="det-pdf-link" class="flex flex-col gap-1.5"></div>
+          </div>
+        </div>
+
+        <div>
+          <p class="text-xs font-bold text-slate-400 mb-1.5 uppercase tracking-wider">▼ 進行状況</p>
+          <div class="border border-slate-200 rounded-lg overflow-x-auto bg-white">
+            <table class="w-full text-left border-collapse text-xs sm:text-sm min-w-[750px]">
+              <thead class="bg-slate-50 text-slate-500 font-bold border-b border-slate-200">
+                <tr>
+                  <th class="py-2 px-3 border-r border-slate-200 w-16 text-center">工程</th>
+                  <th class="py-2 px-3 border-r border-slate-200 w-44">役割</th>
+                  <th class="py-2 px-3 border-r border-slate-200 w-48">名前</th>
+                  <th class="py-2 px-3 border-r border-slate-200 w-24 text-center">結果</th>
+                  <th class="py-2 px-3 border-r border-slate-200">コメント</th>
+                  <th class="py-2 px-3 w-36">日時</th>
+                </tr>
+              </thead>
+              <tbody id="modal-timeline-tbody" class="divide-y divide-slate-200 text-slate-700"></tbody>
+            </table>
+          </div>
+        </div>
+        <div id="modal-comment-area" class="bg-blue-50 p-4 rounded-lg border border-blue-200 hidden">
+          <label class="block text-xs font-bold text-blue-800 mb-1">コメント理由 <span class="text-red-500">*</span></label>
+          <textarea id="modal-comment" rows="2" class="w-full p-2 text-sm rounded border border-slate-300 bg-white shadow-sm focus:outline-none"></textarea>
+        </div>
+      </div>
+      <div class="pt-4 border-t border-slate-200 flex justify-end items-center gap-2 bg-white shrink-0" id="modal-buttons-container"></div>
+    </div>
+  </div>
+
+  <script>
+    // --- Google Apps Script (google.script.run) Mock for Flask API ---
+    window.google = {
+      script: {
+        run: {
+          withSuccessHandler: function(onSuccess) {
+            this._success = onSuccess;
+            return this;
+          },
+          withFailureHandler: function(onFailure) {
+            this._failure = onFailure;
+            return this;
+          },
+          executeGasUserGet: function() {
+            fetch('/api/profile')
+              .then(r => r.json())
+              .then(data => {
+                this._success({
+                  email: data.email,
+                  displayName: data.name,
+                  dept: data.dept,
+                  title: data.title,
+                  isAdmin: data.isAdmin,
+                  isAllowedUser: true
+                });
+              })
+              .catch(err => this._failure && this._failure(err));
+          },
+          getMasterForms: function() {
+            fetch('/api/initial-data')
+              .then(r => r.json())
+              .then(data => this._success(data.forms))
+              .catch(err => this._failure && this._failure(err));
+          },
+          getAllActiveUsers: function() {
+            fetch('/api/initial-data')
+              .then(r => r.json())
+              .then(data => this._success(data.users))
+              .catch(err => this._failure && this._failure(err));
+          },
+          getDepartmentUsers: function() {
+            fetch('/api/initial-data')
+              .then(r => r.json())
+              .then(data => {
+                // Filter users in the same department
+                const deptText = document.getElementById('user-display').textContent;
+                const match = deptText.match(/\[(.*?)\]/);
+                const myDept = match ? match[1] : "";
+                
+                const filtered = data.users.filter(u => !myDept || u.dept === myDept);
+                this._success(filtered.length > 0 ? filtered : data.users);
+              })
+              .catch(err => this._failure && this._failure(err));
+          },
+          getWorkflowHistory: function() {
+            fetch('/api/applications')
+              .then(r => r.json())
+              .then(data => {
+                if (!currentUserEmailAccount) {
+                  this._success({ pending: [], sent: [], received: [], returned: [] });
+                  return;
+                }
+                const emailLower = currentUserEmailAccount.toLowerCase();
+                const pending = [];
+                const sent = [];
+                const received = [];
+                const returned = [];
+                
+                data.forEach(app => {
+                  const routes = app.routes || [];
+                  const applicantEmail = app.applicantEmail || "";
+                  
+                  const activeRoute = routes.find(r => r.step === app.currentStep && r.status === "進行中");
+                  if (activeRoute && activeRoute.approver && activeRoute.approver.toLowerCase() === emailLower && app.globalStatus === "進行中") {
+                    pending.push(app);
+                  }
+                  if (applicantEmail && applicantEmail.toLowerCase() === emailLower) {
+                    sent.push(app);
+                  }
+                  const myPastRoute = routes.find(r => r.approver && r.approver.toLowerCase() === emailLower && ["承認", "決裁", "確認"].includes(r.status));
+                  if (myPastRoute) {
+                    received.push(app);
+                  }
+                  if (applicantEmail && applicantEmail.toLowerCase() === emailLower && ["差し戻し", "引き戻し", "却下"].includes(app.globalStatus)) {
+                    returned.push(app);
+                  }
+                });
+                this._success({ pending, sent, received, returned });
+              })
+              .catch(err => this._failure && this._failure(err));
+          },
+          addNewApplication: function(formData) {
+            fetch('/api/applications/submit', {
+              method: 'POST',
+              headers: {'Content-Type': 'application/json'},
+              body: JSON.stringify({
+                formId: currentActiveForm.id,
+                formName: formData.formName,
+                title: formData.title,
+                pdfName: formData.fileName || "未添付",
+                routes: formData.customRoutes.map((r, idx) => {
+                  const firstEmail = r.approvers.length > 0 ? r.approvers[0].email : "未定";
+                  const firstName = r.approvers.length > 0 ? r.approvers[0].name.split(" [")[0] : "未定";
+                  return {
+                    step: idx + 1,
+                    role: r.role,
+                    type: r.type,
+                    approver: firstEmail,
+                    approverName: firstName,
+                    status: "未到達",
+                    comment: "-",
+                    time: "-"
+                  };
+                })
+              })
+            })
+            .then(r => r.json())
+            .then(data => {
+              if (data.success) this._success(data.appNumber);
+              else this._failure && this._failure(new Error(data.error));
+            })
+            .catch(err => this._failure && this._failure(err));
+          },
+          getWorkflowDetails: function(appNumber) {
+            fetch('/api/applications')
+              .then(r => r.json())
+              .then(apps => {
+                const app = apps.find(a => a.appNumber === appNumber);
+                if (!app) {
+                  this._failure && this._failure(new Error("Not found"));
+                  return;
+                }
+                const timeline = app.routes.map(r => ({
+                  step: r.step,
+                  role: r.role,
+                  approver: r.approverName || r.approver,
+                  approverRaw: r.approver,
+                  status: r.status,
+                  comment: r.comment || "-",
+                  date: r.time || r.actionAt || "-"
+                }));
+                
+                const activeStep = app.routes.find(r => r.step === app.currentStep && r.status === "進行中");
+                const isCurrentUserTurn = activeStep && activeStep.approver.toLowerCase() === currentUserEmailAccount.toLowerCase();
+                
+                this._success({
+                  application: app,
+                  timeline: timeline,
+                  isCurrentUserTurn: isCurrentUserTurn,
+                  activeStep: app.currentStep
+                });
+              })
+              .catch(err => this._failure && this._failure(err));
+          },
+          processApprove: function(appNumber, step, comment) {
+            this._sendAction(appNumber, 'approve', comment);
+          },
+          processReturn: function(appNumber, step, comment) {
+            this._sendAction(appNumber, 'return', comment);
+          },
+          processReject: function(appNumber, step, comment) {
+            this._sendAction(appNumber, 'reject', comment);
+          },
+          processWithdraw: function(appNumber, comment) {
+            this._sendAction(appNumber, 'return', comment || "取り下げ");
+          },
+          _sendAction: function(appNumber, action, comment) {
+            fetch('/api/applications/action', {
+              method: 'POST',
+              headers: {'Content-Type': 'application/json'},
+              body: JSON.stringify({ appNumber, action, comment })
+            })
+            .then(r => r.json())
+            .then(data => {
+              if (data.success) this._success("処理が完了しました。");
+              else this._failure && this._failure(new Error(data.error));
+            })
+            .catch(err => this._failure && this._failure(err));
+          },
+          getAttachmentFoldersList: function() {
+            this._success([{id: "default", name: "02_Attachments"}]);
+          },
+          getAdminStorageMetaLogs: function() {
+            this._success([]);
+          },
+          saveFormSortOrders: function(sortedIds) {
+            // Sort order mock (succeeds silently)
+            this._success("順序を保存しました。");
+          },
+          deleteMasterForm: function(formId) {
+            fetch(`/api/admin/forms/delete/${formId}`, { method: 'POST' })
+              .then(r => r.json())
+              .then(data => {
+                if (data.success) this._success("削除しました。");
+                else this._failure && this._failure(new Error(data.error));
+              })
+              .catch(err => this._failure && this._failure(err));
+          }
+        }
+      }
+    };
+
+    let rawWorkflowData = { pending: [], sent: [], received: [], returned: [] };
+    let masterFormsPool = []; 
+    let masterUsersPool = []; 
+    let departmentUsersPool = [];
+    let attachmentFoldersPool = [];
+    let currentView = 'pending';
+    let currentSort = { column: 'appNumber', asc: false };
+    
+    let currentActiveForm = null;
+    let userBuiltRoutes = []; 
+    let adminActiveRowIndex = null;
+    let isEditingModeRow = false;
+    let currentLoggedUserDisplayName = "";
+    let currentUserEmailAccount = "";
+
+    let existingPdfUrlBackup = "";
+    let existingPdfNameBackup = "";
+
+    const ROLE_MASTER_OPTIONS = [
+      "管掌者・所属長", "人事・総務担当", "審議者", "代表取締役社長", "管理部責任者", "管理統括部長", "経理担当", "システム部責任者", "決裁後の回覧者", "申請者（本人）", "統括部長・部門長・所属長", "総務担当（必要項目確認）", "総務担当（決裁番号付番）", "システム部担当（登録処理）", "管理部担当（最終確認）", "管理本部長"
+    ];
+
+    function showLoadingOverlay(title, desc) {
+      if(title) document.getElementById('loading-title').textContent = title;
+      if(desc) document.getElementById('loading-desc').innerHTML = desc;
+      document.getElementById('loading-overlay').classList.remove('hidden');
+    }
+
+    function hideLoadingOverlay() {
+      document.getElementById('loading-overlay').classList.add('hidden');
+    }
+
+    window.onload = function() {
+      google.script.run
+        .withSuccessHandler(userMeta => { 
+          if (!userMeta.isAllowedUser) {
+            document.body.innerHTML = `
+              <div class="h-screen w-screen flex flex-col items-center justify-center bg-slate-900 text-white p-6">
+                <div class="text-6xl mb-4">🔒</div>
+                <h1 class="text-xl font-black mb-2">Access Denied (アクセス権限がありません)</h1>
+                <p class="text-xs text-slate-400 max-w-md text-center">このシステムを利用するには、管理者に社員マスタ(AO列)への利用許可設定を依頼してください。</p>
+                <p class="text-[11px] text-slate-600 mt-6">アカウント: ${userMeta.email}</p>
+              </div>
+            `;
+            return;
+          }
+          currentLoggedUserDisplayName = userMeta.displayName;
+          currentUserEmailAccount = userMeta.email;
+          document.getElementById('user-display').textContent = userMeta.displayName; 
+          if (userMeta.isAdmin) {
+            document.getElementById('menu-admin-settings').classList.remove('hidden');
+          }
+          
+          // ユーザー情報の取得完了後に、順次データをロードする (並列処理の排除)
+          loadMasterFormsData();
+          loadMasterUsersData();
+          loadAttachmentFolders();
+          refreshData();
+          initResizableColumns();
+        })
+        .withFailureHandler(() => { 
+          document.getElementById('user-display').textContent = "ゲストユーザー"; 
+        })
+        .executeGasUserGet();
+    };
+
+    function loadAttachmentFolders(selectedFolderId) {
+      google.script.run.withSuccessHandler(folders => {
+        attachmentFoldersPool = folders;
+        const sel = document.getElementById('adm-form-folder');
+        if (!sel) return;
+        sel.innerHTML = '';
+        folders.forEach(f => {
+          const opt = document.createElement('option');
+          opt.value = f.id;
+          opt.textContent = f.name;
+          if (selectedFolderId && f.id === selectedFolderId) opt.selected = true;
+          sel.appendChild(opt);
+        });
+      }).getAttachmentFoldersList();
+    }
+
+    function promptCreateNewFolder() {
+      const folderName = prompt("新しい添付ファイル保存先フォルダ名を入力してください:\n(例: 営業部稟議, 開発資産稟議 など)");
+      if (!folderName || !folderName.trim()) return;
+
+      showLoadingOverlay("フォルダを新規作成中...", "Google Drive内に保存先フォルダを作成しています。");
+      google.script.run
+        .withSuccessHandler(newFolder => {
+          hideLoadingOverlay();
+          alert(`「${newFolder.name}」フォルダを作成しました！`);
+          loadAttachmentFolders(newFolder.id);
+        })
+        .withFailureHandler(err => {
+          hideLoadingOverlay();
+          alert("フォルダ作成エラー: " + err.message);
+        })
+        .createAttachmentSubFolder(folderName.trim());
+    }
+
+    function initResizableColumns() {
+      const table = document.getElementById('main-workflow-table');
+      if (!table) return;
+      const resizers = table.querySelectorAll('.resizer');
+      
+      resizers.forEach(resizer => {
+        let x = 0;
+        let w = 0;
+        const colIndex = resizer.getAttribute('data-col');
+        const targetCol = document.getElementById('col-' + colIndex);
+
+        const mouseMoveHandler = function (e) {
+          const dx = e.clientX - x;
+          const newWidth = Math.max(60, w + dx);
+          if (targetCol) {
+            targetCol.style.width = newWidth + 'px';
+          }
+        };
+
+        const mouseUpHandler = function () {
+          resizer.classList.remove('resizing');
+          document.removeEventListener('mousemove', mouseMoveHandler);
+          document.removeEventListener('mouseup', mouseUpHandler);
+        };
+
+        resizer.addEventListener('mousedown', function (e) {
+          e.stopPropagation(); 
+          x = e.clientX;
+          w = targetCol ? targetCol.offsetWidth : resizer.parentElement.offsetWidth;
+          resizer.classList.add('resizing');
+          document.addEventListener('mousemove', mouseMoveHandler);
+          document.addEventListener('mouseup', mouseUpHandler);
+        });
+      });
+    }
+
+    function loadMasterFormsData() {
+      google.script.run.withSuccessHandler(forms => { masterFormsPool = forms; renderMasterFormSelector(); renderAdminFormList(); }).getMasterForms();
+    }
+
+    function loadMasterUsersData() {
+      google.script.run.withSuccessHandler(users => { 
+        masterUsersPool = users; 
+        renderAdminUserSelectionPool(); 
+      }).getAllActiveUsers();
+
+      google.script.run.withSuccessHandler(users => {
+        departmentUsersPool = users;
+        refreshUserDepartmentPool();
+      }).getDepartmentUsers();
+    }
+
+    function refreshData() {
+      document.getElementById('data-tbody').innerHTML = '<tr><td colspan="7" class="py-12 text-center text-slate-400 font-medium">最新データを同期中...</td></tr>';
+      google.script.run
+        .withSuccessHandler(data => { rawWorkflowData = data; updateBadges(); renderCurrentTable(); })
+        .withFailureHandler(err => { showMessage("同期エラー: " + err.message, false); })
+        .getWorkflowHistory();
+    }
+
+    function updateBadges() {
+      const pBadge = document.getElementById('badge-pending'); pBadge.textContent = rawWorkflowData.pending.length;
+      pBadge.className = rawWorkflowData.pending.length > 0 ? "bg-red-500 text-white text-xs px-2 py-0.5 rounded-full" : "hidden";
+      
+      const rBadge = document.getElementById('badge-returned'); rBadge.textContent = rawWorkflowData.returned.length;
+      rBadge.className = rawWorkflowData.returned.length > 0 ? "bg-amber-500 text-white text-xs px-2 py-0.5 rounded-full font-bold" : "hidden";
+    }
+
+    function switchMenu(menuKey) {
+      currentView = menuKey;
+      document.getElementById('section-dashboard').classList.add('hidden');
+      document.getElementById('section-form-selector').classList.add('hidden');
+      document.getElementById('section-form-submitter').classList.add('hidden');
+      document.getElementById('section-form-confirmation').classList.add('hidden');
+      document.getElementById('section-admin-panel').classList.add('hidden');
+
+      const menus = ['pending', 'sent', 'received', 'returned', 'admin-settings'];
+      menus.forEach(m => {
+        const btn = document.getElementById('menu-' + m);
+        if(btn) {
+          if (m === 'admin-settings') {
+            btn.className = (m === menuKey) ? "w-full text-left flex items-center px-3 py-2.5 rounded-md bg-blue-600 text-white text-xs font-bold shadow-sm" : "w-full text-left flex items-center px-3 py-2.5 rounded-md bg-slate-50 hover:bg-slate-100 text-xs font-bold shadow-sm border text-slate-700";
+          } else {
+            btn.className = (m === menuKey) ? "w-full text-left flex items-center justify-between px-3 py-2.5 rounded-md font-bold text-blue-700 bg-blue-50 text-sm" : "w-full text-left flex items-center justify-between px-3 py-2.5 rounded-md font-medium text-slate-700 hover:bg-slate-50 text-sm";
+          }
+        }
+      });
+
+      if (menuKey === 'admin-settings') {
+        document.getElementById('sidebar-container').classList.add('hidden');
+        document.getElementById('section-admin-panel').classList.remove('hidden');
+        loadAdminStorageMetaTable(); 
+      } else {
+        document.getElementById('sidebar-container').classList.remove('hidden');
+        document.getElementById('section-dashboard').classList.remove('hidden');
+        const titles = { pending: '未処理一覧（受信）', sent: '送信一覧（マイ申請）', received: '受信履歴（処理済）', returned: '差し戻し・引き戻し・却下一覧' };
+        if(titles[menuKey]) document.getElementById('view-title').textContent = titles[menuKey];
+        renderCurrentTable();
+      }
+    }
+
+    function cancelToDashboard() {
+      document.getElementById('sidebar-container').classList.remove('hidden');
+      switchMenu('pending');
+    }
+
+    function switchAdminTab(targetTab) {
+      document.getElementById('tab-adm-storage').classList.remove('tab-active');
+      document.getElementById('tab-adm-route').classList.remove('tab-active');
+      document.getElementById('sub-panel-storage').classList.add('hidden');
+      document.getElementById('sub-panel-route').classList.add('hidden');
+
+      if (targetTab === 'storage') {
+        document.getElementById('tab-adm-storage').classList.add('tab-active');
+        document.getElementById('sub-panel-storage').classList.remove('hidden');
+        loadAdminStorageMetaTable();
+      } else {
+        document.getElementById('tab-adm-route').classList.add('tab-active');
+        document.getElementById('sub-panel-route').classList.remove('hidden');
+      }
+    }
+
+    function loadAdminStorageMetaTable() {
+      const tbody = document.getElementById('storage-meta-tbody');
+      tbody.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-slate-400">親フォルダ内のログ・ファイルを走査中...</td></tr>';
+      
+      google.script.run.withSuccessHandler(logs => {
+        if(logs.length === 0) { tbody.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-slate-400">データがありません。申請が行われると自動生成されます。</td></tr>'; return; }
+        tbody.innerHTML = '';
+        logs.forEach(l => {
+          const tr = document.createElement('tr'); tr.className = "hover:bg-slate-50 border-b";
+          tr.innerHTML = `
+            <td class="p-3 font-bold text-slate-800">${l.month}</td>
+            <td class="p-3 border-l"><a href="${l.fileUrl}" target="_blank" class="text-blue-600 hover:underline font-medium">📈 ${l.fileName} ➔</a></td>
+            <td class="p-3 border-l"><a href="${l.pdfFolderUrl}" target="_blank" class="text-indigo-600 hover:underline font-medium">📁 02_Attachments/${l.pdfFolderName} ➔</a></td>
+            <td class="p-3 border-l text-center font-black text-blue-800 bg-blue-50/50">${l.applicationCount} 件</td>
+            <td class="p-3 border-l text-slate-400 text-xs">${l.updated}</td>
+          `;
+          tbody.appendChild(tr);
+        });
+      }).getAdminStorageMetaLogs();
+    }
+
+    function renderCurrentTable() {
+      const tbody = document.getElementById('data-tbody');
+      let dataList = [...rawWorkflowData[currentView] || []];
+      if (dataList.length === 0) { tbody.innerHTML = '<tr><td colspan="7" class="py-12 text-center text-slate-400 font-medium">該当するデータはありません。</td></tr>'; return; }
+      tbody.innerHTML = '';
+      dataList.forEach(item => {
+        const tr = document.createElement('tr'); tr.className = "hover:bg-slate-50 text-sm class-row-item";
+        
+        let statusBadge = `<span class="bg-blue-50 text-blue-700 px-2.5 py-0.5 rounded font-bold border border-blue-200 inline-block text-xs">${item.globalStatus || item.status}</span>`;
+        if (item.globalStatus === "差し戻し") {
+          statusBadge = `<span class="bg-amber-100 text-amber-800 px-2.5 py-0.5 rounded font-black border border-amber-300 inline-block text-xs">↩️ 差し戻し</span>`;
+        } else if (item.globalStatus === "引き戻し") {
+          statusBadge = `<span class="bg-slate-200 text-slate-700 px-2.5 py-0.5 rounded font-black border border-slate-300 inline-block text-xs">↩️ 引き戻し</span>`;
+        } else if (item.globalStatus === "却下") {
+          statusBadge = `<span class="bg-red-100 text-red-800 px-2.5 py-0.5 rounded font-black border border-red-300 inline-block text-xs">❌ 却下</span>`;
+        } else if (item.globalStatus === "決裁") {
+          statusBadge = `<span class="bg-red-50 text-red-600 px-2.5 py-0.5 rounded font-black border border-red-200 inline-block text-xs">【決裁】</span>`;
+        }
+
+        let actionBtnHtml = `<button onclick="openActionModal('${item.appNumber}')" class="bg-slate-100 hover:bg-blue-600 hover:text-white font-bold px-3.5 py-1.5 rounded shadow-sm transition-colors text-xs inline-block">詳細</button>`;
+        if (currentView === 'returned' || item.globalStatus === "差し戻し" || item.globalStatus === "引き戻し" || item.globalStatus === "却下") {
+          actionBtnHtml = `
+            <div class="flex items-center justify-center space-x-1.5 whitespace-nowrap">
+              <button onclick="openActionModal('${item.appNumber}')" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-2.5 py-1.5 rounded shadow-sm transition-colors text-xs shrink-0">詳細</button>
+              <button onclick="reuseAndReapplyWorkflow('${item.appNumber}')" style="background-color: #f59e0b; color: #ffffff; font-weight: 800;" class="hover:opacity-90 px-3 py-1.5 rounded shadow-sm transition-opacity text-xs shrink-0">再申請</button>
+            </div>
+          `;
+        }
+
+        tr.innerHTML = `
+          <td class="py-3 px-3 font-bold whitespace-nowrap overflow-hidden">No.${item.appNumber}</td>
+          <td class="py-3 px-3 text-slate-500 whitespace-nowrap overflow-hidden">${item.type}</td>
+          <td class="py-3 px-3 font-semibold text-slate-800 leading-relaxed break-words">${item.title}</td>
+          <td class="py-3 px-3 text-slate-700 break-words">${item.applicant}</td>
+          <td class="py-3 px-3 text-slate-400 whitespace-nowrap overflow-hidden">${item.date}</td>
+          <td class="py-3 px-3 whitespace-nowrap overflow-hidden">${statusBadge}</td>
+          <td class="py-3 px-3 text-center whitespace-nowrap">${actionBtnHtml}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function startNewWorkflow() {
+      existingPdfUrlBackup = "";
+      existingPdfNameBackup = "";
+      document.getElementById('existing-pdf-info').classList.add('hidden');
+      document.getElementById('ins-pdf').required = true;
+      document.getElementById('ins-title').value = '';
+
+      document.getElementById('section-dashboard').classList.add('hidden');
+      document.getElementById('section-form-submitter').classList.add('hidden');
+      document.getElementById('section-form-confirmation').classList.add('hidden');
+      document.getElementById('section-admin-panel').classList.add('hidden');
+      document.getElementById('section-form-selector').classList.remove('hidden');
+    }
+
+    function renderMasterFormSelector() {
+      const container = document.getElementById('master-form-selector-list'); container.innerHTML = '';
+      masterFormsPool.forEach(form => {
+        const div = document.createElement('div'); div.className = "py-4 flex justify-between items-center hover:bg-slate-50 px-2 rounded-lg text-sm border-b";
+        div.innerHTML = `<div class="flex-1"><h4 class="text-base font-bold text-blue-800">✦ ${form.name}</h4><p class="text-slate-500 mt-1 leading-relaxed">${form.description.replace(/\n/g, '<br>')}</p></div><button onclick="selectFormToInput('${form.id}')" class="bg-blue-50 hover:bg-blue-600 hover:text-white border border-blue-300 font-bold px-5 py-2 rounded-lg transition-all text-sm">申請作成 ➔</button>`;
+        container.appendChild(div);
+      });
+    }
+
+    function selectFormToInput(formId) {
+      const form = masterFormsPool.find(f => f.id === formId); if(!form) return;
+      currentActiveForm = form; userBuiltRoutes = JSON.parse(JSON.stringify(form.routes));
+      document.getElementById('section-form-selector').classList.add('hidden');
+      document.getElementById('section-form-confirmation').classList.add('hidden');
+      document.getElementById('section-form-submitter').classList.remove('hidden');
+      document.getElementById('submit-form-name').textContent = `📄 申請書の作成：${form.name}`;
+      document.getElementById('submit-form-desc').textContent = form.description;
+      refreshUserDepartmentPool(); renderUserBuiltRouteTable();
+    }
+
+    function reuseAndReapplyWorkflow(appNumber) {
+      closeActionModal();
+      showLoadingOverlay("申請内容を復元中...", "過去の申請データを読み込んでいます。");
+
+      google.script.run.withSuccessHandler(res => {
+        hideLoadingOverlay();
+        const app = res.application;
+        
+        let form = masterFormsPool.find(f => f.name === app.type);
+        if(!form) {
+          form = { id: "custom", name: app.type, description: "再利用申請", routes: [], folderId: "" };
+        }
+        currentActiveForm = form;
+
+        document.getElementById('ins-title').value = app.title;
+
+        if (app.pdfUrl) {
+          existingPdfUrlBackup = app.pdfUrl;
+          existingPdfNameBackup = app.pdfName || "添付済_稟議書.pdf";
+          const pdfInfoElem = document.getElementById('existing-pdf-info');
+          pdfInfoElem.textContent = `📎 前回添付ファイル: ${existingPdfNameBackup} （※ファイルを選択しない場合、このファイルがそのまま維持されます）`;
+          pdfInfoElem.classList.remove('hidden');
+          document.getElementById('ins-pdf').required = false; 
+        }
+
+        userBuiltRoutes = [];
+        res.timeline.forEach(row => {
+          let roleName = row.role;
+          let typeName = "承認（全員）";
+          if (roleName.includes("(")) {
+            const pts = roleName.split("(");
+            roleName = pts[0].trim();
+            typeName = pts[1].replace(")", "").trim();
+          }
+
+          userBuiltRoutes.push({
+            type: typeName,
+            role: roleName,
+            approvers: row.approver && !row.approver.includes("手動指定") ? [{ email: row.approverRaw || row.approver, name: row.approver }] : []
+          });
+        });
+
+        document.getElementById('section-dashboard').classList.add('hidden');
+        document.getElementById('section-form-selector').classList.add('hidden');
+        document.getElementById('section-form-confirmation').classList.add('hidden');
+        document.getElementById('section-admin-panel').classList.add('hidden');
+        document.getElementById('section-form-submitter').classList.remove('hidden');
+        document.getElementById('submit-form-name').textContent = `📄 修正と再申請：${app.title} (元No.${app.appNumber})`;
+        document.getElementById('submit-form-desc').textContent = "内容や添付ファイルを修正し、再度申請を実行できます。";
+
+        refreshUserDepartmentPool(); 
+        renderUserBuiltRouteTable();
+      }).getWorkflowDetails(appNumber);
+    }
+
+    function backToFormSelector() {
+      document.getElementById('section-form-submitter').classList.add('hidden');
+      document.getElementById('section-form-selector').classList.remove('hidden');
+    }
+
+    function refreshUserDepartmentPool() {
+      const showAll = document.getElementById('ins-all-dept-toggle') ? document.getElementById('ins-all-dept-toggle').checked : false;
+      const targetSource = showAll ? masterUsersPool : (departmentUsersPool.length > 0 ? departmentUsersPool : masterUsersPool);
+      
+      const pool = document.getElementById('ins-dept-pool'); 
+      if (!pool) return;
+      pool.innerHTML = '';
+      
+      targetSource.forEach(u => {
+        const opt = document.createElement('option'); 
+        opt.value = u.email;
+        opt.textContent = u.dept ? `[${u.dept}] ${u.name} (${u.title || '一般'})` : `${u.name} (${u.title || '一般'})`;
+        pool.appendChild(opt);
+      });
+    }
+
+    function filterApplicantUserPool() {
+      const kw = document.getElementById('ins-user-filter').value.toLowerCase();
+      const showAll = document.getElementById('ins-all-dept-toggle').checked;
+      const targetSource = showAll ? masterUsersPool : (departmentUsersPool.length > 0 ? departmentUsersPool : masterUsersPool);
+      
+      const pool = document.getElementById('ins-dept-pool'); 
+      pool.innerHTML = '';
+      
+      targetSource.forEach(u => {
+        const txt = `[${u.dept || ''}] ${u.name} (${u.title || ''})`.toLowerCase();
+        if (txt.includes(kw)) {
+          const opt = document.createElement('option'); 
+          opt.value = u.email;
+          opt.textContent = u.dept ? `[${u.dept}] ${u.name} (${u.title || '一般'})` : `${u.name} (${u.title || '一般'})`;
+          pool.appendChild(opt);
+        }
+      });
+    }
+
+    function renderUserBuiltRouteTable() {
+      const tbody = document.getElementById('user-route-build-tbody'); tbody.innerHTML = '';
+      userBuiltRoutes.forEach((stage, sIdx) => {
+        const tr = document.createElement('tr');
+        let typeBadge = `<span class="bg-blue-100 text-blue-800 border font-bold px-1 py-0.5 rounded text-[10px]">${stage.type}</span>`;
+        if(stage.type === '決裁') typeBadge = `<span class="bg-red-100 text-red-800 border border-red-200 font-bold px-1 py-0.5 rounded text-[10px]">決裁</span>`;
+        if(stage.type === '確認') typeBadge = `<span class="bg-gray-100 text-gray-700 border font-bold px-1 py-0.5 rounded text-[10px]">確認</span>`;
+
+        let selectHtml = `<select size="3" class="w-full border rounded p-1 text-[11px] bg-white text-slate-800 focus:outline-none h-16" id="user-stage-select-${sIdx}">`;
+        stage.approvers.forEach((app, aIdx) => { selectHtml += `<option value="${app.email}">${app.name || app.email}</option>`; });
+        selectHtml += `</select>`;
+
+        tr.innerHTML = `<td class="p-2 border-r border-slate-200 font-bold text-center">${typeBadge}</td><td class="p-2 border-r border-slate-200 font-bold text-slate-600">${stage.role}</td><td class="p-2 flex gap-2 items-center"><div class="flex-1">${selectHtml}</div><div class="flex flex-col gap-1 shrink-0"><button type="button" onclick="addUserToStageFromPool(${sIdx})" class="bg-slate-100 hover:bg-blue-600 hover:text-white px-2 py-0.5 border rounded font-bold text-[10px]">← 追加</button><button type="button" onclick="removeUserFromStage(${sIdx})" class="bg-slate-100 hover:bg-red-600 hover:text-white px-2 py-0.5 border rounded font-bold text-[10px]">削除 ➔</button></div></td>`;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function addUserToStageFromPool(stageIdx) {
+      const pool = document.getElementById('ins-dept-pool'); const selectedOptions = Array.from(pool.selectedOptions);
+      if(selectedOptions.length === 0) { alert("右側の社員リストからメンバーを選択してください。"); return; }
+      selectedOptions.forEach(opt => {
+        if(!userBuiltRoutes[stageIdx].approvers.some(a => a.email === opt.value)) { userBuiltRoutes[stageIdx].approvers.push({ email: opt.value, name: opt.textContent }); }
+      });
+      renderUserBuiltRouteTable();
+    }
+
+    function removeUserFromStage(stageIdx) {
+      const sel = document.getElementById(`user-stage-select-${stageIdx}`); if(sel.selectedIndex === -1) { alert("削除したい処理者名を選択してください。"); return; }
+      userBuiltRoutes[stageIdx].approvers.splice(sel.selectedIndex, 1); renderUserBuiltRouteTable();
+    }
+
+    function verifyFileFormat() {
+      const file = document.getElementById('ins-pdf').files[0];
+      if (file && file.type !== 'application/pdf') { alert("添付はPDF形式のみ対応しています。"); document.getElementById('ins-pdf').value = ''; }
+    }
+
+    function proceedToConfirmationStep(event) {
+      event.preventDefault();
+      const title = document.getElementById('ins-title').value.trim();
+      const file = document.getElementById('ins-pdf').files[0];
+
+      if (!title) { alert("申請標題を入力してください。"); return; }
+      if (!file && !existingPdfUrlBackup) { alert("稟議書PDFファイルを添付してください。"); return; }
+
+      document.getElementById('conf-title').textContent = title;
+      document.getElementById('conf-applicant').textContent = currentLoggedUserDisplayName || "申請者本人";
+      document.getElementById('conf-form-name').textContent = currentActiveForm.name;
+      document.getElementById('conf-file-name').textContent = file ? file.name : (existingPdfNameBackup + " (前回ファイルを維持)");
+
+      const confTbody = document.getElementById('conf-route-tbody');
+      confTbody.innerHTML = '';
+
+      userBuiltRoutes.forEach(stage => {
+        const tr = document.createElement('tr');
+        let typeBadge = `<span class="bg-blue-100 text-blue-800 border font-bold px-1.5 py-0.5 rounded text-[10px]">${stage.type}</span>`;
+        if(stage.type === '決裁') typeBadge = `<span class="bg-red-100 text-red-800 border border-red-200 font-bold px-1.5 py-0.5 rounded text-[10px]">決裁</span>`;
+        if(stage.type === '確認') typeBadge = `<span class="bg-gray-100 text-gray-700 border font-bold px-1.5 py-0.5 rounded text-[10px]">確認</span>`;
+
+        let namesText = stage.approvers.map(a => `👤 ${a.name || a.email}`).join('<br>');
+        if(!namesText) namesText = `<span class="text-slate-400">（手動指定待ち）</span>`;
+
+        tr.innerHTML = `
+          <td class="p-2.5 border-r border-slate-200 text-center">${typeBadge}</td>
+          <td class="p-2.5 border-r border-slate-200 font-bold text-slate-700">${stage.role}</td>
+          <td class="p-2.5 font-medium text-slate-800 leading-relaxed">${namesText}</td>
+        `;
+        confTbody.appendChild(tr);
+      });
+
+      document.getElementById('section-form-submitter').classList.add('hidden');
+      document.getElementById('section-form-confirmation').classList.remove('hidden');
+    }
+
+    function previewSelectedLocalPdf() {
+      const file = document.getElementById('ins-pdf').files[0];
+      if (file) {
+        const blobUrl = URL.createObjectURL(file);
+        window.open(blobUrl, '_blank');
+      } else if (existingPdfUrlBackup) {
+        window.open(existingPdfUrlBackup, '_blank');
+      } else {
+        alert("添付ファイルがありません。");
+      }
+    }
+
+    function backToInputForm() {
+      document.getElementById('section-form-confirmation').classList.add('hidden');
+      document.getElementById('section-form-submitter').classList.remove('hidden');
+    }
+
+    function executeWorkflowSubmission() {
+      const file = document.getElementById('ins-pdf').files[0]; 
+
+      showLoadingOverlay(
+        "稟議データを保存・申請中...", 
+        "排他ロック順で処理を行っています。<br>そのまま画面を閉じずに少々お待ちください。"
+      );
+
+      const submitDataProcess = (fileData, fileName) => {
+        const formData = { 
+          formName: currentActiveForm.name, 
+          title: document.getElementById('ins-title').value, 
+          fileName: fileName, 
+          fileData: fileData, 
+          customRoutes: userBuiltRoutes,
+          existingPdfUrl: existingPdfUrlBackup,
+          targetFolderId: currentActiveForm.folderId || ""
+        };
+
+        google.script.run
+          .withSuccessHandler(appNum => { 
+            hideLoadingOverlay();
+            showMessage("稟議を正しく申請しました。 No." + appNum, true); 
+            cancelToDashboard(); 
+            refreshData(); 
+          })
+          .withFailureHandler(err => { 
+            hideLoadingOverlay();
+            showMessage("申請エラー: " + err.message, false); 
+          })
+          .addNewApplication(formData);
+      };
+
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) { submitDataProcess(e.target.result, file.name); };
+        reader.readAsDataURL(file);
+      } else {
+        submitDataProcess(null, existingPdfNameBackup);
+      }
+    }
+
+    // 💡管理パネルのフォーム一覧描画（「▲」「▼」並び替えボタン＆完全安全紐づき付き）
+    function renderAdminFormList() {
+      const container = document.getElementById('admin-form-list'); 
+      if (!container) return;
+      container.innerHTML = '';
+      
+      masterFormsPool.forEach((form, idx) => {
+        const div = document.createElement('div'); 
+        div.className = "p-2 hover:bg-blue-50 cursor-pointer text-xs font-semibold flex justify-between items-center border-b bg-white gap-1 group";
+        div.innerHTML = `
+          <div class="flex items-center space-x-1 shrink-0">
+            <button onclick="moveMasterFormOrder(${idx}, -1); event.stopPropagation();" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-1.5 py-0.5 border rounded text-[10px] ${idx === 0 ? 'opacity-30 cursor-not-allowed' : ''}">▲</button>
+            <button onclick="moveMasterFormOrder(${idx}, 1); event.stopPropagation();" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-1.5 py-0.5 border rounded text-[10px] ${idx === masterFormsPool.length - 1 ? 'opacity-30 cursor-not-allowed' : ''}">▼</button>
+          </div>
+          <div onclick="loadFormIntoEditor('${form.id}')" class="flex-1 truncate px-1">
+            <span class="text-blue-900 font-bold block truncate">📂 ${form.name}</span>
+            <span class="text-slate-400 block text-[9px]">ID: ${form.id}</span>
+          </div>
+          <button onclick="executeDeleteFormMaster('${form.id}', '${form.name}'); event.stopPropagation();" class="text-red-600 bg-red-50 hover:bg-red-600 hover:text-white border border-red-200 px-1.5 py-0.5 rounded text-[10px] font-bold shadow-sm shrink-0">🗑️ 削除</button>
+        `;
+        container.appendChild(div);
+      });
+    }
+
+    // 💡フォーム順序入れ替え実行関数
+    function moveMasterFormOrder(idx, direction) {
+      const targetIdx = idx + direction;
+      if (targetIdx < 0 || targetIdx >= masterFormsPool.length) return;
+
+      const temp = masterFormsPool[idx];
+      masterFormsPool[idx] = masterFormsPool[targetIdx];
+      masterFormsPool[targetIdx] = temp;
+
+      renderAdminFormList();
+      renderMasterFormSelector(); // 一般申請画面のフォーム選択順も同期
+
+      const sortedIds = masterFormsPool.map(f => f.id);
+      google.script.run.withSuccessHandler(msg => {
+        // 並び順更新完了
+      }).saveFormSortOrders(sortedIds);
+    }
+
+    function executeDeleteFormMaster(formId, formName) {
+      if(!confirm(`⚠️【危険】「${formName}」を完全に消去しますか？`)) return;
+      google.script.run.withSuccessHandler(msg => { alert(msg); loadMasterFormsData(); }).deleteMasterForm(formId);
+    }
+
+    function renderAdminUserSelectionPool() {
+      const pool = document.getElementById('adm-user-pool'); pool.innerHTML = '';
+      masterUsersPool.forEach(u => {
+        const opt = document.createElement('option'); opt.value = u.email; opt.textContent = `[${u.dept}] ${u.name} (${u.title || '一般'})`;
+        pool.appendChild(opt);
+      });
+    }
+
+    function filterAdminUserPool() {
+      const kw = document.getElementById('adm-user-filter').value.toLowerCase();
+      const pool = document.getElementById('adm-user-pool'); pool.innerHTML = '';
+      masterUsersPool.forEach(u => {
+        const txt = `[${u.dept}] ${u.name} (${u.title})`.toLowerCase();
+        if(txt.includes(kw)) {
+          const opt = document.createElement('option'); opt.value = u.email; opt.textContent = `[${u.dept}] ${u.name} (${u.title || '一般'})`;
+          pool.appendChild(opt);
+        }
+      });
+    }
+
+    function createNewFormInEditor() {
+      document.getElementById('adm-form-id').value = 'form_' + Date.now().toString().slice(-4);
+      document.getElementById('adm-form-id').disabled = false;
+      document.getElementById('adm-form-name').value = ''; document.getElementById('adm-form-desc').value = '';
+      adminEditorRows = []; isEditingModeRow = false; 
+      renderAdminEditorTableRows();
+      loadAttachmentFolders();
+    }
+
+    function copyCurrentFormInEditor() {
+      const origName = document.getElementById('adm-form-name').value.trim();
+      const origDesc = document.getElementById('adm-form-desc').value.trim();
+      const origFolder = document.getElementById('adm-form-folder').value;
+      if (!origName) { alert("コピー元のフォームを左一覧から選択してください。"); return; }
+
+      document.getElementById('adm-form-id').value = 'form_' + Date.now().toString().slice(-4);
+      document.getElementById('adm-form-id').disabled = false;
+      document.getElementById('adm-form-name').value = origName + ' (コピー)';
+      document.getElementById('adm-form-desc').value = origDesc;
+      document.getElementById('adm-form-folder').value = origFolder;
+      isEditingModeRow = false;
+      alert("現在の設定内容を複製しました。フォーム名やフォルダを調整して右下の「完全保存」を押してください。");
+    }
+
+    function loadFormIntoEditor(formId) {
+      const form = masterFormsPool.find(f => f.id === formId); if(!form) return;
+      document.getElementById('adm-form-id').value = form.id; document.getElementById('adm-form-id').disabled = true;
+      document.getElementById('adm-form-name').value = form.name; document.getElementById('adm-form-desc').value = form.description;
+      adminEditorRows = JSON.parse(JSON.stringify(form.routes)); isEditingModeRow = true;
+      renderAdminEditorTableRows();
+      loadAttachmentFolders(form.folderId);
+      switchAdminTab('route'); 
+    }
+
+    function addNewRowToAdminEditor() { adminEditorRows.push({ type: "承認（全員）", role: "管掌者・所属長", approvers: [] }); renderAdminEditorTableRows(); }
+
+    function renderAdminEditorTableRows() {
+      const tbody = document.getElementById('adm-table-rows-tbody'); tbody.innerHTML = '';
+      if(adminEditorRows.length === 0) { tbody.innerHTML = '<tr><td colspan="4" class="p-4 text-center text-slate-400">工程を定義してください。</td></tr>'; return; }
+
+      adminEditorRows.forEach((row, idx) => {
+        const tr = document.createElement('tr'); tr.className = "hover:bg-white text-[11px]";
+        const types = ["承認（全員）", "承認（誰か1人）", "承認（1人）", "決裁", "確認"];
+        let typeSelect = `<select class="border p-1 rounded bg-white text-slate-800 w-full" onchange="adminEditorRows[${idx}].type=this.value">`;
+        types.forEach(t => { typeSelect += `<option value="${t}" ${row.type===t?'selected':''}>${t}</option>`; });
+        typeSelect += `</select>`;
+
+        let roleSelect = `<select class="border p-1 rounded bg-white text-slate-800 w-full font-bold" onchange="adminEditorRows[${idx}].role=this.value">`;
+        ROLE_MASTER_OPTIONS.forEach(opt => { roleSelect += `<option value="${opt}" ${row.role===opt?'selected':''}>${opt}</option>`; });
+        roleSelect += `</select>`;
+
+        let appSelect = `<select size="3" class="border p-1 rounded bg-white w-full h-12" id="adm-row-select-box-${idx}" onclick="adminActiveRowIndex=${idx}">`;
+        row.approvers.forEach(a => { appSelect += `<option value="${a.email}">${a.name || a.email}</option>`; });
+        appSelect += `</select>`;
+
+        tr.innerHTML = `
+          <td class="p-1">${typeSelect}</td><td class="p-1">${roleSelect}</td>
+          <td class="p-1 flex gap-1 items-center">
+            <div class="flex-1">${appSelect}</div>
+            <div class="flex flex-col gap-0.5 shrink-0">
+              <button type="button" onclick="moveUserInAdminRow(${idx}, -1)" class="bg-slate-100 hover:bg-slate-200 border px-1 text-[8px] rounded">▲</button>
+              <button type="button" onclick="moveUserInAdminRow(${idx}, 1)" class="bg-slate-100 hover:bg-slate-200 border px-1 text-[8px] rounded">▼</button>
+              <button type="button" onclick="removeUserFromAdminRow(${idx})" class="text-red-500 bg-red-50 hover:bg-red-600 border px-1 text-[9px] rounded font-black">❌</button>
+            </div>
+          </td>
+          <td class="p-1 text-center space-x-0.5">
+            <button type="button" onclick="moveAdminRow(${idx}, -1)" class="bg-slate-100 p-0.5 rounded border">▲</button>
+            <button type="button" onclick="moveAdminRow(${idx}, 1)" class="bg-slate-100 p-0.5 rounded border">▼</button>
+            <button type="button" onclick="deleteAdminRow(${idx})" class="bg-red-50 text-red-600 px-1 rounded border border-red-200 font-bold">❌</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function moveUserInAdminRow(rowIdx, direction) {
+      const sel = document.getElementById(`adm-row-select-box-${rowIdx}`); const sIdx = sel.selectedIndex;
+      if(sIdx === -1) { alert("入れ替えたい社員名を直接選択してください。"); return; }
+      const targetIdx = sIdx + direction; const apps = adminEditorRows[rowIdx].approvers;
+      if(targetIdx < 0 || targetIdx >= apps.length) return;
+      const temp = apps[sIdx]; apps[sIdx] = apps[targetIdx]; apps[targetIdx] = temp;
+      renderAdminEditorTableRows(); document.getElementById(`adm-row-select-box-${rowIdx}`).selectedIndex = targetIdx;
+    }
+
+    function injectUserIntoSelectedAdminRow() {
+      if(adminActiveRowIndex === null || adminActiveRowIndex >= adminEditorRows.length) { alert("「③デフォルト初期処理者」ボックス枠を選択してください。"); return; }
+      const pool = document.getElementById('adm-user-pool'); const selectedOptions = Array.from(pool.selectedOptions);
+      if(selectedOptions.length === 0) { alert("全社員名簿から社員を選択してください。"); return; }
+      selectedOptions.forEach(opt => {
+        const selectedUserMeta = masterUsersPool.find(u => u.email === opt.value);
+        if(!adminEditorRows[adminActiveRowIndex].approvers.some(a => a.email === opt.value)) { adminEditorRows[adminActiveRowIndex].approvers.push({ email: opt.value, name: selectedUserMeta ? selectedUserMeta.name : opt.value }); }
+      });
+      renderAdminEditorTableRows();
+    }
+
+    function removeUserFromAdminRow(idx) {
+      const sel = document.getElementById(`adm-row-select-box-${idx}`); if(sel.selectedIndex === -1) { alert("外したい候補者名を選択してください。"); return; }
+      adminEditorRows[idx].approvers.splice(sel.selectedIndex, 1); renderAdminEditorTableRows();
+    }
+
+    function moveAdminRow(idx, dir) { if(idx + dir < 0 || idx + dir >= adminEditorRows.length) return; const temp = adminEditorRows[idx]; adminEditorRows[idx] = adminEditorRows[idx+dir]; adminEditorRows[idx+dir] = temp; renderAdminEditorTableRows(); }
+    function deleteAdminRow(idx) { adminEditorRows.splice(idx, 1); renderAdminEditorTableRows(); }
+
+    function executeSaveMasterForm() {
+      const id = document.getElementById('adm-form-id').value.trim(); 
+      const name = document.getElementById('adm-form-name').value.trim(); 
+      const description = document.getElementById('adm-form-desc').value.trim();
+      const folderId = document.getElementById('adm-form-folder').value;
+
+      if(!id || !name) { alert("IDと名称は必須項目です。"); return; }
+      if(adminEditorRows.length === 0) { alert("ステップを1つ以上追加してください。"); return; }
+      if (!isEditingModeRow && masterFormsPool.some(f => f.id === id)) { if (!confirm(`⚠️上書きしますか？`)) return; }
+      
+      showLoadingOverlay("マスターフォームを保存中...", "データベースへ構造設定を書き込んでいます。");
+      const currentSortPos = masterFormsPool.findIndex(f => f.id === id);
+      const sortVal = currentSortPos !== -1 ? currentSortPos + 1 : masterFormsPool.length + 1;
+
+      const formObj = { id: id, name: name, description: description, routes: adminEditorRows, folderId: folderId, sortOrder: sortVal };
+      google.script.run.withSuccessHandler(msg => { hideLoadingOverlay(); alert(msg); loadMasterFormsData(); }).saveMasterForm(formObj);
+    }
+
+    // ダイアログ詳細
+    function openActionModal(appNumber) {
+      document.getElementById('modal-timeline-tbody').innerHTML = '<tr><td colspan="6" class="py-4 text-center text-slate-400">ロード中...</td></tr>';
+      document.getElementById('action-modal').classList.remove('hidden');
+      google.script.run.withSuccessHandler(res => {
+        const app = res.application;
+        document.getElementById('modal-header-title').textContent = `No.${app.appNumber} 稟議書 (${app.type}/${app.globalStatus})`;
+        document.getElementById('det-applicant').textContent = app.applicant; document.getElementById('det-date').textContent = app.date;
+        document.getElementById('det-type').textContent = app.type; document.getElementById('det-title').textContent = app.title;
+        
+        if (app.pdfUrl) {
+          document.getElementById('det-pdf-link').innerHTML = `
+            <div class="flex items-center space-x-2 mt-0.5">
+              <a href="${app.pdfUrl}" target="_blank" class="text-xs font-black text-blue-600 border border-blue-300 bg-blue-50 px-3 py-1.5 rounded shadow-sm hover:bg-blue-100 transition-colors shrink-0">📄 プレビュー</a>
+            </div>
+            <div class="text-xs text-slate-600 font-mono mt-1 select-all break-all bg-slate-100 p-1.5 rounded border border-slate-200">
+              ${app.pdfName || '稟議書.pdf'}
+            </div>
+          `;
+        } else {
+          document.getElementById('det-pdf-link').innerHTML = `<span class="text-slate-400">なし</span>`;
+        }
+
+        const tbody = document.getElementById('modal-timeline-tbody'); tbody.innerHTML = '';
+        res.timeline.forEach(row => {
+          const tr = document.createElement('tr'); tr.className = "text-xs hover:bg-slate-50 transition-colors";
+          
+          let roleStyleClass = "p-2 border-r border-slate-200 font-semibold";
+          let isDecisionMaker = (row.role.indexOf("決裁") !== -1);
+          
+          if (isDecisionMaker) {
+            roleStyleClass = "p-2 border-r border-slate-200 font-black text-red-600 bg-red-50/30";
+          }
+
+          let statusHtml = row.status;
+          let statusStyle = 'p-2 border-r text-slate-400 text-center font-medium';
+          
+          if (row.status === '承認') {
+            if (isDecisionMaker) {
+              statusStyle = 'p-2 border-r bg-red-50 text-red-600 font-black text-center text-sm tracking-wider';
+              statusHtml = '承認';
+            } else {
+              statusStyle = 'p-2 border-r bg-green-50 text-green-700 font-bold text-center';
+            }
+          } else if (row.status === '決裁') {
+            statusStyle = 'p-2 border-r bg-red-100 text-red-600 font-black text-center text-sm tracking-wider';
+            statusHtml = '【決裁】';
+          } else if (row.status === '進行中') {
+            statusStyle = 'p-2 border-r bg-blue-50 text-blue-700 font-bold text-center';
+          } else if (row.status === '差し戻し') {
+            statusStyle = 'p-2 border-r bg-amber-100 text-amber-800 font-bold text-center'; 
+          } else if (row.status === '引き戻し') {
+            statusStyle = 'p-2 border-r bg-slate-200 text-slate-700 font-bold text-center'; 
+          } else if (row.status === '却下') {
+            statusStyle = 'p-2 border-r bg-red-50 text-red-700 font-bold text-center';
+          }
+          
+          tr.innerHTML = `
+            <td class="p-2 border-r text-center font-mono text-slate-500">${row.step}</td>
+            <td class="${roleStyleClass}">${row.role}</td>
+            <td class="p-2 border-r font-medium break-all">${row.approver}</td>
+            <td class="${statusStyle}">${statusHtml}</td>
+            <td class="p-2 border-r break-all text-slate-600">${row.comment}</td>
+            <td class="p-2 text-slate-400 font-mono whitespace-nowrap">${row.date}</td>
+          `;
+          tbody.appendChild(tr);
+        });
+
+        const btnContainer = document.getElementById('modal-buttons-container');
+        const isApplicant = (app.applicantEmail === currentUserEmailAccount);
+
+        if (res.isCurrentUserTurn && app.globalStatus === '進行中') {
+          document.getElementById('modal-comment-area').classList.remove('hidden');
+          btnContainer.innerHTML = `<button onclick="submitAction('return', '${app.appNumber}', ${res.activeStep})" class="px-4 py-2 bg-amber-500 text-white font-bold rounded-lg shadow">↩️ 差し戻し</button><button onclick="submitAction('reject', '${app.appNumber}', ${res.activeStep})" class="px-4 py-2 bg-red-600 text-white font-bold rounded-lg shadow">❌ 却下</button><button onclick="submitAction('approve', '${app.appNumber}', ${res.activeStep})" class="px-5 py-2 bg-green-600 text-white font-bold rounded-lg shadow">✅ 承認する</button>`;
+        } else if (isApplicant && app.globalStatus === '進行中') {
+          document.getElementById('modal-comment-area').classList.remove('hidden');
+          btnContainer.innerHTML = `<button onclick="submitAction('withdraw', '${app.appNumber}', ${res.activeStep})" class="px-5 py-2 bg-slate-600 hover:bg-slate-700 text-white font-bold rounded-lg shadow">↩️ 申請を取りやめる（引き戻し）</button>`;
+        } else if (isApplicant && (app.globalStatus === '差し戻し' || app.globalStatus === '引き戻し' || app.globalStatus === '却下')) {
+          document.getElementById('modal-comment-area').classList.add('hidden');
+          btnContainer.innerHTML = `<button onclick="reuseAndReapplyWorkflow('${app.appNumber}')" style="background-color: #f59e0b; color: #ffffff; font-weight: 800;" class="px-6 py-2.5 hover:opacity-90 rounded-lg shadow-md transition-opacity whitespace-nowrap"><span>再申請する</span></button>`;
+        } else {
+          document.getElementById('modal-comment-area').classList.add('hidden');
+          btnContainer.innerHTML = `<button onclick="closeActionModal()" class="px-5 py-2 bg-slate-200 font-bold rounded-lg hover:bg-slate-300 transition-colors">閉じる</button>`;
+        }
+      }).getWorkflowDetails(appNumber);
+    }
+
+    function closeActionModal() { document.getElementById('action-modal').classList.add('hidden'); }
+    
+    function submitAction(actionType, appNumber, step) {
+      const comment = document.getElementById('modal-comment').value.trim();
+      if ((actionType === 'return' || actionType === 'reject') && !comment) { alert("理由を入力してください。"); return; }
+      if (!confirm("実行しますか？")) return;
+      closeActionModal();
+
+      showLoadingOverlay(
+        "ステータスを更新中...", 
+        "排他ロック順で処理を行っています。<br>少々お待ちください。"
+      );
+
+      if (actionType === 'approve') { 
+        google.script.run.withSuccessHandler(msg => { hideLoadingOverlay(); showMessage(msg, true); refreshData(); }).withFailureHandler(err => { hideLoadingOverlay(); showMessage(err.message, false); }).processApprove(appNumber, step, comment); 
+      }
+      else if (actionType === 'return') { 
+        google.script.run.withSuccessHandler(msg => { hideLoadingOverlay(); showMessage(msg, true); refreshData(); }).withFailureHandler(err => { hideLoadingOverlay(); showMessage(err.message, false); }).processReturn(appNumber, step, comment); 
+      }
+      else if (actionType === 'reject') { 
+        google.script.run.withSuccessHandler(msg => { hideLoadingOverlay(); showMessage(msg, true); refreshData(); }).withFailureHandler(err => { hideLoadingOverlay(); showMessage(err.message, false); }).processReject(appNumber, step, comment); 
+      }
+      else if (actionType === 'withdraw') { 
+        google.script.run.withSuccessHandler(msg => { hideLoadingOverlay(); showMessage(msg, true); refreshData(); }).withFailureHandler(err => { hideLoadingOverlay(); showMessage(err.message, false); }).processWithdraw(appNumber, comment); 
+      }
+    }
+
+    function showMessage(text, isSuccess) { const container = document.getElementById('message-container'); container.textContent = text; container.className = isSuccess ? "block mb-4 p-3 rounded bg-green-50 text-green-800 border font-bold text-xs" : "block mb-4 p-3 rounded bg-red-50 text-red-800 border font-bold text-xs"; }
+    
+    function downloadCSV() {
+      window.location.href = '/api/applications/export-csv';
+    }
+  </script>
+</body>
+</html>

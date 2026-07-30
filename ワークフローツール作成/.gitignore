@@ -1,0 +1,11 @@
+# Firebase Credentials
+firebase_credential.json
+
+# Local Python caches
+__pycache__/
+*.pyc
+
+# Excel / CSV Temp Files
+~$*.xlsx
+m_user.csv
+m_route_form.csv
