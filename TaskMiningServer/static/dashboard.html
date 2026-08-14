@@ -109,6 +109,11 @@
                 <div class="text-slate-500 text-xs font-bold">非効率作業時間</div>
                 <div class="text-2xl font-extrabold text-red-500 mt-2" id="kpi-inefficient-time">--<span class="text-base font-normal text-red-400 ml-1">m</span></div>
             </div>
+            <div class="bg-white border-l-4 border-l-rose-500 rounded-sm p-4 flex flex-col items-center justify-center text-center shadow-none">
+                <div class="text-slate-500 text-xs font-bold">推定業務ロス (※)</div>
+                <div class="text-2xl font-extrabold text-rose-600 mt-2" id="kpi-loss-yen">--<span class="text-base font-normal text-rose-400 ml-1">円</span></div>
+                <div class="text-[10px] text-slate-400 mt-1">※一律2000円/時で仮換算</div>
+            </div>
             <div class="bg-white border rounded-sm p-4 flex flex-col items-center justify-center text-center shadow-none group relative">
                 <div class="text-slate-500 text-xs font-bold">コピー＆ペースト回数</div>
                 <div class="text-2xl font-extrabold text-slate-800 mt-2" id="kpi-copy-paste">--<span class="text-base font-normal text-slate-500 ml-1">回</span></div>
@@ -266,6 +271,26 @@
                     </thead>
                     <tbody id="member-details-tbody" class="divide-y divide-slate-700/50">
                         <!-- JSで動的に追加 -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 新規：アプリ間転記フロー自動化候補 -->
+        <div class="card flex flex-col mb-8 bg-indigo-900/20 border-indigo-500/30">
+            <h2 class="text-xl font-bold mb-4 text-indigo-100 border-b border-indigo-700/50 pb-2">🔄 アプリ間コピペ・転記フロー 自動化候補 (Top 5)</h2>
+            <p class="text-xs text-indigo-300/80 mb-4">異なるアプリ間で頻繁に行われているコピー＆ペースト作業を自動検知しています。これらはシステム間連携スクリプト（Python/PowerShell）による自動化の最有力候補です。</p>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm text-left text-indigo-100">
+                    <thead class="text-xs text-indigo-300 uppercase bg-indigo-900/50">
+                        <tr>
+                            <th class="px-4 py-3">転記フロー (A ➔ B)</th>
+                            <th class="px-4 py-3 text-right">コピペ回数</th>
+                            <th class="px-4 py-3 text-right">該当ファイル例</th>
+                        </tr>
+                    </thead>
+                    <tbody id="crossAppTableBody" class="divide-y divide-indigo-800/50">
+                        <tr><td colspan="3" class="text-center py-4 text-indigo-300/50">データを読み込み中...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -500,6 +525,13 @@
 
                 document.getElementById('kpi-total-hours').innerHTML = fmtTotalAvgH(data.kpi.total_hours || 0);
                 document.getElementById('kpi-inefficient-time').innerHTML = fmtTotalAvgH(data.kpi.inefficient_hours || 0);
+                
+                const elLossYen = document.getElementById('kpi-loss-yen');
+                if (elLossYen) {
+                    const totalYen = data.kpi.total_loss_yen || 0;
+                    elLossYen.innerHTML = `${totalYen.toLocaleString()}<span class="text-base font-normal text-rose-400 ml-1">円</span>`;
+                }
+                
                 document.getElementById('kpi-copy-paste').innerHTML = fmtTotalAvg(data.kpi.total_copy_paste || 0, '回');
                 document.getElementById('kpi-ai-time').innerHTML = fmtTotalAvg(data.kpi.ai_minutes || 0, 'm');
                 document.getElementById('kpi-meeting').innerHTML = fmtTotalAvgH(data.kpi.meeting_hours || 0);
@@ -571,6 +603,28 @@
                 // 5. メンバー比較
                 drawMemberChart(data.members);
                 drawMemberTable(data.members, data.dept_totals);
+                
+                // Cross App Flows
+                if (data.cross_app_flows) {
+                    const tbody = document.getElementById('crossAppTableBody');
+                    if (tbody) {
+                        tbody.innerHTML = '';
+                        if (data.cross_app_flows.length === 0) {
+                            tbody.innerHTML = '<tr><td colspan="3" class="text-center py-4 text-indigo-300/50">候補となるフローは見つかりませんでした</td></tr>';
+                        } else {
+                            data.cross_app_flows.forEach(f => {
+                                const filesStr = f.files.map(x => `<span class="bg-indigo-800 text-indigo-200 px-1 rounded mx-1">${x}</span>`).join("");
+                                tbody.innerHTML += `
+                                <tr class="hover:bg-indigo-800/30 transition-colors">
+                                    <td class="px-4 py-2 font-bold text-indigo-200">${f.flow}</td>
+                                    <td class="px-4 py-2 text-right font-mono text-indigo-300">${f.count}回</td>
+                                    <td class="px-4 py-2 text-right text-xs truncate max-w-[200px] text-indigo-400" title="${f.files.join(', ')}">${filesStr}</td>
+                                </tr>
+                                `;
+                            });
+                        }
+                    }
+                }
 
             } catch(e) {
                 console.error("Failed to load dashboard data", e);

@@ -385,6 +385,7 @@ async def get_dashboard_data(user_id: str = "ALL", start_date: str = None, end_d
         "total_right_clicks": total_right_clicks,
         "total_shortcut_keys": total_shortcut_keys,
         "total_manual_typing": total_manual_typing,
+        "total_loss_yen": int((inefficient_sec / 3600) * 2000), # 一律2000円/時で仮計算
         "shortcut_details": dict(sorted(total_shortcut_details.items(), key=lambda x: x[1], reverse=True)[:10]),
         "result_trend": get_historical_trend(conn, user_id="ALL", department=department)
     }
@@ -428,6 +429,68 @@ async def get_user_data(user_id: str = "ALL", start_date: str = None, end_date: 
             
     # トレンドの取得
     trend_res = get_historical_trend(conn, user_id=user_id, department=department)
+    
+    # --- ベンチマーク（部門平均・上位10%）の計算 ---
+    cursor.execute("""
+        SELECT c.user_id, SUM(c.shortcut_key_count), SUM(c.right_click_count), 
+               SUM(c.context_switch_count), SUM(c.duration_seconds), SUM(c.click_count)
+        FROM client_logs c
+        LEFT JOIN employees e ON c.user_id = e.user_id
+        WHERE e.department = %s AND c.duration_seconds > 0
+        GROUP BY c.user_id
+    """ if os.environ.get("DATABASE_URL") else """
+        SELECT c.user_id, SUM(c.shortcut_key_count), SUM(c.right_click_count), 
+               SUM(c.context_switch_count), SUM(c.duration_seconds), SUM(c.click_count)
+        FROM client_logs c
+        LEFT JOIN employees e ON c.user_id = e.user_id
+        WHERE e.department = ? AND c.duration_seconds > 0
+        GROUP BY c.user_id
+    """, (department,))
+    dept_members = cursor.fetchall()
+    
+    benchmarks = {
+        "my_shortcut_rate": 0,
+        "my_rightclick_rate": 0,
+        "my_switch_per_hr": 0,
+        "avg_shortcut_rate": 0,
+        "avg_rightclick_rate": 0,
+        "avg_switch_per_hr": 0,
+        "top_shortcut_rate": 0,
+        "top_rightclick_rate": 0,
+        "top_switch_per_hr": 0
+    }
+    
+    if dept_members:
+        member_stats_list = []
+        for m in dept_members:
+            uid, sk, rc, sw, dur, clk = m
+            sk = sk or 0; rc = rc or 0; sw = sw or 0; dur = dur or 1; clk = clk or 1
+            s_rate = round(sk / max(1, sk + rc) * 100, 1)
+            r_rate = round(rc / max(1, clk) * 100, 1)
+            sw_hr = round(sw / (dur / 3600), 1) if dur > 0 else 0
+            stats = {"uid": uid, "s_rate": s_rate, "r_rate": r_rate, "sw_hr": sw_hr}
+            member_stats_list.append(stats)
+            if resolved and resolved != "ALL" and uid == resolved["uuid"]:
+                benchmarks["my_shortcut_rate"] = s_rate
+                benchmarks["my_rightclick_rate"] = r_rate
+                benchmarks["my_switch_per_hr"] = sw_hr
+                
+        # Averages
+        benchmarks["avg_shortcut_rate"] = round(sum(m["s_rate"] for m in member_stats_list) / len(member_stats_list), 1)
+        benchmarks["avg_rightclick_rate"] = round(sum(m["r_rate"] for m in member_stats_list) / len(member_stats_list), 1)
+        benchmarks["avg_switch_per_hr"] = round(sum(m["sw_hr"] for m in member_stats_list) / len(member_stats_list), 1)
+        
+        # Top 10% (best efficiency)
+        top_n = max(1, int(len(member_stats_list) * 0.1))
+        
+        sorted_by_s = sorted(member_stats_list, key=lambda x: x["s_rate"], reverse=True)[:top_n]
+        benchmarks["top_shortcut_rate"] = round(sum(m["s_rate"] for m in sorted_by_s) / len(sorted_by_s), 1)
+        
+        sorted_by_r = sorted(member_stats_list, key=lambda x: x["r_rate"])[:top_n]
+        benchmarks["top_rightclick_rate"] = round(sum(m["r_rate"] for m in sorted_by_r) / len(sorted_by_r), 1)
+        
+        sorted_by_sw = sorted(member_stats_list, key=lambda x: x["sw_hr"])[:top_n]
+        benchmarks["top_switch_per_hr"] = round(sum(m["sw_hr"] for m in sorted_by_sw) / len(sorted_by_sw), 1)
     
     query_files = "SELECT file_name, sum(duration_seconds), sum(manual_typing_count + copy_paste_count) FROM client_logs WHERE file_name IS NOT NULL AND file_name != '' "
     params = []
@@ -620,6 +683,7 @@ async def get_user_data(user_id: str = "ALL", start_date: str = None, end_date: 
         forecast_steps = [{"step_name": "データなし", "manual_sec": 0, "forecast_sec": 0}]
 
     return {
+        "benchmarks": benchmarks,
         "timeline": timeline_data,
         "forecast_steps": forecast_steps,
         "result_trend": trend_res,
@@ -702,5 +766,36 @@ async def analyze_dashboard_data(
     except Exception as e:
         return {"report": f"AI分析中にエラーが発生しました: {str(e)}"}
 
+@router.get("/api/dashboard/salary_status")
+async def get_salary_status(user_id: str):
+    conn = get_connection()
+    cursor = conn.cursor()
+    placeholder = "%s" if os.environ.get("DATABASE_URL") else "?"
+    cursor.execute(f"SELECT base_salary FROM employees WHERE user_id = {placeholder}", (user_id,))
+    row = cursor.fetchone()
+    conn.close()
+    
+    if row and row[0] and row[0] > 0:
+        return {"has_salary": True}
+    return {"has_salary": False}
+
+@router.post("/api/dashboard/set_salary")
+async def set_salary(request: Request):
+    data = await request.json()
+    user_id = data.get("user_id")
+    base_salary = int(data.get("base_salary", 0))
+    # 20日稼働 * 8時間 = 160時間で時給計算
+    hourly_wage = int(base_salary / 160) if base_salary > 0 else 0
+    
+    conn = get_connection()
+    cursor = conn.cursor()
+    placeholder = "%s" if os.environ.get("DATABASE_URL") else "?"
+    cursor.execute(f"UPDATE employees SET base_salary = {placeholder}, hourly_wage = {placeholder} WHERE user_id = {placeholder}", 
+                  (base_salary, hourly_wage, user_id))
+    conn.commit()
+    conn.close()
+    return {"status": "success"}
+
 if __name__ == "__main__":
+    import uvicorn
     uvicorn.run("app:app", host="0.0.0.0", port=8080, reload=True)
