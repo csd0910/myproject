@@ -1,0 +1,1066 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>部門ビュー (マクロ) - TaskMining</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        body { background-color: #0f172a; color: #f8fafc; font-family: 'Inter', sans-serif; }
+        .card { background-color: rgba(30,41,59,0.7); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 1.5rem; backdrop-filter: blur(10px); }
+        .heatmap-cell { width: 40px; height: 30px; border-radius: 4px; margin: 2px; display: inline-block; cursor: pointer; transition: transform 0.1s; }
+        .heatmap-cell:hover { transform: scale(1.1); border: 1px solid white; }
+        .legend-dot { display: inline-block; width: 12px; height: 12px; border-radius: 50%; margin-right: 6px; }
+        
+        /* Chart specific rules */
+        .chart-legend { display: flex; gap: 1rem; font-size: 0.875rem; color: #cbd5e1; margin-bottom: 0.5rem; justify-content: flex-end; }
+        
+        /* Badges */
+        .badge-vba { background-color: #10b981; color: white; }
+        .badge-python { background-color: #3b82f6; color: white; }
+        .badge-powershell { background-color: #8b5cf6; color: white; }
+        .badge-gas { background-color: #f59e0b; color: white; }
+    </style>
+</head>
+<body class="p-6">
+    <div class="w-full mx-auto space-y-6">
+        <!-- Header & Controls -->
+        <div class="flex justify-between items-center mb-6">
+            <h1 class="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-emerald-400 flex items-center gap-3">
+                🌐 部門マクロビュー (全体の非効率・自動化ポテンシャル俯瞰)
+                <span class="text-xs font-mono bg-blue-500/20 text-blue-300 px-2 py-1 rounded-full border border-blue-500/30">Ver1.0.1</span>
+            </h1>
+            <div class="flex items-center gap-4 print:hidden">
+                <button onclick="generateAIReport('ALL')" id="aiReportBtn" class="px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 rounded text-sm transition-colors border border-purple-400 flex items-center gap-2 font-bold shadow-lg shadow-purple-500/30">
+                    <span>🤖</span> AI改善レポート生成
+                </button>
+                
+                <button onclick="downloadCsv()" class="px-4 py-2 bg-emerald-700 hover:bg-emerald-600 rounded text-sm transition-colors border border-emerald-500 flex items-center gap-2">
+                    <span>📊</span> CSV出力
+                </button>
+                
+                <button onclick="window.print()" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded text-sm transition-colors border border-slate-600 flex items-center gap-2">
+                    <span>🖨️</span> 印刷 (PDF)
+                </button>
+                
+                <a href="/settings" id="adminMenuBtn" class="hidden px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded text-sm transition-colors border border-blue-500 flex items-center gap-2">
+                    <span>⚙️</span> 管理者メニュー
+                </a>
+                
+                <button id="authBtn" onclick="toggleAuth()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded text-sm transition-colors border border-slate-600 flex items-center gap-2">
+                    <span id="authIcon">🔒</span> <span id="authText">管理者ログイン</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- フィルターバー -->
+        <div class="card p-4 mb-6 flex flex-wrap items-end gap-4 bg-slate-800/80 print:hidden">
+            <div>
+                <label class="block text-xs text-slate-400 mb-1">📅 開始日時</label>
+                <input type="datetime-local" id="filterStart" class="bg-slate-900 border border-slate-600 rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500">
+            </div>
+            <div>
+                <label class="block text-xs text-slate-400 mb-1">📅 終了日時</label>
+                <input type="datetime-local" id="filterEnd" class="bg-slate-900 border border-slate-600 rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500">
+            </div>
+            <div>
+                <label class="block text-xs text-slate-400 mb-1">🏢 部門</label>
+                <select id="filterDept" class="bg-slate-900 border border-slate-600 rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500 w-40">
+                    <option value="ALL">すべて</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs text-slate-400 mb-1">👤 メンバー</label>
+                <select id="filterUser" class="bg-slate-900 border border-slate-600 rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500 w-40">
+                    <option value="ALL">すべて</option>
+                </select>
+            </div>
+            <div>
+                <button onclick="goToUserDashboard()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 rounded text-sm transition-colors border border-indigo-500 font-bold">👤 個人詳細ビューへ</button>
+            </div>
+
+            <div class="ml-auto flex gap-3">
+                <button onclick="applyFilters()" class="px-6 py-2 bg-blue-600 hover:bg-blue-500 rounded font-bold transition-colors">絞り込み適用</button>
+                <button onclick="resetFilters()" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded transition-colors border border-slate-500">リセット</button>
+            </div>
+        </div>
+
+        <div class="flex justify-end items-center gap-4 mb-2">
+            <span class="text-sm text-slate-400">凡例: </span>
+            <span class="px-2 py-1 bg-yellow-500/20 text-yellow-300 text-xs rounded border border-yellow-500/50">非効率疑い</span>
+            <span class="px-2 py-1 bg-red-500/20 text-red-300 text-xs rounded border border-red-500/50">自動化優先度(高)</span>
+        </div>
+
+        <!-- 1. KPIサマリーカード -->
+        <div class="mb-2 text-sm text-slate-500 font-bold">🏢 部門集計 <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded ml-2" id="kpi-users-badge">対象: --名</span></div>
+        
+
+        <!-- 1. KPIサマリーカード -->
+        <div class="mb-2 text-sm text-slate-500 font-bold">🏢 部門集計 <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded ml-2" id="kpi-users-badge">対象: --名</span></div>
+        <div class="grid grid-cols-2 md:grid-cols-6 gap-4 mb-8">
+            <div class="bg-white border rounded-sm p-4 flex flex-col items-center justify-center text-center shadow-none">
+                <div class="text-slate-500 text-xs font-bold">総稼働時間</div>
+                <div class="text-2xl font-extrabold text-slate-800 mt-2" id="kpi-total-hours">--<span class="text-base font-normal text-slate-500 ml-1">h</span></div>
+            </div>
+            <div class="bg-white border-l-4 border-l-red-400 rounded-sm p-4 flex flex-col items-center justify-center text-center shadow-none">
+                <div class="text-slate-500 text-xs font-bold">非効率作業時間</div>
+                <div class="text-2xl font-extrabold text-red-500 mt-2" id="kpi-inefficient-time">--<span class="text-base font-normal text-red-400 ml-1">m</span></div>
+            </div>
+            <div class="bg-white border rounded-sm p-4 flex flex-col items-center justify-center text-center shadow-none group relative">
+                <div class="text-slate-500 text-xs font-bold">コピー＆ペースト回数</div>
+                <div class="text-2xl font-extrabold text-slate-800 mt-2" id="kpi-copy-paste">--<span class="text-base font-normal text-slate-500 ml-1">回</span></div>
+                <!-- ツールチップ (直近8時間のダミー棒グラフ) -->
+                <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 hidden group-hover:flex flex-col items-center z-10 w-48 bg-slate-800 text-white text-xs rounded p-2 shadow-lg">
+                    <span class="mb-1">直近8時間の推移</span>
+                    <div class="flex items-end h-10 gap-1 w-full justify-center opacity-80">
+                        <div class="w-2 bg-indigo-400 rounded-t" style="height: 20%;"></div><div class="w-2 bg-indigo-400 rounded-t" style="height: 50%;"></div><div class="w-2 bg-indigo-400 rounded-t" style="height: 30%;"></div><div class="w-2 bg-indigo-400 rounded-t" style="height: 80%;"></div><div class="w-2 bg-indigo-400 rounded-t" style="height: 100%;"></div><div class="w-2 bg-indigo-400 rounded-t" style="height: 60%;"></div><div class="w-2 bg-indigo-400 rounded-t" style="height: 40%;"></div><div class="w-2 bg-indigo-400 rounded-t" style="height: 90%;"></div>
+                    </div>
+                    <div class="flex justify-between w-full text-[9px] text-slate-300 mt-1 px-1 time-labels"></div>
+                    <div class="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-slate-800 rotate-45"></div>
+                </div>
+            </div>
+            <div class="bg-white border-l-4 border-l-indigo-400 rounded-sm p-4 flex flex-col items-center justify-center text-center shadow-none">
+                <div class="text-slate-500 text-xs font-bold">AIツール使用時間</div>
+                <div class="text-2xl font-extrabold text-indigo-500 mt-2" id="kpi-ai-time">--<span class="text-base font-normal text-indigo-400 ml-1">m</span></div>
+            </div>
+            <div class="bg-white border-l-4 border-l-purple-400 rounded-sm p-4 flex flex-col items-center justify-center text-center shadow-none">
+                <div class="text-slate-500 text-xs font-bold">会議時間 (Zoom等)</div>
+                <div class="text-2xl font-extrabold text-purple-500 mt-2" id="kpi-meeting">--</div>
+            </div>
+            <div class="bg-white border-l-4 border-l-slate-400 rounded-sm p-4 flex flex-col items-center justify-center text-center shadow-none">
+                <div class="text-slate-500 text-xs font-bold">アイドル (無操作)</div>
+                <div class="text-2xl font-extrabold text-slate-600 mt-2" id="kpi-idle">--</div>
+            </div>
+        </div>
+        
+        <!-- 詳細入力KPIカード -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+            <div class="bg-indigo-50 border border-indigo-100 rounded-sm p-4 flex flex-col items-center justify-center text-center shadow-none group relative">
+                <div class="text-indigo-600 text-xs font-bold">手動クリック数</div>
+                <div class="text-2xl font-extrabold text-indigo-800 mt-2" id="kpi-clicks">--<span class="text-base font-normal text-indigo-600 ml-1">回</span></div>
+                <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 hidden group-hover:flex flex-col items-center z-10 w-48 bg-slate-800 text-white text-xs rounded p-2 shadow-lg">
+                    <span class="mb-1">直近8時間の推移</span>
+                    <div class="flex items-end h-10 gap-1 w-full justify-center opacity-80">
+                        <div class="w-2 bg-indigo-400 rounded-t" style="height: 10%;"></div><div class="w-2 bg-indigo-400 rounded-t" style="height: 40%;"></div><div class="w-2 bg-indigo-400 rounded-t" style="height: 60%;"></div><div class="w-2 bg-indigo-400 rounded-t" style="height: 20%;"></div><div class="w-2 bg-indigo-400 rounded-t" style="height: 90%;"></div><div class="w-2 bg-indigo-400 rounded-t" style="height: 50%;"></div><div class="w-2 bg-indigo-400 rounded-t" style="height: 30%;"></div><div class="w-2 bg-indigo-400 rounded-t" style="height: 70%;"></div>
+                    </div>
+                    <div class="flex justify-between w-full text-[9px] text-slate-300 mt-1 px-1 time-labels"></div>
+                    <div class="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-slate-800 rotate-45"></div>
+                </div>
+            </div>
+            <div class="bg-teal-50 border border-teal-100 rounded-sm p-4 flex flex-col items-center justify-center text-center shadow-none group relative">
+                <div class="text-teal-600 text-xs font-bold">スクロール/矢印操作数</div>
+                <div class="text-2xl font-extrabold text-teal-800 mt-2" id="kpi-scrolls">--<span class="text-base font-normal text-teal-600 ml-1">回</span></div>
+                <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 hidden group-hover:flex flex-col items-center z-10 w-48 bg-slate-800 text-white text-xs rounded p-2 shadow-lg">
+                    <span class="mb-1">直近8時間の推移</span>
+                    <div class="flex items-end h-10 gap-1 w-full justify-center opacity-80">
+                        <div class="w-2 bg-teal-400 rounded-t" style="height: 30%;"></div><div class="w-2 bg-teal-400 rounded-t" style="height: 60%;"></div><div class="w-2 bg-teal-400 rounded-t" style="height: 40%;"></div><div class="w-2 bg-teal-400 rounded-t" style="height: 80%;"></div><div class="w-2 bg-teal-400 rounded-t" style="height: 50%;"></div><div class="w-2 bg-teal-400 rounded-t" style="height: 20%;"></div><div class="w-2 bg-teal-400 rounded-t" style="height: 90%;"></div><div class="w-2 bg-teal-400 rounded-t" style="height: 40%;"></div>
+                    </div>
+                    <div class="flex justify-between w-full text-[9px] text-slate-300 mt-1 px-1 time-labels"></div>
+                    <div class="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-slate-800 rotate-45"></div>
+                </div>
+            </div>
+            <div class="bg-amber-50 border border-amber-100 rounded-sm p-4 flex flex-col items-center justify-center text-center shadow-none group relative">
+                <div class="text-amber-600 text-xs font-bold">マウス移動距離</div>
+                <div class="text-2xl font-extrabold text-amber-800 mt-2" id="kpi-distance">--<span class="text-base font-normal text-amber-600 ml-1">px</span></div>
+                <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 hidden group-hover:flex flex-col items-center z-10 w-48 bg-slate-800 text-white text-xs rounded p-2 shadow-lg">
+                    <span class="mb-1">直近8時間の推移</span>
+                    <div class="flex items-end h-10 gap-1 w-full justify-center opacity-80">
+                        <div class="w-2 bg-amber-400 rounded-t" style="height: 50%;"></div><div class="w-2 bg-amber-400 rounded-t" style="height: 20%;"></div><div class="w-2 bg-amber-400 rounded-t" style="height: 80%;"></div><div class="w-2 bg-amber-400 rounded-t" style="height: 40%;"></div><div class="w-2 bg-amber-400 rounded-t" style="height: 60%;"></div><div class="w-2 bg-amber-400 rounded-t" style="height: 10%;"></div><div class="w-2 bg-amber-400 rounded-t" style="height: 30%;"></div><div class="w-2 bg-amber-400 rounded-t" style="height: 70%;"></div>
+                    </div>
+                    <div class="flex justify-between w-full text-[9px] text-slate-300 mt-1 px-1 time-labels"></div>
+                    <div class="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-slate-800 rotate-45"></div>
+                </div>
+            </div>
+            <div class="bg-rose-50 border border-rose-100 rounded-sm p-4 flex flex-col items-center justify-center text-center shadow-none group relative">
+                <div class="text-rose-600 text-xs font-bold">画面/タブ切り替え回数</div>
+                <div class="text-2xl font-extrabold text-rose-800 mt-2" id="kpi-switches">--<span class="text-base font-normal text-rose-600 ml-1">回</span></div>
+                <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 hidden group-hover:flex flex-col items-center z-10 w-48 bg-slate-800 text-white text-xs rounded p-2 shadow-lg">
+                    <span class="mb-1">直近8時間の推移</span>
+                    <div class="flex items-end h-10 gap-1 w-full justify-center opacity-80">
+                        <div class="w-2 bg-rose-400 rounded-t" style="height: 80%;"></div><div class="w-2 bg-rose-400 rounded-t" style="height: 40%;"></div><div class="w-2 bg-rose-400 rounded-t" style="height: 90%;"></div><div class="w-2 bg-rose-400 rounded-t" style="height: 30%;"></div><div class="w-2 bg-rose-400 rounded-t" style="height: 60%;"></div><div class="w-2 bg-rose-400 rounded-t" style="height: 20%;"></div><div class="w-2 bg-rose-400 rounded-t" style="height: 50%;"></div><div class="w-2 bg-rose-400 rounded-t" style="height: 70%;"></div>
+                    </div>
+                    <div class="flex justify-between w-full text-[9px] text-slate-300 mt-1 px-1 time-labels"></div>
+                    <div class="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-slate-800 rotate-45"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. 構成比セクション -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div class="card flex flex-col">
+                <h3 class="text-lg font-semibold mb-2">業務内訳 (メール/会議/作業)</h3>
+                <div class="flex-grow relative h-64"><canvas id="breakdownPieChart"></canvas></div>
+            </div>
+            <div class="card flex flex-col">
+                <h3 class="text-lg font-semibold mb-2">アプリ別稼働時間 (上位5件)</h3>
+                <div class="chart-legend"><span class="legend-dot" style="background-color: #2a78d6;"></span>稼働時間(秒)</div>
+                <div class="flex-grow relative h-64"><canvas id="appBarChart"></canvas></div>
+            </div>
+            <div class="card flex flex-col">
+                <h3 class="text-lg font-semibold mb-2">操作種別内訳</h3>
+                <div class="chart-legend"><span class="legend-dot" style="background-color: #eb6834;"></span>手作業・コピペ <span class="legend-dot" style="background-color: #1baf7a; margin-left:5px;"></span>関数等 <span class="legend-dot" style="background-color: #64748b; margin-left:5px;"></span>閲覧 <span class="legend-dot" style="background-color: #94a3b8; margin-left:5px;"></span>待機</div>
+                <div class="flex-grow relative h-64"><canvas id="opBarChart"></canvas></div>
+            </div>
+        </div>
+
+        <!-- 3. 非効率検知ヒートマップ -->
+        <div class="card">
+            <h3 class="text-lg font-semibold mb-4">🔥 非効率疑いタグ 発生ヒートマップ (曜日×時間帯)</h3>
+            <p class="text-xs text-slate-400 mb-4">色が濃い時間帯ほど、定型的な単純手作業やコピー＆ペーストが集中しています。</p>
+            <div class="flex">
+                <div class="flex flex-col justify-between pr-4 text-sm text-slate-400 font-mono" style="padding-top: 24px;" id="heatmap-y-labels"></div>
+                <div class="overflow-x-auto pb-4">
+                    <div class="flex text-xs text-slate-400 font-mono mb-1" id="heatmap-x-labels"></div>
+                    <div id="heatmap-grid" class="flex flex-col gap-1"></div>
+                </div>
+                <div id="heatmap-details" class="ml-10 p-4 bg-slate-700/30 rounded-lg flex-grow text-slate-300 text-sm hidden border border-slate-600">
+                    <h4 id="heatmap-details-title" class="font-bold text-white mb-3 border-b border-slate-600 pb-2"></h4>
+                    <ul id="heatmap-details-list" class="space-y-3"></ul>
+                    <p class="mt-4 text-xs text-amber-400/80">※この時間帯はシステム全体の負荷が高まるため、自動化が推奨されます。</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. ボトルネック比較グラフ (現状 vs 予想 / 多系列折れ線) -->
+        <div class="grid grid-cols-2 gap-6">
+            <div class="card flex flex-col">
+                <h3 class="text-lg font-semibold mb-2">🚨 ボトルネック比較グラフ (現状 vs 予想)</h3>
+                <div class="chart-legend">
+                    <div><span class="legend-dot" style="background-color: #eb6834;"></span>現状 (手動)</div>
+                    <div><span class="legend-dot" style="background-color: #1baf7a;"></span>予想 (自動化後)</div>
+                </div>
+                <div class="flex-grow relative h-80"><canvas id="compareBarChart"></canvas></div>
+            </div>
+            
+            <div class="card flex flex-col">
+                <h3 class="text-lg font-semibold mb-2">📉 部門/全社トレンド (非効率作業の推移)</h3>
+                <div class="chart-legend" id="trendLegend"></div>
+                <div class="flex-grow relative h-80"><canvas id="trendLineChart"></canvas></div>
+            </div>
+        </div>
+
+        <!-- 5. メンバー比較セクション -->
+        <div class="card flex flex-col mb-8">
+            <h3 class="text-lg font-semibold mb-2">👥 メンバー別 非効率スコア偏差</h3>
+            <p class="text-xs text-slate-400 mb-2">0（部門平均）を基準として、プラス側に伸びているメンバーは定型作業の負荷が高い状態です。</p>
+            <div class="chart-legend">
+                <div><span class="legend-dot" style="background-color: rgba(239, 68, 68, 0.8);"></span>平均より非効率</div>
+                <div><span class="legend-dot" style="background-color: rgba(16, 185, 129, 0.8);"></span>平均より効率的</div>
+            </div>
+            <div class="h-64 relative mb-6"><canvas id="memberChart"></canvas></div>
+            
+            <h4 class="text-md font-bold mb-3 mt-4 text-emerald-300 border-b border-slate-600 pb-2">📊 部門・個人データ詳細 (1人あたり × 人数 = 部門計)</h4>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-sm text-slate-300 border-collapse">
+                    <thead class="bg-slate-700/50 text-slate-200">
+                        <tr>
+                            <th class="py-3 px-4 font-bold border-b border-slate-600 rounded-tl-lg">メンバー名</th>
+                            <th class="py-3 px-4 font-bold border-b border-slate-600 text-right">総作業時間</th>
+                            <th class="py-3 px-4 font-bold border-b border-slate-600 text-right">非効率時間</th>
+                            <th class="py-3 px-4 font-bold border-b border-slate-600 text-right">非効率率 (vs 平均)</th>
+                            <th class="py-3 px-4 font-bold border-b border-slate-600 text-right rounded-tr-lg">偏差スコア</th>
+                        </tr>
+                    </thead>
+                    <tbody id="member-details-tbody" class="divide-y divide-slate-700/50">
+                        <!-- JSで動的に追加 -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- AIレポートモーダル -->
+    <div id="aiModal" class="fixed inset-0 bg-black/80 hidden z-50 flex items-center justify-center p-6 backdrop-blur-sm">
+        <div class="bg-slate-800 border border-slate-600 rounded-xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl">
+            <div class="p-5 border-b border-slate-700 flex justify-between items-center bg-slate-800/50 rounded-t-xl">
+                <h2 class="text-xl font-bold flex items-center gap-2"><span class="text-2xl">🤖</span> DXコンサルタント AI改善レポート</h2>
+                <button onclick="closeAIModal()" class="text-slate-400 hover:text-white text-2xl font-bold px-2">&times;</button>
+            </div>
+            <div id="aiModalContent" class="p-6 overflow-y-auto flex-grow text-slate-200 prose prose-invert max-w-none">
+                <!-- Report will be inserted here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- グラフ詳細パネル -->
+    <div id="chartModal" class="fixed w-[48rem] bg-slate-800 border border-slate-600 rounded-xl shadow-2xl hidden z-50 flex flex-col pointer-events-none transition-opacity duration-200" style="left: 50%; top: 20%;">
+        <div class="p-4 border-b border-slate-700 flex justify-between items-center bg-slate-900/50 rounded-t-xl">
+            <h3 class="font-bold text-slate-200 flex items-center gap-2 text-lg">📊 トップ10 内訳詳細</h3>
+        </div>
+        <div class="p-6">
+            <div class="text-center mb-4">
+                <div id="chartModalLabel" class="text-2xl font-bold text-slate-100 mb-2"></div>
+                <div class="text-4xl font-extrabold text-blue-400 mb-2" id="chartModalPercent"></div>
+            </div>
+            <div id="chartModalValue" class="text-base text-slate-300"></div>
+        </div>
+    </div>
+
+    <script>
+        const COVE_COLORS = ['#2a78d6','#eb6834','#1baf7a','#eda100','#e87ba4', '#8b5cf6', '#14b8a6', '#f43f5e', '#f59e0b', '#06b6d4'];
+        
+        let appChart, opChart, breakdownChart, compareChart, trendChart, memberChart;
+
+        Chart.defaults.color = '#f8fafc';
+        Chart.defaults.font.family = "'Inter', sans-serif";
+        
+        function checkAuthStatus() {
+            const token = localStorage.getItem('admin_token');
+            const btnText = document.getElementById('authText');
+            const btnIcon = document.getElementById('authIcon');
+            const adminMenuBtn = document.getElementById('adminMenuBtn');
+            if (token) {
+                btnText.innerText = '管理者サインアウト';
+                btnIcon.innerText = '🔓';
+                if(adminMenuBtn) adminMenuBtn.classList.remove('hidden');
+                return token;
+            } else {
+                btnText.innerText = '管理者サインイン';
+                btnIcon.innerText = '🔒';
+                if(adminMenuBtn) adminMenuBtn.classList.add('hidden');
+                return null;
+            }
+        }
+
+        function toggleAuth() {
+            const token = localStorage.getItem('admin_token');
+            if (token) {
+                localStorage.removeItem('admin_token');
+                checkAuthStatus();
+                initDashboard(); // 権限が変わったので再読み込み
+            } else {
+                window.location.href = '/login';
+            }
+        }
+        
+        function applyFilters() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const start = document.getElementById('filterStart').value;
+            const end = document.getElementById('filterEnd').value;
+            const dept = document.getElementById('filterDept').value;
+            const userEl = document.getElementById('filterUser');
+            
+            if (start) urlParams.set('start_date', start);
+            else urlParams.delete('start_date');
+            
+            if (end) urlParams.set('end_date', end);
+            else urlParams.delete('end_date');
+            
+            if (dept && dept !== 'ALL') urlParams.set('department', dept);
+            else urlParams.delete('department');
+            
+            if (userEl && userEl.value !== 'ALL') urlParams.set('user_id', userEl.value);
+            else urlParams.delete('user_id');
+            
+            urlParams.set('_t', Date.now()); // キャッシュバスター (Shift+F5相当の強制リロード)
+            window.location.href = window.location.pathname + '?' + urlParams.toString();
+        }
+        
+        function resetFilters() {
+            window.location.href = window.location.pathname;
+        }
+
+        function goToUserDashboard() {
+            const userEl = document.getElementById('filterUser');
+            const user = userEl ? userEl.value : 'ALL';
+            if (user && user !== 'ALL') {
+                window.location.href = '/static/user_dashboard.html?user_id=' + encodeURIComponent(user);
+            } else {
+                window.location.href = '/static/user_dashboard.html';
+            }
+        }
+
+        async function downloadCsv() {
+            const token = checkAuthStatus();
+            const start = document.getElementById('filterStart').value;
+            const end = document.getElementById('filterEnd').value;
+            const dept = document.getElementById('filterDept').value;
+            const userEl = document.getElementById('filterUser');
+            const user = userEl ? userEl.value : 'ALL';
+            
+            const params = new URLSearchParams();
+            if (start) params.append('start_date', new Date(start).toISOString());
+            if (end) params.append('end_date', new Date(end).toISOString());
+            if (dept !== 'ALL') params.append('department', dept);
+            if (user !== 'ALL') params.append('user_id', user);
+
+            const headers = {};
+            if (token) headers['X-Admin-Token'] = `Bearer ${token}`;
+
+            const res = await fetch(`/api/dashboard/export_csv?${params.toString()}`, { headers });
+            
+            if (res.ok) {
+                const blob = await res.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
+                a.download = `taskmining_report_${new Date().getTime()}.csv`;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+            } else {
+                alert("CSVのエクスポートに失敗しました。権限を確認してください。");
+            }
+        }
+
+        async function loadDepartments() {
+            try {
+                const token = checkAuthStatus();
+                if (!token) return;
+                
+                const res = await fetch('/api/settings/departments', {
+                    headers: { 'X-Admin-Token': `Bearer ${token}` }
+                });
+                const data = await res.json();
+                
+                const select = document.getElementById('filterDept');
+                const currentValue = select.value;
+                select.innerHTML = '<option value="ALL">すべて</option>';
+                
+                if (data.departments) {
+                    data.departments.forEach(d => {
+                        const opt = document.createElement('option');
+                        opt.value = d.name;
+                        opt.textContent = d.name;
+                        select.appendChild(opt);
+                    });
+                }
+                
+                // Keep the previous selection if it still exists
+                if (Array.from(select.options).some(opt => opt.value === currentValue)) {
+                    select.value = currentValue;
+                }
+            } catch (e) {
+                console.error("部門の読み込みに失敗しました", e);
+            }
+        }
+
+        async function initDashboard() {
+            try {
+                if (!document.getElementById('filterDept').options.length || document.getElementById('filterDept').options.length === 1) {
+                    await loadDepartments();
+                }
+                const token = checkAuthStatus();
+                
+                // フィルター値の取得
+                const start = document.getElementById('filterStart').value;
+                const end = document.getElementById('filterEnd').value;
+                const dept = document.getElementById('filterDept').value;
+                const userEl = document.getElementById('filterUser');
+                const user = userEl ? userEl.value : 'ALL';
+                
+                // URLにクエリパラメータを付与
+                const params = new URLSearchParams();
+                if (start) params.append('start_date', new Date(start).toISOString());
+                if (end) params.append('end_date', new Date(end).toISOString());
+                if (dept !== 'ALL') params.append('department', dept);
+
+                const headers = {};
+                if (token) headers['X-Admin-Token'] = `Bearer ${token}`;
+
+                const res = await fetch(`/api/dashboard/data?${params.toString()}`, { headers });
+                const data = await res.json();
+
+                // メンバー選択肢の更新
+                const selectUser = document.getElementById('filterUser');
+                if (selectUser) {
+                    const currentUserVal = selectUser.value;
+                    selectUser.innerHTML = '<option value="ALL">すべて</option>';
+                    if (data.members) {
+                        data.members.forEach(m => {
+                            const opt = document.createElement('option');
+                            opt.value = m.name;
+                            opt.textContent = m.name;
+                            selectUser.appendChild(opt);
+                        });
+                    }
+                    if (Array.from(selectUser.options).some(opt => opt.value === currentUserVal)) {
+                        selectUser.value = currentUserVal;
+                    }
+                }
+                
+                // KPI等を更新
+
+                const count = data.kpi.member_count || 1;
+                document.getElementById('kpi-users-badge').innerText = `対象: ${count}名`;
+                
+                const fmtTotalAvg = (val, unit) => {
+                    const avg = (val / count).toFixed(1);
+                    return `<div class="flex items-end justify-center gap-2"><span>${val}<span class="text-xs text-slate-400 font-normal ml-1">${unit}</span></span><span class="text-sm text-slate-500 border-l border-slate-300 pl-2">${avg}<span class="text-[10px] text-slate-400 font-normal ml-1">${unit}/人</span></span></div>`;
+                };
+                
+                const fmtTotalAvgH = (val) => {
+                    const avg = (val / count).toFixed(1);
+                    return `<div class="flex items-end justify-center gap-2"><span>${val}<span class="text-xs text-slate-400 font-normal ml-1">h</span></span><span class="text-sm text-slate-500 border-l border-slate-300 pl-2">${avg}<span class="text-[10px] text-slate-400 font-normal ml-1">h/人</span></span></div>`;
+                };
+
+                document.getElementById('kpi-total-hours').innerHTML = fmtTotalAvgH(data.kpi.total_hours || 0);
+                document.getElementById('kpi-inefficient-time').innerHTML = fmtTotalAvgH(data.kpi.inefficient_hours || 0);
+                document.getElementById('kpi-copy-paste').innerHTML = fmtTotalAvg(data.kpi.total_copy_paste || 0, '回');
+                document.getElementById('kpi-ai-time').innerHTML = fmtTotalAvg(data.kpi.ai_minutes || 0, 'm');
+                document.getElementById('kpi-meeting').innerHTML = fmtTotalAvgH(data.kpi.meeting_hours || 0);
+                document.getElementById('kpi-idle').innerHTML = fmtTotalAvgH(data.kpi.idle_hours || 0);
+                
+                const c = document.getElementById('kpi-clicks');
+                if(c) c.innerHTML = fmtTotalAvg(data.kpi.total_clicks || 0, '回');
+                const s = document.getElementById('kpi-scrolls');
+                if(s) s.innerHTML = fmtTotalAvg(data.kpi.total_scrolls || 0, '回');
+                const d = document.getElementById('kpi-distance');
+                if(d) d.innerHTML = fmtTotalAvg(Math.floor((data.kpi.total_mouse_distance || 0)/1000), 'k px');
+                const sw = document.getElementById('kpi-switches');
+                if(sw) sw.innerHTML = fmtTotalAvg(data.kpi.total_context_switches || 0, '回');
+                
+                const now = new Date();
+                const currentHour = now.getHours();
+                document.querySelectorAll('.time-labels').forEach(container => {
+                    container.innerHTML = '';
+                    for(let i=7; i>=0; i--) {
+                        let h = currentHour - i;
+                        if (h < 0) h += 24;
+                        container.innerHTML += `<span>${h}</span>`;
+                    }
+                });
+
+
+                // 2. Charts
+                window.currentDashboardData = data;
+                drawBreakdownChart(data.work_breakdown);
+                drawAppChart(data.apps);
+                drawOpChart(data.ops);
+                
+                // 3. Heatmap
+                // ボトルネックデータをグローバルに保持
+            window.currentBottlenecks = data.bottlenecks;
+
+            drawHeatmap(data.heatmap);
+                
+                // 4. Bottleneck Charts
+                drawCompareChart(data.bottlenecks);
+                
+                // 部署/全社トレンド
+                if (data.kpi && data.kpi.result_trend) {
+                    const trend = data.kpi.result_trend;
+                    const ctxTrend = document.getElementById('trendLineChart').getContext('2d');
+                    if(trendChart) trendChart.destroy();
+                    trendChart = new Chart(ctxTrend, {
+                        type: 'line',
+                        data: {
+                            labels: trend.period_labels,
+                            datasets: [{
+                                label: '非効率操作(回)',
+                                data: trend.cumulative_saved_min,
+                                borderColor: '#ef4444',
+                                backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                                fill: true,
+                                tension: 0.2,
+                                borderWidth: 2,
+                                pointRadius: 4
+                            }]
+                        },
+                        options: { ...commonOptions, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false }, ticks: { color: '#898781' } }, y: { title: { display: true, text: '非効率操作（回）' }, grid: { color: '#e2e8f0' } } } }
+                    });
+                    document.getElementById('trendLegend').innerHTML = `
+                        <div><span class="legend-dot" style="background-color: #ef4444;"></span>非効率操作(回)</div>
+                    `;
+                }
+                
+                // 5. メンバー比較
+                drawMemberChart(data.members);
+                drawMemberTable(data.members, data.dept_totals);
+
+            } catch(e) {
+                console.error("Failed to load dashboard data", e);
+            }
+        }
+
+        const formatTimeHM = (val) => {
+            let hrs = Math.floor(val / 3600);
+            let mins = Math.floor((val % 3600) / 60);
+            return hrs > 0 ? `${hrs}h${mins}m` : (mins > 0 ? `${mins}m` : `${Math.floor(val)}s`);
+        };
+
+        const buildHoverHandler = (catKey) => {
+            return (event, elements, chart) => {
+                const modal = document.getElementById('chartModal');
+                if (elements.length > 0) {
+                    const idx = elements[0].index;
+                    const label = chart.data.labels[idx];
+                    let val;
+                    let total = 0;
+                    
+                    if (chart.config.type === 'doughnut' || chart.config.type === 'pie') {
+                        val = chart.data.datasets[0].data[idx];
+                        total = chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
+                    } else { // bar chart
+                        val = chart.data.datasets[0].data[idx];
+                        total = chart.data.datasets[0].data.reduce((a, b) => a + b, 0); // Not strictly percentage for bar, but useful to know relative
+                    }
+                    
+                    const percentage = total > 0 ? Math.round((val / total) * 100) : 0;
+                    
+                    const detailList = (window.currentDashboardData && window.currentDashboardData.details && window.currentDashboardData.details[catKey]) 
+                        ? window.currentDashboardData.details[catKey][label] : [];
+                    
+                    let html = `<div class="font-bold text-slate-400 text-center mb-2 border-b border-slate-600 pb-2">総計: ${formatTimeHM(val)}</div>`;
+                    html += `<ul class="text-left text-sm space-y-3">`;
+                    if (detailList && detailList.length > 0) {
+                        detailList.forEach((d, i) => {
+                            html += `<li class="flex justify-between items-start gap-4">
+                                <span class="truncate text-slate-300 font-medium leading-tight" title="${d.file}">${i+1}. ${d.file}</span>
+                                <span class="font-bold text-blue-400 whitespace-nowrap">${formatTimeHM(d.duration)}</span>
+                            </li>`;
+                        });
+                    } else {
+                        html += `<li class="text-slate-500 text-center">詳細データなし</li>`;
+                    }
+                    html += `</ul>`;
+                    
+                    document.getElementById('chartModalLabel').textContent = label;
+                    document.getElementById('chartModalPercent').textContent = chart.config.type === 'doughnut' ? `${percentage}%` : '';
+                    document.getElementById('chartModalValue').innerHTML = html;
+                    
+                    const canvasRect = chart.canvas.getBoundingClientRect();
+                    const modalWidth = 768; // 48rem = 768px
+                    
+                    if (canvasRect.right + 20 + modalWidth > window.innerWidth) {
+                        // 右にはみ出る場合は左側に表示
+                        modal.style.left = Math.max(20, canvasRect.left - modalWidth - 20) + 'px';
+                    } else {
+                        // 右側に表示
+                        modal.style.left = (canvasRect.right + 20) + 'px';
+                    }
+                    modal.style.top = Math.max(20, canvasRect.top - 20) + 'px';
+                    
+                    modal.classList.remove('hidden');
+                } else {
+                    modal.classList.add('hidden');
+                }
+            };
+        };
+
+        const commonOptions = {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { 
+                    title: { display: true, text: '値', color: '#898781' }, 
+                    grid: { color: '#334155' }, 
+                    ticks: { color: '#cbd5e1' } 
+                },
+                y: { grid: { display: false }, ticks: { color: '#cbd5e1' } }
+            }
+        };
+
+        function drawBreakdownChart(breakdownData) {
+            const ctx = document.getElementById('breakdownPieChart');
+            if(breakdownChart) breakdownChart.destroy();
+            
+            const labels = Object.keys(breakdownData);
+            const values = Object.values(breakdownData);
+            const colors = ['#f59e0b', '#3b82f6', '#8b5cf6', '#64748b', '#10b981']; 
+            
+            breakdownChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: values,
+                        backgroundColor: colors,
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { 
+                        legend: { position: 'right', labels: { color: '#cbd5e1', font: { size: 11 } } },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.label || '';
+                                    if (label) label += ': ';
+                                    let value = context.parsed;
+                                    let total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    if (total > 0) {
+                                        label += Math.round((value / total) * 100) + '%';
+                                        label += ` (${formatTimeHM(value)})`;
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                    },
+                    cutout: '60%',
+                    onHover: buildHoverHandler('work_breakdown')
+                }
+            });
+        }
+
+        function drawAppChart(appsData) {
+            const ctx = document.getElementById('appBarChart');
+            if(appChart) appChart.destroy();
+            appChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(appsData),
+                    datasets: [{
+                        data: Object.values(appsData),
+                        backgroundColor: '#2a78d6',
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+                    plugins: { 
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return (context.label || '') + ': ' + formatTimeHM(context.raw);
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: { 
+                            title: { display: true, text: '稼働時間', color: '#898781' }, 
+                            grid: { color: '#334155' },
+                            ticks: { 
+                                color: '#cbd5e1',
+                                callback: function(value) { return formatTimeHM(value); }
+                            }
+                        },
+                        y: { grid: { display: false }, ticks: { color: '#cbd5e1' } }
+                    },
+                    onHover: buildHoverHandler('apps')
+                }
+            });
+        }
+
+        function drawOpChart(opsData) {
+            const ctx = document.getElementById('opBarChart');
+            if(opChart) opChart.destroy();
+            
+            // Assign specific colors for Ops
+            const bgColors = Object.keys(opsData).map(k => {
+                if(k.includes('手入力') || k.includes('コピペ')) return '#eb6834'; // Coral
+                if(k.includes('マクロ') || k.includes('関数')) return '#1baf7a'; // Green
+                if(k.includes('閲覧')) return '#64748b'; // Slate
+                if(k.includes('待機')) return '#94a3b8'; // Light Slate
+                return '#898781'; // Gray
+            });
+
+            opChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(opsData),
+                    datasets: [{
+                        data: Object.values(opsData),
+                        backgroundColor: bgColors,
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return (context.label || '') + ': ' + formatTimeHM(context.raw);
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: { 
+                            title: { display: true, text: '所要時間（割合）', color: '#898781' }, 
+                            grid: { color: '#334155' },
+                            ticks: { 
+                                color: '#cbd5e1',
+                                callback: function(value) { return formatTimeHM(value); }
+                            }
+                        },
+                        y: { grid: { display: false }, ticks: { color: '#cbd5e1' } }
+                    },
+                    onHover: buildHoverHandler('ops')
+                }
+            });
+        }
+
+        function drawCompareChart(bottlenecks) {
+            const ctx = document.getElementById('compareBarChart');
+            if(compareChart) compareChart.destroy();
+            const labels = bottlenecks.map(b => b.name.length > 15 ? b.name.substring(0,15)+'...' : b.name);
+            const manualData = bottlenecks.map(b => b.manual_sec);
+            const forecastData = bottlenecks.map(b => b.forecast_sec);
+            const tools = bottlenecks.map(b => b.tool);
+
+            compareChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        { label: '現状（手動）', data: manualData, backgroundColor: '#eb6834', borderRadius: 4 },
+                        { label: '予想（自動化後）', data: forecastData, backgroundColor: '#1baf7a', borderRadius: 4 }
+                    ]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { 
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let val = context.raw;
+                                    let hrs = Math.floor(val / 3600);
+                                    let mins = Math.floor((val % 3600) / 60);
+                                    let str = hrs > 0 ? `${hrs}時間${mins}分` : (mins > 0 ? `${mins}分` : `${val}秒`);
+                                    return context.dataset.label + ': ' + str;
+                                },
+                                afterLabel: function(context) {
+                                    if(context.datasetIndex === 0) return '推奨ツール: ' + tools[context.dataIndex];
+                                    return '';
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: { 
+                            title: { display: true, text: '所要時間（時間/分）', color: '#898781' }, 
+                            grid: { color: '#334155' },
+                            ticks: {
+                                callback: function(value) {
+                                    let hrs = Math.floor(value / 3600);
+                                    let mins = Math.floor((value % 3600) / 60);
+                                    return hrs > 0 ? `${hrs}h${mins}m` : (mins > 0 ? `${mins}m` : `${value}s`);
+                                }
+                            }
+                        },
+                        y: { grid: { display: false } }
+                    }
+                }
+            });
+        }
+
+
+        function drawMemberChart(members) {
+            const ctx = document.getElementById('memberChart');
+            if(memberChart) memberChart.destroy();
+            members.sort((a,b) => b.score_vs_avg - a.score_vs_avg);
+            const colors = members.map(m => m.score_vs_avg >= 0 ? 'rgba(239, 68, 68, 0.8)' : 'rgba(16, 185, 129, 0.8)');
+            
+            memberChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: members.map(m => m.name),
+                    datasets: [{
+                        label: '部門平均との偏差',
+                        data: members.map(m => m.score_vs_avg),
+                        backgroundColor: colors,
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    ...commonOptions,
+                    scales: {
+                        x: { title: { display: true, text: '偏差スコア', color: '#898781' }, grid: { color: '#334155' } },
+                        y: { grid: { display: false } }
+                    }
+                }
+            });
+        }
+
+        function drawMemberTable(members, dept_totals) {
+            const tbody = document.getElementById('member-details-tbody');
+            if (!tbody || !dept_totals) return;
+            
+            let html = '';
+            
+            // 全体合計行
+            html += `
+                <tr class="bg-blue-900/20 font-bold text-blue-200">
+                    <td class="py-3 px-4">【部門全体 合計】<br><span class="text-xs text-blue-400 font-normal">(${dept_totals.member_count}名分)</span></td>
+                    <td class="py-3 px-4 text-right">${formatTimeHM(dept_totals.total_sec)}</td>
+                    <td class="py-3 px-4 text-right">${formatTimeHM(dept_totals.inefficient_sec)}</td>
+                    <td class="py-3 px-4 text-right">${(dept_totals.avg_rate * 100).toFixed(1)}% <span class="text-xs text-slate-400">(平均)</span></td>
+                    <td class="py-3 px-4 text-right">-</td>
+                </tr>
+            `;
+            
+            // 1人あたり平均行
+            html += `
+                <tr class="bg-emerald-900/20 font-bold text-emerald-200">
+                    <td class="py-3 px-4">【1人あたり 平均】</td>
+                    <td class="py-3 px-4 text-right">${formatTimeHM(dept_totals.avg_total_sec)}</td>
+                    <td class="py-3 px-4 text-right">${formatTimeHM(dept_totals.avg_ineff_sec)}</td>
+                    <td class="py-3 px-4 text-right">${(dept_totals.avg_rate * 100).toFixed(1)}% <span class="text-xs text-slate-400">(基準値)</span></td>
+                    <td class="py-3 px-4 text-right">0</td>
+                </tr>
+            `;
+
+            // 各メンバーデータ
+            members.forEach(m => {
+                const diffRate = ((m.rate - dept_totals.avg_rate) * 100).toFixed(1);
+                const isWorse = m.score_vs_avg > 0;
+                const diffColor = isWorse ? 'text-red-400' : 'text-emerald-400';
+                const diffSign = isWorse ? '+' : '';
+                
+                html += `
+                    <tr class="hover:bg-slate-700/30 transition-colors">
+                        <td class="py-3 px-4 font-medium text-slate-200">${m.name}</td>
+                        <td class="py-3 px-4 text-right">${formatTimeHM(m.total_sec)}</td>
+                        <td class="py-3 px-4 text-right">${formatTimeHM(m.inefficient_sec)}</td>
+                        <td class="py-3 px-4 text-right">
+                            ${(m.rate * 100).toFixed(1)}% 
+                            <span class="text-xs ${diffColor} ml-1">(${diffSign}${diffRate}%)</span>
+                        </td>
+                        <td class="py-3 px-4 text-right font-bold ${diffColor}">${m.score_vs_avg}</td>
+                    </tr>
+                `;
+            });
+            
+            tbody.innerHTML = html;
+        }
+
+        function drawHeatmap(heatmapData) {
+            const days = ["月", "火", "水", "木", "金"];
+            const timeSet = new Set(heatmapData.map(d => d.time_slot));
+            const times = Array.from(timeSet).sort();
+            
+            document.getElementById('heatmap-y-labels').innerHTML = days.map(d => `<div>${d}</div>`).join('');
+            document.getElementById('heatmap-x-labels').innerHTML = times.map(t => `<div style="width: 44px; text-align:center;">${t.split(':')[0]}</div>`).join('');
+            
+            const grid = document.getElementById('heatmap-grid');
+            let html = '';
+            days.forEach(day => {
+                html += `<div class="flex">`;
+                times.forEach(time => {
+                    const cell = heatmapData.find(d => d.weekday === day && d.time_slot === time);
+                    const rate = cell ? cell.inefficient_rate : 0;
+                    const opacity = Math.max(0.1, rate);
+                    const color = `rgba(235, 104, 52, ${opacity})`; // Coral (#eb6834) shade
+                    html += `<div class="heatmap-cell" style="background-color: ${color}; cursor:pointer;" title="${day} ${time} - 非効率率: ${Math.round(rate*100)}%" onclick="showHeatmapDetails('${day}', '${time}')"></div>`;
+                });
+                html += `</div>`;
+            });
+            grid.innerHTML = html;
+        }
+
+        function showHeatmapDetails(day, time) {
+            if (!window.currentBottlenecks) return;
+            const tops = window.currentBottlenecks.slice(0, 5);
+            
+            const panel = document.getElementById('heatmap-details');
+            const title = document.getElementById('heatmap-details-title');
+            const list = document.getElementById('heatmap-details-list');
+            
+            title.textContent = `${day}曜日 ${time} の主な非効率作業 (Top 5)`;
+            
+            let html = '';
+            tops.forEach((b, i) => {
+                let hrs = Math.floor(b.manual_sec / 3600);
+                let mins = Math.floor((b.manual_sec % 3600) / 60);
+                let timeStr = hrs > 0 ? `${hrs}時間${mins}分` : `${mins}分`;
+                html += `<li>
+                    <div class="text-slate-100 font-semibold">${i+1}. ${b.name}</div>
+                    <div class="text-xs text-slate-400 mt-0.5">所要: ${timeStr} <span class="ml-2 text-teal-400">(推奨: ${b.tool})</span></div>
+                </li>`;
+            });
+            list.innerHTML = html;
+            panel.classList.remove('hidden');
+        }
+
+        async function generateAIReport(userId) {
+            const btn = document.getElementById('aiReportBtn');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<span>⏳</span> 生成中...';
+            btn.disabled = true;
+            
+            try {
+                let url = '/api/dashboard/analyze?user_id=' + userId;
+                
+                const start = document.getElementById('filterStart').value;
+                const end = document.getElementById('filterEnd').value;
+                const dept = document.getElementById('filterDept').value;
+                
+                if (start) url += '&start_date=' + encodeURIComponent(start);
+                if (end) url += '&end_date=' + encodeURIComponent(end);
+                if (dept && dept !== 'ALL') url += '&department=' + encodeURIComponent(dept);
+                
+                const res = await fetch(url, { method: 'POST' });
+                const data = await res.json();
+                
+                let reportHtml = data.report.replace(/&lt;/g, '<').replace(/&gt;/g, '>');
+                document.getElementById('aiModalContent').innerHTML = marked && marked.parse ? marked.parse(reportHtml) : reportHtml.replace(/\n/g, '<br>');
+                document.getElementById('aiModal').classList.remove('hidden');
+            } catch (err) {
+                alert('AIレポートの生成に失敗しました: ' + err);
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        }
+        
+        function closeAIModal() {
+            document.getElementById('aiModal').classList.add('hidden');
+        }
+        function setDefaultDates() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const urlStart = urlParams.get('start_date');
+            const urlEnd = urlParams.get('end_date');
+            const urlDept = urlParams.get('department');
+            const urlUser = urlParams.get('user_id');
+
+            if (urlStart) document.getElementById('filterStart').value = urlStart;
+            if (urlEnd) document.getElementById('filterEnd').value = urlEnd;
+            if (urlDept) {
+                // If options aren't loaded yet, create a temporary option so .value sticks
+                const deptEl = document.getElementById('filterDept');
+                if (!Array.from(deptEl.options).some(o => o.value === urlDept)) {
+                    const opt = document.createElement('option');
+                    opt.value = urlDept;
+                    opt.textContent = urlDept;
+                    deptEl.appendChild(opt);
+                }
+                deptEl.value = urlDept;
+            }
+            if (urlUser) {
+                const userEl = document.getElementById('filterUser');
+                if (userEl) {
+                    if (!Array.from(userEl.options).some(o => o.value === urlUser)) {
+                        const opt = document.createElement('option');
+                        opt.value = urlUser;
+                        opt.textContent = urlUser;
+                        userEl.appendChild(opt);
+                    }
+                    userEl.value = urlUser;
+                }
+            }
+
+            if (!document.getElementById('filterStart').value && !document.getElementById('filterEnd').value) {
+                const now = new Date();
+                const start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+                const end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+                const formatLocal = d => new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+                document.getElementById('filterStart').value = formatLocal(start);
+                document.getElementById('filterEnd').value = formatLocal(end);
+            }
+        }
+        
+        setDefaultDates();
+        initDashboard();
+    </script>
+</body>
+</html>
