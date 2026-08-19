@@ -1,6 +1,8 @@
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 import logging
+from pathlib import Path
+from main import DataProcessor
 
 # ロガー設定
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -28,6 +30,9 @@ class UploadDataCreateApp:
         
         self.base_file_path = tk.StringVar()
         self.config_file_path = tk.StringVar()
+        
+        self.processor = None
+        self.output_dir = Path(r"c:\Users\フォーレスト026\MyProject\UploadDataCreate\output")
         
         self._create_widgets()
         
@@ -68,7 +73,7 @@ class UploadDataCreateApp:
             {"name": "5. 送料無料の付与 (楽天)", "status_var": tk.StringVar(value="未実行"), "btn_text": "内容確認 → Stage 6へ"},
             {"name": "6. イベント別キーワード付与 (楽天)", "status_var": tk.StringVar(value="未実行"), "btn_text": "内容確認 → Stage 7へ"},
             {"name": "7. 文字数制限の調整 (楽天)", "status_var": tk.StringVar(value="未実行"), "btn_text": "内容確認 → Stage 8へ"},
-            {"name": "8. 最終フォーマット調整", "status_var": tk.StringVar(value="未実行"), "btn_text": "作業終了 (次工程へ)"},
+            {"name": "8. 最終フォーマット調整", "status_var": tk.StringVar(value="未実行"), "btn_text": "作業終了 (出力確認)"},
         ]
         
         self.stage_buttons = []
@@ -104,32 +109,59 @@ class UploadDataCreateApp:
         """全体の処理を開始し、Stage1を実行する"""
         if not self.base_file_path.get() or not self.config_file_path.get():
             messagebox.showwarning("確認", "対象ファイルと案件設定ファイル(JSON)を選択してください。")
-            # 実際の環境では return させますが、テスト用にコメントアウト可能
-            # return
+            return
             
         logger.info("作業を開始します。")
-        messagebox.showinfo("開始", "処理を開始します。\n（実際のロジック連携は後ほど実装します）")
-        
-        # Stage1完了の状態をシミュレート
-        self.stages[0]["status_var"].set("処理完了")
-        self.stage_buttons[0].config(state=tk.NORMAL)
+        try:
+            self.processor = DataProcessor(self.base_file_path.get(), self.config_file_path.get(), self.output_dir)
+            self.processor.load_data()
+            self.processor.stage1_remove_exclude()
+            
+            self.stages[0]["status_var"].set("処理完了")
+            self.stage_buttons[0].config(state=tk.NORMAL)
+            messagebox.showinfo("Stage 1 完了", f"Stage 1 が完了しました。\n出力フォルダ: {self.output_dir}\n「temp_stage1.xlsx」をご確認ください。")
+        except Exception as e:
+            logger.error(f"エラー発生: {e}", exc_info=True)
+            messagebox.showerror("エラー", f"処理中にエラーが発生しました。\n{e}")
 
     def _confirm_stage(self, stage_index):
-        """各ステージの確認ボタンが押されたときの処理"""
-        # 該当ステージの中間ファイルを開く処理などをここに実装
-        logger.info(f"Stage {stage_index + 1} のファイルを確認しています...")
-        
-        messagebox.showinfo("確認", f"Stage {stage_index + 1} の中間データファイルを開きます。\n確認後、OKを押すと次のステージへ進みます。")
-        
-        # 次のステージがあれば実行をシミュレート
+        """各ステージの確認・次工程実行処理"""
         next_index = stage_index + 1
-        if next_index < len(self.stages):
+        
+        if next_index >= len(self.stages):
+            messagebox.showinfo("完了", "すべての処理が完了しました！\n出力フォルダの normal_item_result.xlsx をご確認ください。")
+            self.stage_buttons[stage_index].config(state=tk.DISABLED)
+            return
+
+        try:
+            # 次のステージの処理を実行
+            if next_index == 1:
+                self.processor.stage2_remove_stock_order()
+            elif next_index == 2:
+                self.processor.stage3_remove_medicine()
+            elif next_index == 3:
+                self.processor.stage4_remove_specific_string()
+            elif next_index == 4:
+                self.processor.stage5_add_free_shipping()
+            elif next_index == 5:
+                self.processor.stage6_add_event_keyword()
+            elif next_index == 6:
+                self.processor.stage7_truncate_bytes()
+            elif next_index == 7:
+                self.processor.stage8_final_format()
+
             self.stages[next_index]["status_var"].set("処理完了")
             self.stage_buttons[next_index].config(state=tk.NORMAL)
-            self.stage_buttons[stage_index].config(state=tk.DISABLED) # 現在のボタンは無効化
-        else:
-            messagebox.showinfo("完了", "すべての前処理が完了しました！\n次工程（佐々木exe）へ進みます。")
             self.stage_buttons[stage_index].config(state=tk.DISABLED)
+            
+            if next_index < 7:
+                messagebox.showinfo(f"Stage {next_index+1} 完了", f"Stage {next_index+1} が完了しました。\ntemp_stage{next_index+1}.xlsx をご確認ください。")
+            else:
+                messagebox.showinfo(f"全工程完了", "Stage 8 の最終フォーマット調整が完了しました。\nnormal_item_result.xlsx をご確認ください。")
+                
+        except Exception as e:
+            logger.error(f"エラー発生: {e}", exc_info=True)
+            messagebox.showerror("エラー", f"処理中にエラーが発生しました。\n{e}")
 
 if __name__ == "__main__":
     root = tk.Tk()
