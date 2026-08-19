@@ -1,0 +1,14 @@
+{
+  "merge_files": [
+    "C:\\Users\\フォーレスト026\\Desktop\\元データ\\【2】社外キーワード追加対応.xlsx",
+    "C:\\Users\\フォーレスト026\\Desktop\\元データ\\111取り寄せ＋有効在庫有り.csv",
+    "C:\\Users\\フォーレスト026\\Desktop\\元データ\\111倉庫_売価変更用.csv"
+  ],
+  "events": [
+    {
+      "event_name": "楽天スーパーSALE",
+      "keyword_data_file": "C:\\Users\\フォーレスト026\\Desktop\\元データ\\イベント別キーワード一覧.xlsx",
+      "add_prefix": "【SALE】"
+    }
+  ]
+}
