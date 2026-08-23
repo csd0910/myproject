@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--_SIG=1PbuS6x8RluQ+FAnroPpGEip1D7rXyPzFcm++UgD9EiMzw6ujtjrjdw20/h1eU8DxzCQI8xQabhdC0UZJH47Ns3A5OPcXbyoIdglcIDHs9B7W3Y7JIZnG8ekdAq4kEcfqi+Rsh+8Mic2TrpEStx0tJhaOQoRe0NNCu7LEXU1eUc=-->
+<Package Id="Proofing.ja-jp" Type="MSI" Path="Proofing.MSI" Version="1.0" ProductCode="{90140000-002C-0411-0000-0000000FF1CE}" MSIVersion="14.0.4763.1000" Platform="x86">
+	<Feature Id="Gimme_OnDemandData" Cost="0">
+		<OptionRef Id="Gimme_OnDemandData"/>
+	</Feature>
+	<Feature Id="SetupXmlFiles" Cost="468">
+		<OptionRef Id="AlwaysInstalled"/>
+	</Feature>
+	<Feature Id="SetupControllerFiles" Cost="468">
+		<OptionRef Id="AlwaysInstalled"/>
+	</Feature>
+	<Feature Id="MsoInstalledPackagesScopedIntl_1041" Cost="0">
+		<OptionRef Id="AlwaysInstalled"/>
+	</Feature>
+</Package>

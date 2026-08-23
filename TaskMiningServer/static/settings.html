@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>従業員マスタ設定 - TaskMining</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        body { background-color: #0f172a; color: #f8fafc; font-family: 'Inter', sans-serif; }
+        .card { background-color: rgba(30,41,59,0.7); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 2rem; backdrop-filter: blur(10px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); }
+    </style>
+</head>
+<body class="p-6 md:p-12">
+    <div class="w-full max-w-[1600px] mx-auto space-y-8">
+        
+        <header class="flex justify-between items-center border-b border-slate-700 pb-4">
+            <div>
+                <h1 class="text-3xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-emerald-400 mb-2">
+                    ⚙️ 管理者メニュー
+                </h1>
+                <p class="text-slate-400">マスタ登録(利用部門・社員登録) および パスワード変更</p>
+            </div>
+            <a href="/dashboard" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded text-sm transition-colors border border-slate-500">🌐 ダッシュボードへ戻る</a>
+        </header>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            
+            <!-- システム監視エリア -->
+            <div class="card flex flex-col md:col-span-2 lg:col-span-3 mb-4">
+                <h2 class="text-xl font-bold mb-4 text-cyan-300">📡 システム稼働ステータス</h2>
+                <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                    <div class="bg-slate-800 p-4 rounded-lg border border-slate-700">
+                        <div class="text-xs text-slate-400 mb-1">利用データベース</div>
+                        <div id="sysDb" class="text-lg font-bold text-slate-200">読込中...</div>
+                    </div>
+                    <div class="bg-slate-800 p-4 rounded-lg border border-slate-700">
+                        <div class="text-xs text-slate-400 mb-1">DB総容量</div>
+                        <div id="sysDbSize" class="text-lg font-bold text-slate-200">読込中...</div>
+                    </div>
+                    <div class="bg-slate-800 p-4 rounded-lg border border-slate-700">
+                        <div class="text-xs text-slate-400 mb-1">蓄積ログ総数</div>
+                        <div id="sysLogs" class="text-lg font-bold text-blue-300">読込中...</div>
+                    </div>
+                    <div class="bg-slate-800 p-4 rounded-lg border border-slate-700">
+                        <div class="text-xs text-slate-400 mb-1">累計利用人数</div>
+                        <div id="sysUsers" class="text-lg font-bold text-blue-300">読込中...</div>
+                    </div>
+                    <div class="bg-slate-800 p-4 rounded-lg border border-slate-700">
+                        <div class="text-xs text-slate-400 mb-1">稼働端末(直近1h)</div>
+                        <div id="sysClients" class="text-lg font-bold text-emerald-300">読込中...</div>
+                    </div>
+                    <div class="bg-slate-800 p-4 rounded-lg border border-slate-700">
+                        <div class="text-xs text-slate-400 mb-1">Gemini API状態</div>
+                        <div id="sysApi" class="text-lg font-bold text-purple-300">読込中...</div>
+                    </div>
+                </div>
+                
+                <!-- グラフ表示エリア -->
+                <div class="mt-6 bg-slate-800 p-4 rounded-lg border border-slate-700 h-64">
+                    <canvas id="sysChart"></canvas>
+                </div>
+
+                <!-- 最新ログ確認エリア -->
+                <div class="mt-6">
+                    <h3 class="text-lg font-bold mb-2 text-slate-200">📝 最新の生ログストリーム (直近50件)</h3>
+                    <div class="bg-slate-900 rounded-lg border border-slate-700 overflow-y-auto max-h-64">
+                        <table class="w-full text-left border-collapse text-xs">
+                            <thead class="sticky top-0 bg-slate-800 shadow">
+                                <tr class="text-slate-400">
+                                    <th class="py-2 px-3 border-b border-slate-700">日時</th>
+                                    <th class="py-2 px-3 border-b border-slate-700">ユーザー</th>
+                                    <th class="py-2 px-3 border-b border-slate-700">アプリ</th>
+                                    <th class="py-2 px-3 border-b border-slate-700">操作</th>
+                                    <th class="py-2 px-3 border-b border-slate-700">ウィンドウ/ファイル名</th>
+                                </tr>
+                            </thead>
+                            <tbody id="sysLogTableBody" class="text-slate-300">
+                                <tr><td colspan="5" class="py-2 px-3 text-center">読込中...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- パスワード変更エリア -->
+            <div class="card flex flex-col md:col-span-2 lg:col-span-1">
+                <h2 class="text-xl font-bold mb-4 text-purple-300">🔑 管理者パスワード変更</h2>
+                <p class="text-sm text-slate-400 mb-4">サインイン時に必要なパスワードを変更します。</p>
+                
+                <div class="space-y-4 flex-grow">
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-300 mb-2">新しいパスワード</label>
+                        <input type="password" id="newPassword" class="w-full px-4 py-3 bg-slate-800 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-purple-500 transition-colors" placeholder="新しいパスワードを入力">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-300 mb-2">確認のためもう一度</label>
+                        <input type="password" id="confirmPassword" class="w-full px-4 py-3 bg-slate-800 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-purple-500 transition-colors" placeholder="もう一度入力">
+                    </div>
+                    <button onclick="changePassword()" class="w-full py-3 mt-4 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 rounded-lg font-bold text-white shadow-lg transition-transform transform hover:-translate-y-1">
+                        パスワードを変更
+                    </button>
+                    <div id="pwdResult" class="mt-4 text-center text-sm font-bold hidden"></div>
+                </div>
+            </div>
+            
+            <!-- CSVアップロードエリア -->
+            <div class="card flex flex-col">
+                <h2 class="text-xl font-bold mb-4 text-blue-300 flex justify-between items-center">
+                    <span>📥 マスタ登録 (利用部門・社員)</span>
+                    <button onclick="downloadEmployeesCsv()" class="text-xs px-3 py-1 bg-slate-700 hover:bg-slate-600 text-blue-200 rounded border border-slate-600 font-bold transition-colors shadow-sm flex items-center gap-1">
+                        ⬇️ 現状をDL
+                    </button>
+                </h2>
+                <p class="text-sm text-slate-400 mb-6">
+                    以下のヘッダーを含むCSVファイルをアップロードしてください。<br>
+                    <code class="bg-slate-800 px-2 py-1 rounded text-emerald-300 mt-2 inline-block">user_id, name, department, section</code>
+                </p>
+                
+                <div class="flex-grow flex flex-col justify-center">
+                    <input type="file" id="csvFile" accept=".csv" class="block w-full text-sm text-slate-300 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700 transition-colors mb-6 cursor-pointer"/>
+                    
+                    <button onclick="uploadCsv()" class="w-full py-3 bg-gradient-to-r from-blue-600 to-emerald-600 hover:from-blue-500 hover:to-emerald-500 rounded-lg font-bold text-white shadow-lg transition-transform transform hover:-translate-y-1">
+                        アップロード実行
+                    </button>
+                    <div id="uploadResult" class="mt-4 text-center text-sm font-bold hidden"></div>
+                </div>
+            </div>
+
+            <!-- 登録済み部門一覧 -->
+            <div class="card flex flex-col">
+                <h2 class="text-xl font-bold mb-4 text-emerald-300">🏢 登録済み部門一覧</h2>
+                <p class="text-sm text-slate-400 mb-4">現在データベースに登録されている部門と所属人数です。</p>
+                
+                <div class="bg-slate-800 rounded-lg border border-slate-700 overflow-hidden flex-grow">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-900 text-slate-300 text-sm">
+                                <th class="py-3 px-4 border-b border-slate-700">部門名</th>
+                                <th class="py-3 px-4 border-b border-slate-700 w-32 text-right">登録人数</th>
+                            </tr>
+                        </thead>
+                        <tbody id="deptTableBody" class="text-slate-200">
+                            <!-- JSで動的に追加 -->
+                            <tr>
+                                <td colspan="2" class="py-4 text-center text-slate-500">読み込み中...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- 個人ビュー抽出 -->
+            <div class="card flex flex-col border-2 border-indigo-500/30">
+                <h2 class="text-xl font-bold mb-4 text-indigo-300">👤 個人ビュー抽出</h2>
+                <p class="text-sm text-slate-400 mb-6">
+                    特定の社員を指定し、個人の詳細な入力データや操作ログ（ミクロビュー）を抽出します。この機能は管理者のみ利用可能です。
+                </p>
+                <div class="flex-grow flex flex-col justify-center gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-400 mb-2">対象メンバーを選択</label>
+                        <select id="adminUserSelect" class="w-full bg-slate-800 border border-slate-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-indigo-500">
+                            <option value="">読込中...</option>
+                        </select>
+                    </div>
+                    <button onclick="openPersonalView()" class="w-full py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 rounded-lg font-bold text-white shadow-lg transition-transform transform hover:-translate-y-1 mt-auto">
+                        個人ビュー(ミクロ)を開く
+                    </button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        const token = localStorage.getItem('admin_token');
+        if (!token) {
+            alert("管理者権限がありません。ログイン画面へ移動します。");
+            window.location.href = '/login';
+        }
+
+        let sysChartInstance = null;
+
+        async function loadSystemStatus() {
+            try {
+                const res = await fetch('/api/settings/system_status', {
+                    headers: { 'X-Admin-Token': `Bearer ${token}` }
+                });
+                const data = await res.json();
+                if (data.status === "success") {
+                    document.getElementById('sysDb').innerText = data.db_type;
+                    document.getElementById('sysDbSize').innerText = data.db_size_mb + " MB";
+                    document.getElementById('sysLogs').innerText = data.total_logs.toLocaleString() + " 件";
+                    document.getElementById('sysUsers').innerText = data.total_users + " 名";
+                    document.getElementById('sysClients').innerText = data.active_clients + " 台";
+                    document.getElementById('sysApi').innerText = data.api_status;
+                    
+                    // グラフ描画
+                    const ctx = document.getElementById('sysChart').getContext('2d');
+                    if (sysChartInstance) {
+                        sysChartInstance.data.labels = data.chart_labels;
+                        sysChartInstance.data.datasets[0].data = data.chart_data;
+                        sysChartInstance.update();
+                    } else {
+                        sysChartInstance = new Chart(ctx, {
+                            type: 'line',
+                            data: {
+                                labels: data.chart_labels,
+                                datasets: [{
+                                    label: '直近24時間の受信ログ件数 (件/時)',
+                                    data: data.chart_data,
+                                    borderColor: '#38bdf8',
+                                    backgroundColor: 'rgba(56, 189, 248, 0.2)',
+                                    borderWidth: 2,
+                                    fill: true,
+                                    tension: 0.4
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                scales: {
+                                    y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.1)' }, ticks: { color: '#94a3b8' } },
+                                    x: { grid: { display: false }, ticks: { color: '#94a3b8' } }
+                                },
+                                plugins: {
+                                    legend: { labels: { color: '#e2e8f0' } }
+                                }
+                            }
+                        });
+                    }
+                }
+                
+                // 続けて最新ログも取得
+                const resLogs = await fetch('/api/settings/latest_logs', {
+                    headers: { 'X-Admin-Token': `Bearer ${token}` }
+                });
+                const dataLogs = await resLogs.json();
+                if (dataLogs.status === "success") {
+                    const tbody = document.getElementById('sysLogTableBody');
+                    tbody.innerHTML = dataLogs.logs.map(l => `
+                        <tr class="hover:bg-slate-700/50 border-b border-slate-700/50">
+                            <td class="py-1 px-3 whitespace-nowrap text-slate-400">${l.time}</td>
+                            <td class="py-1 px-3 text-blue-300 truncate max-w-[100px]">${l.user}</td>
+                            <td class="py-1 px-3 text-emerald-300 truncate max-w-[120px]">${l.app}</td>
+                            <td class="py-1 px-3 text-purple-300 text-[10px]"><span class="bg-slate-700 px-1 rounded">${l.op}</span></td>
+                            <td class="py-1 px-3 truncate max-w-[200px]" title="${l.file}">${l.file}</td>
+                        </tr>
+                    `).join('');
+                }
+            } catch(e) {
+                console.error("システムステータスの読み込みに失敗しました", e);
+            }
+        }
+
+        async function loadDepartments() {
+            try {
+                const res = await fetch('/api/settings/departments', {
+                    headers: { 'X-Admin-Token': `Bearer ${token}` }
+                });
+                const data = await res.json();
+                const tbody = document.getElementById('deptTableBody');
+                
+                if (data.departments && data.departments.length > 0) {
+                    tbody.innerHTML = data.departments.map(d => `
+                        <tr class="hover:bg-slate-700 transition-colors">
+                            <td class="py-3 px-4 border-b border-slate-700 font-semibold text-blue-200">${d.name}</td>
+                            <td class="py-3 px-4 border-b border-slate-700 text-right"><span class="bg-emerald-500/20 text-emerald-300 px-2 py-1 rounded-full text-xs font-bold">${d.count} 名</span></td>
+                        </tr>
+                    `).join('');
+                } else {
+                    tbody.innerHTML = `<tr><td colspan="2" class="py-4 text-center text-slate-500">登録されている部門がありません</td></tr>`;
+                }
+                
+                // 個人ビュー抽出用メンバーリストの取得
+                const resData = await fetch('/api/dashboard/data', {
+                    headers: { 'X-Admin-Token': `Bearer ${token}` }
+                });
+                const dashData = await resData.json();
+                
+                const select = document.getElementById('adminUserSelect');
+                if (dashData.members && dashData.members.length > 0) {
+                    select.innerHTML = '<option value="">メンバーを選択してください</option>';
+                    dashData.members.forEach(m => {
+                        select.innerHTML += `<option value="${m.name}">${m.name}</option>`;
+                    });
+                } else {
+                    select.innerHTML = '<option value="">データが存在しません</option>';
+                }
+                
+            } catch(e) {
+                console.error("部門データの読み込みに失敗しました", e);
+            }
+        }
+
+        async function uploadCsv() {
+            const fileInput = document.getElementById('csvFile');
+            const resultDiv = document.getElementById('uploadResult');
+            
+            if (!fileInput.files.length) {
+                resultDiv.innerText = "⚠️ ファイルを選択してください";
+                resultDiv.className = "mt-4 text-center text-sm font-bold text-amber-400 block";
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append("file", fileInput.files[0]);
+
+            resultDiv.innerText = "⏳ アップロード中...";
+            resultDiv.className = "mt-4 text-center text-sm font-bold text-blue-400 block";
+
+            try {
+                const res = await fetch('/api/settings/upload_csv', {
+                    method: 'POST',
+                    headers: { 'X-Admin-Token': `Bearer ${token}` },
+                    body: formData
+                });
+                const data = await res.json();
+                
+                if (data.status === "success") {
+                    resultDiv.innerText = `✅ アップロード成功（処理件数: ${data.processed_count}件）`;
+                    resultDiv.className = "mt-4 text-center text-sm font-bold text-emerald-400 block";
+                    setTimeout(() => window.location.reload(), 2000);
+                } else {
+                    resultDiv.innerText = "❌ エラー: " + data.message;
+                    resultDiv.className = "mt-4 text-center text-sm font-bold text-red-400 block";
+                }
+            } catch(e) {
+                resultDiv.innerText = "❌ エラーが発生しました: " + e;
+                resultDiv.className = "mt-4 text-center text-sm font-bold text-red-400 block";
+            }
+        }
+        
+        async function downloadEmployeesCsv() {
+            try {
+                const res = await fetch('/api/settings/export_employees_csv', {
+                    headers: { 'X-Admin-Token': `Bearer ${token}` }
+                });
+                if (res.ok) {
+                    const blob = await res.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'employees_master.csv';
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                    window.URL.revokeObjectURL(url);
+                } else {
+                    alert('ダウンロードに失敗しました。');
+                }
+            } catch(e) {
+                console.error(e);
+                alert('エラーが発生しました。');
+            }
+        }
+
+        async function changePassword() {
+            const pwd = document.getElementById('newPassword').value;
+            const confirm = document.getElementById('confirmPassword').value;
+            const resDiv = document.getElementById('pwdResult');
+
+            if (!pwd || pwd.length < 6) {
+                resDiv.innerText = "⚠️ パスワードは6文字以上で入力してください";
+                resDiv.className = "mt-4 text-center text-sm font-bold text-amber-400 block";
+                return;
+            }
+            if (pwd !== confirm) {
+                resDiv.innerText = "⚠️ パスワードが一致しません";
+                resDiv.className = "mt-4 text-center text-sm font-bold text-amber-400 block";
+                return;
+            }
+
+            resDiv.innerText = "⏳ 変更中...";
+            resDiv.className = "mt-4 text-center text-sm font-bold text-blue-400 block";
+
+            try {
+                const res = await fetch('/api/auth/change_password', {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'X-Admin-Token': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ new_password: pwd })
+                });
+                const data = await res.json();
+                
+                if (data.status === "success") {
+                    resDiv.innerText = `✅ パスワードを変更しました`;
+                    resDiv.className = "mt-4 text-center text-sm font-bold text-emerald-400 block";
+                    document.getElementById('newPassword').value = '';
+                    document.getElementById('confirmPassword').value = '';
+                } else {
+                    resDiv.innerText = `❌ エラー: ${data.message}`;
+                    resDiv.className = "mt-4 text-center text-sm font-bold text-red-400 block";
+                }
+            } catch(e) {
+                resDiv.innerText = `❌ 通信エラーが発生しました`;
+                resDiv.className = "mt-4 text-center text-sm font-bold text-red-400 block";
+            }
+        }
+
+        function openPersonalView() {
+            const user = document.getElementById('adminUserSelect').value;
+            if (!user) {
+                alert("メンバーを選択してください。");
+                return;
+            }
+            window.open(`/user_dashboard?user_id=${encodeURIComponent(user)}`, '_blank');
+        }
+
+        // 初期読み込み
+        loadDepartments();
+        loadSystemStatus();
+        setInterval(loadSystemStatus, 10000); // 10秒ごとにステータス更新
+    </script>
+</body>
+</html>

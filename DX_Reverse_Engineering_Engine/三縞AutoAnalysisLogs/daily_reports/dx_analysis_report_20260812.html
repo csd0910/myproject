@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>詳細DX抽出レポート - 20260812</title>
+    <script src="https://cdn.tailwindcss.com"></script><script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <script>mermaid.initialize({startOnLoad:true});</script>
+    <style>body { background-color: #f8fafc; color: #334155; }</style>
+</head>
+<body class="p-6 md:p-12">
+    <div class="max-w-7xl mx-auto bg-white p-8 rounded-xl shadow-lg border border-gray-100">
+        <header class="mb-12 border-b pb-6">
+            <h1 class="text-3xl font-extrabold text-slate-800 mb-2">詳細DX抽出レポート (20260812)</h1>
+            <p class="text-slate-500">業務ロギングとAIによる自動化提案</p>
+        </header>
+        
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-12">
+            <!-- 左カラム：グラフ（アプリ割合 ＆ 操作割合） -->
+            <div class="lg:col-span-3 space-y-12 border-r pr-8">
+                <div>
+                    <h2 class="text-lg font-bold mb-4 text-center text-slate-700">🖥️ アプリ使用割合</h2>
+                    <div class="relative w-full aspect-square"><canvas id="appChart"></canvas></div>
+                </div>
+                <div>
+                    <h2 class="text-lg font-bold mb-4 text-center text-slate-700">⚙️ 操作ごとの割合 (作業分解)</h2>
+                    <div class="relative w-full aspect-square"><canvas id="taskChart"></canvas></div>
+                </div>
+            </div>
+            
+            <!-- 右カラム：AI解析結果（タイムライン、フロー図、DX提案） -->
+            <div class="lg:col-span-9">
+                <h2 class="text-2xl mb-4 border-b pb-2 text-blue-700 font-bold">📁 操作した主要ファイルと手作業のコスト</h2>
+<ul>
+    <li><strong>操作ファイル/システム:</strong>
+        <ul>
+            <li><code>0812長期欠品管理表.xlsb</code> (主要作業ファイル)</li>
+            <li><code>長期欠品設定解除依頼.xlsx</code> (データ参照・コピー元)</li>
+            <li><code>【長期欠品更新専用】品目情報.csv</code> (データ参照・コピー元)</li>
+            <li><code>未入荷リスト_新.csv</code> (データ参照・コピー元)</li>
+            <li><code>EXCEL.EXE</code> (メインアプリケーション)</li>
+            <li><code>explorer.exe</code> (ファイル操作)</li>
+        </ul>
+    </li>
+    <li><strong>手作業の実時間:</strong> 約44分40秒 (2026-08-12 14:43:22 から 15:28:02)</li>
+    <li><strong>自動化した場合の想定削減時間:</strong> 約40分 (RPA実行時間 5分未満と想定)</li>
+</ul>
+
+<div class="mt-8 flex flex-col lg:flex-row gap-8">
+    <div class="flex-1 lg:w-1/2">
+        <h2 class="text-xl mb-4 border-b pb-2 text-teal-700 font-bold">🔄 現在の処理フロー図 (手動所要時間)</h2>
+        <div class="mermaid bg-slate-50 p-4 rounded shadow">
+        graph TD
+        A["開始: DXロガーからパスをコピー (14:43)"] --> B["Excelで'長期欠品設定解除依頼.xlsx'を開く"]
+        B --> C["'0812長期欠品管理表.xlsb'を開く (または既に開いている状態)"]
+        C --> D["'【長期欠品更新専用】品目情報.csv'から全データをコピー"]
+        D --> E["'0812長期欠品管理表.xlsb'の適宜シートに貼り付け (品目情報)"]
+        E --> F["'0812長期欠品管理表.xlsb'の'①長期欠品'シートで特定行データをコピー"]
+        F --> G["'0812長期欠品管理表.xlsb'のセル'H9892'に'在庫チーム'と手入力 (15:00)"]
+        G --> H["'0812長期欠品管理表.xlsb'の'①長期欠品'シートで複数行を選択しDelete (15:00)"]
+        H --> I["'0812長期欠品管理表.xlsb'の'③社外サイト販売休止'シートのセル'E2300'に備考を手入力 (15:00)"]
+        I --> J["'【長期欠品更新専用】品目情報.csv'の全データを再度コピー (15:01)"]
+        J --> K["'未入荷リスト_新.csv'を開き、データをコピー (15:02)"]
+        K --> L["'0812長期欠品管理表.xlsb'の'未入荷'シートに貼り付け (15:02)"]
+        L --> M["'長期欠品設定解除依頼.xlsx'から複数の品目情報・商品名をコピー (複数回)"]
+        M --> N["'0812長期欠品管理表.xlsb'の'①長期欠品'/'②長期欠品解除'シートに貼り付け (複数回)"]
+        N --> O["'0812長期欠品管理表.xlsb'の'未入荷'シートでデータ範囲を選択しコピー/貼り付け (複数回)"]
+        O --> P["'0812長期欠品管理表.xlsb'の'未入荷'シートのE列に値を手入力 (複数セル)"]
+        P --> Q["'0812長期欠品管理表.xlsb'の'未入荷'シートのF列にVLOOKUP数式を手入力・コピー (例: '=K893')"]
+        Q --> R["'0812長期欠品管理表.xlsb'の'①長期欠品'シートのF列にVLOOKUP数式を手入力・コピー (15:20)"]
+        R --> S["'長期欠品設定解除依頼.xlsx'から追加データをコピー (品目コード、商品名、備考など)"]
+        S --> T["'0812長期欠品管理表.xlsb'の'①長期欠品'/'②長期欠品解除'/'③社外サイト販売休止'シートに貼り付け/加工 (複数回)"]
+        T --> U["'0812長期欠品管理表.xlsb'のデータ範囲をカットし、別の位置に貼り付け (15:25)"]
+        U --> V["'0812長期欠品管理表.xlsb'の各シートで複数範囲のデータをコピー/貼り付け (VLOOKUP結果の値貼り付けを含むと推測)"]
+        V --> W["'0812長期欠品管理表.xlsb'を保存 (15:28)"]
+        W --> X["終了"]
+        </div>
+    </div>
+    <div class="flex-1 lg:w-1/2">
+        <h2 class="text-xl mb-4 border-b pb-2 text-orange-600 font-bold">🚀 自動化後のフロー図 (短縮時間)</h2>
+        <div class="mermaid bg-slate-50 p-4 rounded shadow">
+        graph TD
+        A["RPA開始: 各ファイルパスを取得"] --> B["'0812長期欠品管理表.xlsb'をRPAで開く"]
+        B --> C{"各データソースからデータをRPAで読み込み"}
+        C --> D["'【長期欠品更新専用】品目情報.csv'の全データを取得"]
+        C --> E["'未入荷リスト_新.csv'の全データを取得"]
+        C --> F["'長期欠品設定解除依頼.xlsx'から必要なデータを取得"]
+        D & E & F --> G["収集したデータを元に'0812長期欠品管理表.xlsb'の各シートに自動入力/貼り付け (Write Range)"]
+        G --> H["'①長期欠品'シートの特定範囲をRPAで削除 (Delete Rows)"]
+        H --> I["'①長期欠品'シートの指定セルに'在庫チーム'を自動入力 (Write Cell)"]
+        I --> J["'③社外サイト販売休止'シートの備考欄を自動入力 (Write Cell)"]
+        J --> K["'未入荷'シートのE列にRPAで取得した値を自動入力"]
+        K --> L["'未入荷'シートのF列にVLOOKUP数式を自動設定し、範囲に適用 (Write Cell Formula & Fill Range)"]
+        L --> M["'①長期欠品'シートのF列にVLOOKUP数式を自動設定し、範囲に適用 (Write Cell Formula & Fill Range)"]
+        M --> N["必要に応じて、数式結果を値に変換 (Paste Special Values)"]
+        N --> O["'0812長期欠品管理表.xlsb'をRPAで保存 (Save Workbook)"]
+        O --> P["RPA終了"]
+        </div>
+    </div>
+</div>
+
+<div class="mt-12 bg-orange-50 p-6 rounded-xl border border-orange-100">
+    <h2 class="text-2xl mb-4 text-orange-800 font-bold">💡 具体的な自動化案とステップ</h2>
+    <p class="mb-4">現在の手作業は約44分40秒を要しており、複数のExcel/CSVファイル間のデータコピー、貼り付け、手入力、数式設定が繰り返されています。特にCtrlキーやTabキーの連打が多く見られ、これは手動操作特有の無駄な動作です。RPAを導入することで、これらの定型作業を高速かつ正確に実行し、作業時間を大幅に短縮できます。</p>
+
+    <h3 class="text-lg font-semibold text-orange-700 mb-2">Step 1: 初期設定とファイルパス管理</h3>
+    <ul class="list-disc pl-6 mb-4 text-gray-700">
+        <li>RPAツール（UiPath, Automation Anywhere, Blue Prismなど）に、主要なExcelファイル（<code>0812長期欠品管理表.xlsb</code>, <code>長期欠品設定解除依頼.xlsx</code>）とCSVファイル（<code>【長期欠品更新専用】品目情報.csv</code>, <code>未入荷リスト_新.csv</code>）のパスを変数として登録します。</li>
+        <li>Excelアプリケーションスコープなどのアクティビティを使用し、RPAから各Excelファイルを開閉できるように設定します。これにより、手動でのファイル検索やクリック操作が不要になります。</li>
+    </ul>
+
+    <h3 class="text-lg font-semibold text-orange-700 mb-2">Step 2: 各種データソースからのデータ抽出と統合</h3>
+    <ul class="list-disc pl-6 mb-4 text-gray-700">
+        <li>`【長期欠品更新専用】品目情報.csv`の内容を、RPAの「CSVを読み込み (Read CSV)」アクティビティでデータテーブルとして全件取得します。ユーザーが複数回Ctrl+Aを押して全選択している動作を代替します。</li>
+        <li>`未入荷リスト_新.csv`の内容も同様に「CSVを読み込み」アクティビティでデータテーブルとして全件取得します。</li>
+        <li>`長期欠品設定解除依頼.xlsx`を開き、「範囲を読み込み (Read Range)」アクティビティを使用して、品目コード、商品名、備考など、必要なデータ範囲をデータテーブルとして取得します。</li>
+        <li>これらのデータテーブルを、`0812長期欠品管理表.xlsb`の「未入荷」シートや「①長期欠品」「②長期欠品解除」シートの適切な範囲に「範囲を書き込み (Write Range)」アクティビティで一括して書き込みます。手動でのコピー＆ペースト、大量のセル移動（Ctrl+Down/Up, Tab）が不要になります。</li>
+    </ul>
+
+    <h3 class="text-lg font-semibold text-orange-700 mb-2">Step 3: 「①長期欠品」シートの加工とデータ入力</h3>
+    <ul class="list-disc pl-6 mb-4 text-gray-700">
+        <li>ログにあるセル`H9892`や`H9976:H10042`などへの「在庫チーム」という手入力値は、「セルを書き込み (Write Cell)」アクティビティで直接該当セルに文字列を書き込みます。</li>
+        <li>`B5:E9861`のような広範囲のデータ削除（ログのDeleteキー操作）は、「行を削除 (Delete Rows)」アクティビティで該当行範囲を指定して実行します。</li>
+        <li>品目情報や商品名などの貼り付け（`$D$9892:$H$9975`、`$C$9892:$C$9975`、`$A$9892:$E$10042`など）は、Step 2で取得したデータテーブルから「範囲を書き込み (Write Range)」アクティビティで実施します。</li>
+        <li>ログでデータ範囲をカットして別位置に貼り付けている操作（`Ctrl+X`）は、「範囲をコピー/貼り付け (Copy/Paste Range)」アクティビティでソースとターゲット範囲を指定して実行します。</li>
+    </ul>
+
+    <h3 class="text-lg font-semibold text-orange-700 mb-2">Step 4: 「③社外サイト販売休止」シートの備考欄更新</h3>
+    <ul class="list-disc pl-6 mb-4 text-gray-700">
+        <li>`E2300`セルへの「メーカー出荷8/27以降のため」という備考入力は、「セルを書き込み (Write Cell)」アクティビティで直接書き込みます。</li>
+        <li>`長期欠品設定解除依頼.xlsx`からコピーされたその他の詳細データ（`205930`, `Forestway/布ﾃｰﾌﾟ 重量...`など）は、「範囲を書き込み (Write Range)」アクティビティで「③社外サイト販売休止」シートの該当セル範囲に一括で書き込みます。</li>
+    </ul>
+
+    <h3 class="text-lg font-semibold text-orange-700 mb-2">Step 5: VLOOKUP数式の自動設定と値への変換</h3>
+    <ul class="list-disc pl-6 mb-4 text-gray-700">
+        <li>「未入荷」シートの`E`列に手入力されている値（`2.0`, `6.0`など）は、RPAでデータソースから取得した条件に基づいて「セルを書き込み (Write Cell)」アクティビティで入力します。</li>
+        <li>「未入荷」シートの`F`列や「①長期欠品」シートの`F`列に手入力されているVLOOKUP数式（例: `=K893`や`=VLOOKUP(C243,未入荷!C:F,4,0)`）は、「セルに数式を書き込み (Write Cell Formula)」アクティビティで対象セルに設定します。</li>
+        <li>数式設定後、「範囲を自動入力 (Fill Range)」アクティビティを使用して、必要な範囲（例: `F$893`から該当列の最終行まで）に数式を一括で適用します。これにより、手動での数式コピーと貼り付けが不要になります。</li>
+        <li>数式を値に変換する操作（ログの`Ctrl+C`後に`Ctrl+V`で`SheetChange`が発生し`Value`が変更されるものと推測）は、「範囲をコピー/貼り付け (Copy/Paste Range)」アクティビティの「貼り付けオプション (Paste Option)」を「値のみ (Values)」に設定することで実現します。</li>
+    </ul>
+
+    <h3 class="text-lg font-semibold text-orange-700 mb-2">Step 6: 最終処理と保存</h3>
+    <ul class="list-disc pl-6 mb-4 text-gray-700">
+        <li>全てのデータ処理と加工が完了した後、「ブックを保存 (Save Workbook)」アクティビティで`0812長期欠品管理表.xlsb`を保存し、「ブックを閉じる (Close Workbook)」アクティビティでExcelファイルを閉じます。</li>
+        <li>この一連のプロセスをRPAで自動化することにより、約44分40秒の手作業時間を約5分未満に短縮し、ヒューマンエラーのリスクも大幅に削減することが可能です。</li>
+    </ul>
+</div>
+            </div>
+        </div>
+    </div>
+    <script>
+        // アプリ割合グラフ
+        new Chart(document.getElementById('appChart').getContext('2d'), {
+            type: 'pie', data: { labels: ["EXCEL.EXE", "explorer.exe", "AI_DX_Logger.exe", "WindowsTerminal.exe", "Unknown"], datasets: [{ data: [1729, 68, 8, 4, 1], backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#64748b'] }] }
+        });
+        // 操作割合（手作業/コピペなど）グラフ
+        new Chart(document.getElementById('taskChart').getContext('2d'), {
+            type: 'pie', data: { labels: ["\u624b\u5165\u529b\u30fb\u7de8\u96c6", "\u30b3\u30d4\u30da\u30fb\u53cd\u5fa9\u8ee2\u8a18", "\u95a2\u6570\u51e6\u7406", "\u305d\u306e\u4ed6\u95b2\u89a7\u30fb\u5f85\u6a5f"], datasets: [{ data: [130, 59, 0, 169], backgroundColor: ['#ef4444', '#3b82f6', '#10b981', '#64748b'] }] }
+        });
+    </script>
+</body></html>

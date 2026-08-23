@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--_SIG=9RgKHmbQYHmgfJHcZQC2LOuLuEYZH6dZDALqTuiMEnmF0GuhJw5UUj6zdY5F5zl65EnySRVQx204e66ZmYPMdJSFIw+msZayxmAqtdC00xo8EKCMQT9d8ZSlAW5+LB3pEQAux51bp6zwhwongy5ecRdMy07hZsPzJ/UyQbufAjk=-->
+<Package Id="IME64.ja-jp" Type="MSI" Path="IME64.MSI" Version="1.0" ProductCode="{90140000-0028-0411-1000-0000000FF1CE}" MSIVersion="14.0.4763.1000" Platform="x64">
+	<Feature Id="Gimme_OnDemandData" Cost="0">
+		<OptionRef Id="Gimme_OnDemandData"/>
+	</Feature>
+	<Feature Id="SetupXmlFiles" Cost="234">
+		<OptionRef Id="AlwaysInstalled"/>
+	</Feature>
+	<Feature Id="SetupControllerFiles" Cost="234">
+		<OptionRef Id="AlwaysInstalled"/>
+	</Feature>
+	<Feature Id="IMEMainIntl.x64_1041" Cost="61119149">
+		<OptionRef Id="IMEMain_1041"/>
+	</Feature>
+	<Feature Id="MsoInstalledPackagesScopedIntl_1041" Cost="0">
+		<OptionRef Id="AlwaysInstalled"/>
+	</Feature>
+</Package>

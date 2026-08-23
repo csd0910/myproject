@@ -1,0 +1,50 @@
+﻿開始日時,終了日時,滞在時間,状態,アプリケーション名,ウィンドウタイトル,AI作業解析内容
+2026/07/27 13:43:50,2026/07/27 13:46:41,170秒,作業中,gui_app.exe,DX推進アシスタント (AIロガー),AIロガーを起動、Excel業務のPython自動化のためログ活用をAIと協議。
+2026/07/27 13:46:41,2026/07/27 13:46:52,10秒,作業中,SearchHost.exe,検索,「DX推進アシスタント」AIロガーで、操作ログの記録停止や日報出力を設定中。
+2026/07/27 13:46:52,2026/07/27 13:47:17,25秒,作業中,EXCEL.EXE,Book1 - Excel,Excelの作業をPythonで効率化するため、ログ記録ツールの設定と検討中。
+2026/07/27 13:47:17,2026/07/27 13:47:27,9秒,作業中,ShellExperienceHost.exe,Adobe Acrobat のジャンプ リスト,【非効率疑い】DXアシスタントで作業ログを記録し、PCトラブル対応や機器手配の日報を確認、Excel自動化を検討中。
+2026/07/27 13:47:27,2026/07/27 13:48:51,84秒,作業中,EXCEL.EXE,Book1 - Excel,Excel作業のログをDX推進アシスタントで記録し、業務改善やPython化を検討している。
+2026/07/27 13:48:51,2026/07/27 13:49:01,9秒,作業中,EXCEL.EXE,,Excel操作のPython化を検討し、AIロガーで記録を管理。
+2026/07/27 15:04:59,2026/07/27 15:05:01,2秒,作業中,gui_app.exe,DX推進アシスタント (AIロガー),"AI解析エラー: 503 UNAVAILABLE. {'error': {'code': 503, 'message': 'This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.', 'status': 'UNAVAILABLE'}}"
+2026/07/27 15:05:01,2026/07/27 15:05:06,5秒,作業中,explorer.exe,C:\Users\フォーレスト026\MyProject\bin - エクスプローラー,【非効率疑い】Pythonでシステムロガーを編集しつつ、ExcelのVLOOKUP手作業手順を確認している。
+2026/07/27 15:05:06,2026/07/27 15:05:18,11秒,作業中,Antigravity IDE.exe,Antigravity IDE,Antigravity IDEでの作業の一環として、ファイルエクスプローラーでプロジェクトのbinディレクトリを確認していた。
+2026/07/27 15:05:18,2026/07/27 15:05:29,11秒,作業中,explorer.exe,C:\Users\フォーレスト026\MyProject - エクスプローラー,"AI解析エラー: 503 UNAVAILABLE. {'error': {'code': 503, 'message': 'This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.', 'status': 'UNAVAILABLE'}}"
+2026/07/27 15:05:29,2026/07/27 15:05:34,4秒,作業中,EXCEL.EXE,VLOOKUPテスト用.xlsx - Excel,Excelで「VLOOKUPテスト用.xlsx」ファイルを開き、商品コード、商品名、単価のデータを確認していました。
+2026/07/27 15:05:34,2026/07/27 15:05:39,5秒,作業中,explorer.exe,,【非効率疑い】Excel VLOOKUPなどの手作業をPythonで自動化するツールの開発とテスト。
+2026/07/27 15:05:39,2026/07/27 15:05:49,10秒,作業中,Antigravity IDE.exe,Antigravity IDE,【非効率疑い】ExcelのVLOOKUP手入力作業を自動化するPythonスクリプトをAntigravity IDEで開発中。
+2026/07/27 15:05:49,2026/07/27 15:06:52,62秒,作業中,EXCEL.EXE,VLOOKUPテスト用.xlsx - Excel,【非効率疑い】ExcelでVLOOKUP関数と計算式を手入力し、オートフィルでデータ処理。
+2026/07/27 15:06:52,2026/07/27 15:07:05,13秒,作業中,Antigravity IDE.exe,Antigravity IDE,【非効率疑い】AI指示に従いExcelのVLOOKUP関数を手作業で入力中。
+2026/07/27 15:07:05,2026/07/27 15:07:25,19秒,作業中,EXCEL.EXE,VLOOKUPテスト用.xlsx - Excel,【非効率疑い】VLOOKUPテスト用Excelで、VLOOKUPと積算式を手作業で入力しオートフィル。
+2026/07/27 16:09:58,2026/07/27 16:10:32,34秒,作業中,gui_app.exe,DX推進アシスタント (AIロガー),「DX推進アシスタント(AIロガー)」を使い、PCの作業ログを記録し日報形式で出力する準備をしている。
+2026/07/27 16:10:32,2026/07/27 16:10:43,10秒,作業中,explorer.exe,C:\Users\フォーレスト026\MyProject\bin - エクスプローラー,自身の開発プロジェクトのbinフォルダ内ファイルをエクスプローラーで管理・確認。
+2026/07/27 16:10:43,2026/07/27 16:11:00,17秒,作業中,explorer.exe,C:\Users\フォーレスト026\MyProject - エクスプローラー,DX推進アシスタントでログ記録を停止し、日報出力と保存先フォルダをエクスプローラーで確認。
+2026/07/27 16:11:00,2026/07/27 16:11:20,19秒,作業中,EXCEL.EXE,VLOOKUPテスト用.xlsx - Excel,Excel操作は画面に非表示。ログ記録ツールと付箋で、業務履歴やタスクを確認。
+2026/07/27 16:11:20,2026/07/27 16:11:52,31秒,作業中,explorer.exe,C:\Users\フォーレスト026\MyProject - エクスプローラー,DX推進アシスタントのログ出力先「MyProject」フォルダをエクスプローラーで確認中。
+2026/07/27 16:11:52,2026/07/27 16:12:03,11秒,作業中,explorer.exe,C:\Users\フォーレスト026\MyProject\AppUpdaterTest - エクスプローラー,アプリケーション更新テスト用フォルダのファイル管理を行っていました。
+2026/07/27 16:12:03,2026/07/27 16:12:18,14秒,作業中,explorer.exe,C:\Users\フォーレスト026\MyProject\tools - エクスプローラー,DX推進アシスタントの記録ファイルが保存されたフォルダをエクスプローラーで操作していた。
+2026/07/27 16:12:18,2026/07/27 16:12:33,14秒,作業中,explorer.exe,C:\Users\フォーレスト026\MyProject - エクスプローラー,MyProjectフォルダでDX推進アシスタント関連ファイルを確認・整理している。
+2026/07/27 16:12:33,2026/07/27 16:12:48,15秒,作業中,Antigravity IDE.exe,Antigravity IDE,Antigravity IDEでWindowsUpdate関連アプリの開発作業中。
+2026/07/27 16:12:48,2026/07/27 16:13:00,12秒,作業中,explorer.exe,C:\Users\フォーレスト026\MyProject\DXテスト用_大容量Excel.xlsx - 検索場所: MyProject - エクスプローラー,MyProjectフォルダ内でDXテスト用大容量Excelファイルを検索中。
+2026/07/27 16:13:00,2026/07/27 16:13:14,13秒,作業中,explorer.exe,C:\Users\フォーレスト026\MyProject - エクスプローラー,自身のMyProjectフォルダで、AIロガーが記録した過去の作業日報を確認していました。
+2026/07/27 16:13:14,2026/07/27 16:13:26,12秒,作業中,EXCEL.EXE,DXテスト用_大容量Excel.xlsx - Excel,Excelの具体的な操作内容は、スクリーンショット上では確認できません。
+2026/07/27 16:13:26,2026/07/27 16:13:40,13秒,作業中,Antigravity IDE.exe,Antigravity IDE,Antigravity IDEでWindowsUpdate関連アプリ開発を行い、付箋でタスク管理中。
+2026/07/27 16:13:40,2026/07/27 16:14:16,36秒,作業中,EXCEL.EXE,DXテスト用_大容量Excel.xlsx - Excel,添付されたスクリーンショットには指定されたExcelアプリは表示されていません。
+2026/07/27 16:14:16,2026/07/27 16:14:24,8秒,作業中,Antigravity IDE.exe,Antigravity IDE,Antigravity IDEで行われた作業の記録をAIロガーで停止し、日報出力の準備をしている。
+2026/07/27 16:14:24,2026/07/27 16:14:36,11秒,作業中,msedge.exe,新しいタブ - My profile １ - Microsoft​ Edge,Microsoft Edgeで過去の作業日報を閲覧し、付箋アプリでタスク管理を行っている。
+2026/07/27 16:14:36,2026/07/27 16:14:50,14秒,作業中,msedge.exe,MSN および他 1 ページ - My profile １ - Microsoft​ Edge,Microsoft EdgeのMy profile 1でMSNと別のページを閲覧。
+2026/07/27 16:14:50,2026/07/27 16:15:19,28秒,作業中,EXCEL.EXE,DXテスト用_大容量Excel.xlsx - Excel,Excelウィンドウがスクリーンショットに表示されておらず、具体的な作業内容は不明です。
+2026/07/27 16:15:19,2026/07/27 16:15:30,11秒,作業中,EXCEL.EXE,レンズの分析,Excelで『レンズの分析』という作業を行っていましたが、具体的な内容は画像からは判別できません。
+2026/07/27 16:15:30,2026/07/27 16:15:48,18秒,作業中,EXCEL.EXE,DXテスト用_大容量Excel.xlsx - Excel,添付されたスクリーンショットにExcelウィンドウが確認できないため、具体的な作業内容は特定できません。
+2026/07/27 16:15:48,2026/07/27 16:15:55,6秒,作業中,Antigravity IDE.exe,Antigravity IDE,AIロガーでITサポートや業務改善の作業ログを記録・管理している。
+2026/07/27 20:35:15,2026/07/27 20:35:18,3秒,作業中,gui_app.exe,DX推進アシスタント (AIロガー),「DX推進アシスタント (AIロガー)」アプリの実行ファイルを確認。
+2026/07/27 20:35:18,2026/07/27 20:35:29,10秒,作業中,explorer.exe,C:\Users\フォーレスト026\MyProject\bin - エクスプローラー,GeminiとBingで情報収集を行いながら、開発プロジェクトのbinフォルダを確認中。
+2026/07/27 20:35:29,2026/07/27 20:35:55,25秒,作業中,chrome.exe,検索 - Microsoft Bing - Google Chrome,Google ChromeでGoogle Geminiのウェブページを開き、関連情報を確認している。
+2026/07/27 20:35:55,2026/07/27 20:36:02,7秒,作業中,chrome.exe,‎Google Gemini - Google Chrome,ChromeでGoogle Geminiのページを開き、他のタブも閲覧中。
+2026/07/27 20:36:02,2026/07/27 20:36:12,9秒,作業中,explorer.exe,,Chromeで業務関連の多数のタブを開き、Google検索ページで次の情報検索開始を準備中。
+2026/07/27 20:36:12,2026/07/27 20:36:19,6秒,作業中,chrome.exe,新しいタブ - Google Chrome,Gemini AIサービスで過去のチャット履歴を閲覧し、新しいチャットを開始する準備をしている。
+2026/07/27 20:36:19,2026/07/27 20:36:23,4秒,作業中,chrome.exe,Google Gemini - Google Chrome,Google Geminiのウェブページを開き、Windowsスタートメニューでアプリを確認していました。
+2026/07/27 20:36:23,2026/07/27 20:36:28,4秒,作業中,StartMenuExperienceHost.exe,スタート,ユーザーは**Excelのホームタブでセルのスタイルを確認・選択している。**
+2026/07/27 20:36:28,2026/07/27 20:36:39,11秒,作業中,EXCEL.EXE,Book1 - Excel,【非効率疑い】Excelでデータ化やコピペ用テキスト作成の作業中
+2026/07/27 20:36:39,2026/07/27 20:36:50,10秒,作業中,chrome.exe,Google Gemini - Google Chrome,Geminiで複数見積もりデータをExcelに集約し、新規・機種変更の月額合計を税抜き・税込で表示する作業を実施。
+2026/07/27 20:36:50,2026/07/27 20:37:00,10秒,作業中,chrome.exe,Excelデータ化とコピペ用テキスト - Google Gemini - Google Chrome,見積データをExcelシートに集約し、新規・機種変更の月額合計を算出してまとめを作成していました。
+2026/07/27 20:37:00,2026/07/27 20:37:22,21秒,作業中,EXCEL.EXE,Book1 - Excel,GeminiでPDF見積書をExcel化し、税抜・税込月額合計の自動計算を行う作業。

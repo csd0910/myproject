@@ -1,0 +1,12 @@
+﻿Timestamp,ActiveApp,EventType,TargetName,Metadata
+"2026-08-18 16:34:20","EXCEL.EXE","Copy","Microsoft Excel - Book1","Size:14 chars, Data:[unnko  unnko  ]"
+"2026-08-18 16:34:27","EXCEL.EXE","KeyLog","Microsoft Excel - Book1","Keys:unnko[Enter]unnko[Enter][Ctrl+C][Ctrl+V][Ctrl+V][Enter][Ctrl+V][Ctrl+V][Ctrl+V][Ctrl+V]"
+"2026-08-18 16:34:31","EXCEL.EXE","Copy","Microsoft Excel - Book1","Size:96 chars, Data:[unnko	unnko		unnko		unnko		unnko  unnko	unnko		unnko		unnko		unnko  unnko							  unnko							  ]"
+"2026-08-18 16:34:33","Explorer.EXE","PotentialTransfer (Paste)","Program Manager","Source: EXCEL.EXE, Data:[unnko	unnko		unnko		unnko		unnko  unnko	unnko		unn...]"
+"2026-08-18 16:34:33","Explorer.EXE","KeyLog","Program Manager","Keys:[Ctrl+C][Ctrl+V]"
+"2026-08-18 16:34:44","EXCEL.EXE","Copy","Microsoft Excel - テーブル・フィールド一覧.xls  [読み取り専用]  [互換モード]","Size:611 chars, Data:[EM00110	取引先タイプＭ		  EM00120	取引先Ｍ	変更	1999/06/18  EM00129	優良顧客管理Ｍ	新規	2025/06/09  EM00130	取引先オプションＭ	変更	1...]"
+"2026-08-18 16:34:44","Explorer.EXE","PotentialTransfer (Paste)","TESTexe","Source: EXCEL.EXE, Data:[EM00110	取引先タイプＭ		  EM00120	取引先Ｍ	変更	1999/06/18  EM0...]"
+"2026-08-18 16:34:45","EXCEL.EXE","KeyLog","Microsoft Excel - テーブル・フィールド一覧.xls  [読み取り専用]  [互換モード]","Keys:[Ctrl+C]"
+"2026-08-18 16:34:51","EXCEL.EXE","KeyLog","名前を付けて保存","Keys:[Ctrl+V][Ctrl+S]"
+"2026-08-18 16:34:58","EXCEL.EXE","KeyLog","Microsoft Excel - Book100.xlsx","Keys:d0d0"
+"2026-08-18 16:35:02","TaskMinerXP.exe","PotentialTransfer (Paste)","DX推進アシスタント (AIロガー - XP版)","Source: EXCEL.EXE, Data:[EM00110	取引先タイプＭ		  EM00120	取引先Ｍ	変更	1999/06/18  EM0...]"

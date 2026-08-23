@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>NEXUS INTELLIGENCE DASHBOARD</title>
+  <link href="https://fonts.googleapis.com/css2?family=Consolas:wght@400;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      background-color: #0a0a0a;
+      color: #ffffff;
+      font-family: 'Consolas', monospace;
+      margin: 0;
+      padding: 30px;
+    }
+    .header {
+      text-align: center;
+      color: #00e5ff;
+      font-size: 32px;
+      font-weight: bold;
+      margin-bottom: 40px;
+      text-shadow: 0 0 15px rgba(0, 229, 255, 0.6);
+      letter-spacing: 2px;
+    }
+    .stats-container {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 40px;
+      gap: 30px;
+      max-width: 1200px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    .stat-card {
+      background-color: #1a1a1a;
+      border: 1px solid #00e5ff;
+      border-radius: 12px;
+      flex: 1;
+      padding: 30px;
+      text-align: center;
+      box-shadow: 0 0 20px rgba(0, 229, 255, 0.1);
+      transition: transform 0.3s ease;
+    }
+    .stat-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 0 30px rgba(0, 229, 255, 0.2);
+    }
+    .stat-title {
+      color: #888;
+      font-size: 16px;
+      margin-bottom: 15px;
+      letter-spacing: 1px;
+    }
+    .stat-value {
+      font-size: 48px;
+      font-weight: bold;
+      color: #ffffff;
+    }
+    .chart-container {
+      background-color: #111111;
+      border: 1px solid #333;
+      border-radius: 12px;
+      padding: 25px;
+      height: 500px;
+      max-width: 1200px;
+      margin-left: auto;
+      margin-right: auto;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+    }
+    .loading {
+      text-align: center;
+      color: #00e5ff;
+      font-size: 24px;
+      margin-top: 100px;
+      animation: pulse 1.5s infinite;
+    }
+    @keyframes pulse {
+      0% { opacity: 0.5; }
+      50% { opacity: 1; }
+      100% { opacity: 0.5; }
+    }
+    .generate-btn {
+      display: block;
+      margin: 20px auto;
+      padding: 15px 30px;
+      font-size: 18px;
+      font-weight: bold;
+      color: #000;
+      background: linear-gradient(90deg, #00e5ff, #007bff);
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      text-transform: uppercase;
+      box-shadow: 0 0 15px rgba(0, 229, 255, 0.4);
+      transition: all 0.3s ease;
+      font-family: 'Consolas', monospace;
+    }
+    .generate-btn:hover {
+      transform: scale(1.05);
+      box-shadow: 0 0 25px rgba(0, 229, 255, 0.7);
+    }
+  </style>
+</head>
+<body>
+  <div class="header">NEXUS INTELLIGENCE DASHBOARD</div>
+  
+  <button class="generate-btn" onclick="generateAIReport()">🤖 GENERATE AI DX REPORT</button>
+  
+  <div id="loading" class="loading">CONNECTING TO CLOUD...</div>
+  
+  <div id="dashboard" style="display: none;">
+    <div class="stats-container">
+      <div class="stat-card">
+        <div class="stat-title">TOTAL LOGS</div>
+        <div class="stat-value" id="val-logs">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-title">ACTIVE USERS</div>
+        <div class="stat-value" id="val-users">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-title">CLIENTS (1H)</div>
+        <div class="stat-value" id="val-clients">0</div>
+      </div>
+    </div>
+    
+    <div class="chart-container">
+      <canvas id="activityChart"></canvas>
+    </div>
+  </div>
+
+  <script>
+    async function loadData() {
+      try {
+        const response = await fetch('/api/settings/system_status');
+        const data = await response.json();
+        
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('dashboard').style.display = 'block';
+        
+        document.getElementById('val-logs').innerText = (data.total_logs || 0).toLocaleString();
+        document.getElementById('val-users').innerText = (data.total_users || 0).toLocaleString();
+        document.getElementById('val-clients').innerText = (data.active_clients || 0).toLocaleString();
+        
+        renderChart(data.chart_labels || [], data.chart_data || []);
+      } catch (err) {
+        document.getElementById('dashboard').innerHTML = '<div style="color:red;text-align:center;font-size:20px;">Error loading data: ' + err.message + '</div>';
+      }
+    }
+    
+    function renderChart(labels, data) {
+      const ctx = document.getElementById('activityChart').getContext('2d');
+      new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'Activity Logs (Last 24H)',
+            data: data,
+            borderColor: '#00e5ff',
+            backgroundColor: 'rgba(0, 229, 255, 0.1)',
+            borderWidth: 3,
+            pointBackgroundColor: '#0a0a0a',
+            pointBorderColor: '#00e5ff',
+            pointBorderWidth: 2,
+            pointRadius: 5,
+            pointHoverRadius: 8,
+            fill: true,
+            tension: 0.4
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { 
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: 'rgba(0,0,0,0.8)',
+              titleFont: { family: 'Consolas', size: 14 },
+              bodyFont: { family: 'Consolas', size: 16 },
+              padding: 10,
+              borderColor: '#00e5ff',
+              borderWidth: 1
+            }
+          },
+          scales: {
+            x: { 
+              grid: { color: '#222' }, 
+              ticks: { color: '#888', font: { family: 'Consolas' } } 
+            },
+            y: { 
+              grid: { color: '#222' }, 
+              ticks: { color: '#888', font: { family: 'Consolas' } }, 
+              beginAtZero: true 
+            }
+          }
+        }
+      });
+    }
+    
+    function generateAIReport() {
+      if(confirm('今すぐ最新のデータを使って、AIに「DXレポート」を生成させますか？\n（新しいタブで表示されます）')) {
+        window.open('/api/admin/generate_report', '_blank');
+      }
+    }
+    
+    window.onload = loadData;
+  </script>
+</body>
+</html>

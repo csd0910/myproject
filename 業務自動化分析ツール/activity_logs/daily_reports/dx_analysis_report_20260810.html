@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>詳細DX抽出レポート - 20260810</title>
+    <script src="https://cdn.tailwindcss.com"></script><script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <script>mermaid.initialize({startOnLoad:true});</script>
+    <style>body { background-color: #f8fafc; color: #334155; }</style>
+</head>
+<body class="p-6 md:p-12">
+    <div class="max-w-7xl mx-auto bg-white p-8 rounded-xl shadow-lg border border-gray-100">
+        <header class="mb-12 border-b pb-6">
+            <h1 class="text-3xl font-extrabold text-slate-800 mb-2">詳細DX抽出レポート (20260810)</h1>
+            <p class="text-slate-500">業務ロギングとAIによる自動化提案</p>
+        </header>
+        
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-12">
+            <!-- 左カラム：グラフ（アプリ割合 ＆ 操作割合） -->
+            <div class="lg:col-span-3 space-y-12 border-r pr-8">
+                <div>
+                    <h2 class="text-lg font-bold mb-4 text-center text-slate-700">🖥️ アプリ使用割合</h2>
+                    <div class="relative w-full aspect-square"><canvas id="appChart"></canvas></div>
+                </div>
+                <div>
+                    <h2 class="text-lg font-bold mb-4 text-center text-slate-700">⚙️ 操作ごとの割合 (作業分解)</h2>
+                    <div class="relative w-full aspect-square"><canvas id="taskChart"></canvas></div>
+                </div>
+            </div>
+            
+            <!-- 右カラム：AI解析結果（タイムライン、フロー図、DX提案） -->
+            <div class="lg:col-span-9">
+                <h2 class="text-2xl mb-4 border-b pb-2 text-blue-700 font-bold">📁 操作した主要ファイルと手作業のコスト</h2>
+<ul>
+    <li>
+        <strong>ファイル名:</strong> テスト発注業務_数式手入力用.xlsx（発注データ入力シート、商品マスタシート）
+        <ul>
+            <li><strong>手作業の実時間:</strong> 約3分（ログ計測時間。実作業では入力ミスや確認を含め約10分と想定）</li>
+            <li><strong>自動化後の想定削減時間:</strong> 約9分（処理速度向上、ミス削減、VLOOKUP手入力不要化）</li>
+        </ul>
+    </li>
+</ul>
+
+<div class="mt-8 flex flex-col lg:flex-row gap-8">
+    <div class="flex-1 lg:w-1/2">
+        <h2 class="text-xl mb-4 border-b pb-2 text-teal-700 font-bold">🔄 現在の処理フロー図 (手動所要時間)</h2>
+        <div class="mermaid bg-slate-50 p-4 rounded shadow">
+        graph TD
+        A[テスト発注業務_数式手入力用.xlsxを開く] --> B[A列に日付データ手入力 (オートフィル)]
+        B --> C[B列に商品コード手入力 (オートフィル)]
+        C --> D["C6にVLOOKUP関数を手入力 (商品マスタ参照)"]
+        D --> E["C列全体にVLOOKUP関数をコピー/オートフィル"]
+        E --> F[D列に単価データ手入力]
+        F --> G[E列に数量データ手入力]
+        G --> H[G列に備考データ手入力]
+        H --> I[テスト発注業務_数式手入力用.xlsxを保存]
+        I --> J[Excelを閉じる]
+        </div>
+    </div>
+    <div class="flex-1 lg:w-1/2">
+        <h2 class="text-xl mb-4 border-b pb-2 text-orange-600 font-bold">🚀 自動化後のフロー図 (短縮時間)</h2>
+        <div class="mermaid bg-slate-50 p-4 rounded shadow">
+        graph TD
+        A[RPA起動] --> B[テスト発注業務_数式手入力用.xlsxを開く]
+        B --> C[A, B, D, E, G列にデータを自動入力]
+        C --> D["C列にVLOOKUP関数を自動設定/適用 (商品マスタ参照)"]
+        D --> E{VLOOKUP結果確認}
+        E -- エラーなし --> F[テスト発注業務_数式手入力用.xlsxを保存]
+        E -- エラーあり --> G[エラーログ出力 &rarr; F]
+        F --> H[Excelを閉じる]
+        H --> I[RPA終了]
+        </div>
+    </div>
+</div>
+
+<div class="mt-12 bg-orange-50 p-6 rounded-xl border border-orange-100">
+    <h2 class="text-2xl mb-4 text-orange-800 font-bold">💡 具体的な自動化案とステップ</h2>
+    <ol class="list-decimal pl-5 space-y-3">
+        <li>
+            <strong>Excelアプリケーション制御の自動化:</strong>
+            <ul>
+                <li>Excelアプリケーションを起動し、対象ファイル（「テスト発注業務_数式手入力用.xlsx」）を開く処理を自動化します。</li>
+                <li>作業完了後、ファイルを指定の場所に保存し、Excelアプリケーションを安全に終了させる処理を実装します。</li>
+            </ul>
+        </li>
+        <li>
+            <strong>データ入力作業の自動化:</strong>
+            <ul>
+                <li><strong>A列（発注日）：</strong> ログからは日付の手入力後にオートフィルを行っていると見受けられます。RPAでは開始日と行数を指定し、自動的に連続する日付データを生成・入力します。</li>
+                <li><strong>B列（商品コード）、D列（単価）、E列（数量）、G列（備考）：</strong> 現在手動で入力されているこれらの項目は、外部データソース（例：CSVファイル、データベース、別のExcelシートなど）からデータを読み込み、Excelシートの各セルに自動で入力するようRPAを構築します。これにより、手入力によるミスや大幅な時間ロスを排除します。</li>
+            </ul>
+        </li>
+        <li>
+            <strong>VLOOKUP関数設定と適用、エラーハンドリングの自動化:</strong>
+            <ul>
+                <li><strong>C列（商品名）：</strong> 現在手入力されているVLOOKUP関数（<code>=VLOOKUP(B6,商品マスタ!A:C,2,FALSE)</code>）をRPAでセルC6に自動入力します。その後、必要な範囲（例：C7:C15）に対して自動フィルまたはコピー＆ペースト処理を実行し、関数を一括適用します。</li>
+                <li><strong>エラー検知と対応：</strong> ログで確認された<code>-2146826246</code>（#N/Aエラー）などのVLOOKUPエラーが発生した場合、RPAが該当する行や商品コードを特定し、その情報をログファイルに出力する、または指定の関係者へ通知する仕組みを導入します。これにより、商品マスタの不足やデータ入力ミスを早期に発見・対応できるようになります。</li>
+            </ul>
+        </li>
+        <li>
+            <strong>処理結果の確認とログ出力:</strong>
+            <ul>
+                <li>自動入力されたデータや関数の適用結果に異常がないか、RPAが簡易的に検証するステップを追加します（例：VLOOKUPエラーがないか、入力された数値が範囲内かなど）。</li>
+                <li>各処理の開始・終了時刻、成功・失敗、エラー内容などを詳細なログとして出力し、システム部での監視やトラブルシューティングに役立てます。</li>
+            </ul>
+        </li>
+    </ol>
+</div>
+            </div>
+        </div>
+    </div>
+    <script>
+        // アプリ割合グラフ
+        new Chart(document.getElementById('appChart').getContext('2d'), {
+            type: 'pie', data: { labels: ["EXCEL.EXE", "python.exe"], datasets: [{ data: [137, 2], backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#64748b'] }] }
+        });
+        // 操作割合（手作業/コピペなど）グラフ
+        new Chart(document.getElementById('taskChart').getContext('2d'), {
+            type: 'pie', data: { labels: ["\u624b\u5165\u529b\u30fb\u7de8\u96c6", "\u30b3\u30d4\u30da\u30fb\u53cd\u5fa9\u8ee2\u8a18", "\u95a2\u6570\u51e6\u7406", "\u305d\u306e\u4ed6\u95b2\u89a7\u30fb\u5f85\u6a5f"], datasets: [{ data: [32, 1, 0, 14], backgroundColor: ['#ef4444', '#3b82f6', '#10b981', '#64748b'] }] }
+        });
+    </script>
+</body></html>

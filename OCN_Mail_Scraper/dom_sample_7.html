@@ -1,0 +1,2250 @@
+<!DOCTYPE html><html><head>
+    
+
+    <!--
+            ===
+            This comment should NOT be removed.
+
+            Charisma v2.0.0
+
+            Copyright 2012-2014 Muhammad Usman
+            Licensed under the Apache License v2.0
+            http://www.apache.org/licenses/LICENSE-2.0
+
+            http://usman.it
+            http://twitter.com/halalit_usman
+            ===
+        -->
+
+    <meta charset="utf-8">
+    <title>コントロールパネル :: メールアドレス設定</title>
+    <meta name="robots" content="noindex,nofollow">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <!-- The styles -->
+    <link id="bs-css" rel="stylesheet" type="text/css" href="/static/css/bootstrap-cerulean.min.css">
+
+    <link rel="stylesheet" type="text/css" href="/static/css/charisma-app.css">
+    <link rel="stylesheet" type="text/css" href="/static/bower_components/fullcalendar/dist/fullcalendar.css">
+    <link rel="stylesheet" type="text/css" href="/static/bower_components/fullcalendar/dist/fullcalendar.print.css">
+    <link rel="stylesheet" type="text/css" href="/static/bower_components/chosen/chosen.min.css">
+    <link rel="stylesheet" type="text/css" href="/static/bower_components/colorbox/example3/colorbox.css">
+    <link rel="stylesheet" type="text/css" href="/static/bower_components/responsive-tables/responsive-tables.css">
+    <link rel="stylesheet" type="text/css" href="/static/bower_components/bootstrap-tour/build/css/bootstrap-tour.min.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/jquery.noty.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/noty_theme_default.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/elfinder.min.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/elfinder.theme.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/jquery.iphone.toggle.css">
+<!--    <link rel="stylesheet" type="text/css" href="/static/css/uploadify.css">  -->
+    <link rel="stylesheet" type="text/css" href="/static/css/animate.min.css">
+
+    <!-- Google Material icons -->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+
+
+    <!-- jQuery -->
+    <script type="text/javascript" src="/static/bower_components/jquery/jquery.min.js"></script>
+    <script type="text/javascript" src="/static/js/utility.js"></script>
+    <script type="text/javascript" src="/static/js/ui-form-inputs.js"></script>
+    <script type="text/javascript" src="/static/js/ui-validation.js"></script>
+
+    <!-- The HTML5 shim, for IE6-8 support of HTML5 elements -->
+    <!--[if lt IE 9]>
+    <script type="text/javascript" src="https://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+    <script src="/static//js/html5shiv.js"></script>
+    <script src="/static//js/respond.js"></script>
+    <![endif]-->
+
+    <!-- The fav icon -->
+    <link rel="shortcut icon" href="/static/img/favicon.ico">
+    <style>
+        .box_header_extend {
+        padding-top: 5px;
+        padding-left: 19px;
+        margin-bottom: 0;
+        -webkit-box-shadow: inset 0 1px 1px rgba(0,0,0,0.05);
+        box-shadow: inset 0 1px 1px rgba(0,0,0,0.05);
+        }
+        #loginUser {padding: 0 10px;}
+        .sorting_asc:not(.unsort):not(.presort):after {
+        content: url("/static/bower_components/datatables/media/images/sort_asc.png");
+        }
+        .sorting_desc:not(.unsort):not(.presort):after {
+        content: url("/static/bower_components/datatables/media/images/sort_desc.png");
+        }
+        .datatable tr > * > * {vertical-align: middle;}
+        .dataTables_length label {width: 100%;}
+        .length-select {display: inline-block; width: 60px; padding: 6px;}
+        .filter_text {display: inline-block;}
+        #cboxContent {background-color: rgba(0,0,0,0.0);}
+        #cboxLoadedContent {background-color: rgba(0,0,0,0.0); border: none;}
+        .dataTables_empty {text-align: center;}
+        .dataTables_info, .dataTables_length {display: inline-block; width: 50%;}
+        #hiddenSwitch {cursor: pointer;}
+        #hiddenSwitch:hover {text-decoration: underline;}
+        table .btn:not(.bigger) {padding: 3px 7px;}
+        #footer {padding: 10px 0;}
+        #footer .dropdown-menu {top: inherit; bottom: 100%;}
+        .dropdown-menu {left: inherit; right: 0;}
+        .alertMsg {color: #F00; font-weight: bold;}
+        .bold {font-weight: bold;}
+        .sidebar-nav {border: 1px solid #BDBDBD; margin-bottom:5px;}
+        #search {margin: 0 10px;}
+        .txt-ellipsis{white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
+        .menu-div{color:dimgray;}
+        .topbtn{border:1px !important; border-color:red !important;}
+        .nav-icon{
+            font-size: 22px;
+            padding-top: 6px !important;
+            padding-bottom: 4px !important;
+        }
+    .breadcrumb { margin-bottom: 3px !important;}
+        .nav-icon .icon-label{
+            font-size: 9px;
+            display: block;
+        }
+        @media (max-width: 767px) {
+            .nav-icon{
+                font-size: 14px;
+            }
+        }
+        @media (min-width: 768px) {
+            .nav-icon{
+                text-align: center;
+            }
+        }
+        .operation_box_default{
+            display:block;
+            text-align:left;
+        /*text-align:right;*/
+        }
+        .operation_box_selected{
+            text-align:left;
+            background-color:#ffaaaa !important;
+            display:none;
+        }
+
+        .navbar-dropdown{
+            min-width:110px !important;
+        }
+
+        .nav-canvas-ex{
+            padding-bottom: 80px !important;
+        }
+
+      .sso-modal-content {
+        width: 50%;
+        margin: 0;
+        padding: 10px 20px;
+        border: 2px solid #aaa;
+        background: #fff;
+        position: fixed;
+        display: none;
+        z-index: 10;
+      }
+      #sso-modal-overlay {
+          z-index: 5 ;
+          display: none ;
+          position: fixed ;
+          top: 0 ;
+          left: 0 ;
+          width: 100% ;
+          height: 120% ;
+          background-color: rgba( 0,0,0, 0.75 ) ;
+      }
+      .sso-modal-close {
+        text-align: right;
+      }
+    }
+
+    </style>
+
+    
+<style type="text/css">
+    .important { color: #336699; }
+
+    /* for saving animation */
+    #loader-bg {
+      display: none;
+      position: fixed;
+      width: 100%;
+      height: 100%;
+      top: 0px;
+      left: 0px;
+      background: rgba(255, 255, 255, 0.85);
+      z-index: 20;
+    }
+
+    #loader {
+      display: none;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      width: 300px;
+      height: 300px;
+      margin-top: -100px;
+      margin-left: -100px;
+      text-align: center;
+      color: rgba(0, 0, 0, 1);
+      z-index: 15;
+    }
+</style>
+
+</head>
+
+<body>
+<!-- topbar starts -->
+<div id="header" class="navbar navbar-default" role="navigation">
+
+    <div class="navbar-inner">
+        <button type="button" class="navbar-toggle pull-left flip">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+        </button>
+        
+            <a href="/index/" id="topLogo">
+                <img src="/static/img/biz_mw_premium.png" height="40px" alt="Logo" align="left" style="margin: 10px 23px;">
+            </a>
+        
+
+
+        <!-- user dropdown starts -->
+        <div class="btn-group pull-right">
+            <button class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                <i class="glyphicon glyphicon-user"></i><span class="hidden-xs" id="loginUser">c300ls1v</span>
+                <span class="caret"></span>
+            </button>
+            
+            <ul class="dropdown-menu subMenu">
+                    <li><a href="/UserSettings/DateTime">日付と時刻</a></li>
+                    <li><a href="/UserSettings/Password">パスワード</a></li>
+                    <li><a href="/UserSettings/otpauth">二要素認証</a></li>
+            
+                <li class="divider"></li>
+                <li><a href="/logout">ログアウト</a></li>
+            </ul>
+        </div>
+
+        <!-- user dropdown ends -->
+        <ul class="collapse navbar-collapse nav navbar-nav ">
+
+        
+            <li>
+                <a href="/index/" id="homeMenu" class="menu-li" onclick="nav_bar(event, $(this));">
+                    <i class="glyphicon glyphicon-home"></i>
+                    <span class="">ホーム</span>
+                </a>
+            </li>
+        
+
+        
+            
+            
+            
+            
+        
+
+        
+            <li>
+                <a href="/MailSettings/Mail" class="menu-li" onclick="nav_bar(event, $(this));">
+                    <i class="glyphicon glyphicon-envelope"></i>
+                    <span class="">メール</span>
+                </a>
+            </li>
+        
+        
+            <li>
+                <a href="/Directory/files" class="menu-li" onclick="nav_bar(event, $(this));">
+                    <i class="glyphicon glyphicon-folder-open"></i>
+                    <span class="">ファイル</span>
+                </a>
+            </li>
+        
+        </ul>
+    </div>
+</div>
+<!-- topbar ends -->
+<div class="ch-container">
+
+
+<div class="row">
+    <!-- left menu starts -->
+    <form action="" id="menuForm" method="post">
+
+    
+        <input type="submit" name="LoginHash" value="e52645fe51af0f1e783b80ab29f7370f9e3c6fbf4993f228dda97aa0d03938a9" id="loginHash" style="display: none;">
+    
+    
+    
+    <div id="sidebar" class="col-sm-3 col-lg-2">
+            <div class="sidebar-nav">
+                <div class="nav-canvas txt-ellipsis">
+                    <div class="nav-sm nav nav-stacked"></div>
+                    <ul class="nav nav-pills nav-stacked main-menu" style="">
+                    
+                        <li class="nav-header">
+                            <i class="glyphicon glyphicon-cog"></i>
+                            管理者設定
+                        </li>
+                        
+                        <li>
+                            <a href="/Domain/DomainList" class="menu-li">
+                                <i class="glyphicon glyphicon-tags"></i>ドメイン
+                            </a>
+                        </li>
+                        
+                        <li>
+                        
+                            <a href="/Users/UserList_P" class="menu-li">
+                            <i class="glyphicon glyphicon-user"></i>ユーザー</a>
+                        
+                        </li>
+
+                        <li class="accordion">
+                            <a href="#"><i class="glyphicon glyphicon-envelope"></i>メールサーバー</a>
+                            <ul class="nav nav-pills nav-stacked subMenu" style="display: block;">
+                            
+                                <li class="active MailAddress"><a href="/MailServer/MailaddressList">メールアドレス</a></li>
+                            
+                            
+                            
+                                <li><a href="/MailServer/MailingList">メーリングリスト</a></li>
+                            
+                            
+                                <li><a href="/MailServer/MailAuth">送信ドメイン認証</a></li>
+                            
+                                
+                                
+                                    
+                                    <li><a href="/MailServer/MailSecurity/Premium">迷惑メールフィルタリング</a></li>
+                                    
+                                
+                                
+                                <li><a href="/MailServer/WebMail">ウェブメール</a></li>
+                                
+                                
+                                
+                                <li><a href="/mode2/mailanalysis/MailAnalysis">メール分析</a></li>
+                                
+                            </ul>
+                        </li>
+                        
+                        <li class="accordion">
+                            <a href="#"><i class="glyphicon glyphicon-globe"></i>ウェブサーバー</a>
+                            <ul class="nav nav-pills nav-stacked subMenu">
+                                
+                                <li><a href="/WebServer/SSLInstallTop">SSL/TLS証明書</a></li>
+                                
+                                <li><a href="/WebServer/Accessrestriction">サイトアクセス制限</a></li>
+                                
+                                <li><a href="/WebServer/webalias_P">サイト編集権限</a></li>
+                                
+                                <li><a href="/WebServer/BackUp">サイトバックアップ</a></li>
+                                
+                                
+                                
+                                <li><a href="/WebServer/waf/top">WAF</a></li>
+                                
+                                
+                                <li><a href="/mode2/webanalysis/WebAnalysis">ウェブサイト分析</a></li>
+                                
+                            </ul>
+                        </li>
+                        
+                        
+                        <li class="accordion">
+                            <a href="#"><i class="glyphicon glyphicon glyphicon-th"></i>アプリケーション</a>
+                            <ul class="nav nav-pills nav-stacked subMenu">
+                                <li><a href="/Application/Core">基本アプリ</a></li>
+                                
+                                <li><a href="/Application/Additional">追加アプリ</a></li>
+                                
+                                <li><a href="/Application/Database">データベース</a></li>
+                            </ul>
+                        </li>
+                        <li class="accordion">
+                            <a href="#"><i class="glyphicon glyphicon-hdd"></i>システム</a>
+                            <ul class="nav nav-pills nav-stacked subMenu">
+                                <li><a href="/System/Schedule">定期実行タスク</a></li>
+                                <li><a href="/System/firewall">IPアクセス制限</a></li>
+
+                                
+                                <li><a href="/Directory/manage_backup"> ファイルバックアップ</a></li>
+                                
+
+                                
+                            </ul>
+                        </li>
+                        
+                        
+                        <li class="accordion">
+                            <a href="#"><i class="glyphicon glyphicon-check"></i>管理者サポート</a>
+                            <ul class="nav nav-pills nav-stacked">
+
+                
+                    
+                        <li>
+                            <a href="https://bizmw.jp/p-manual/" target="_blank">マニュアル</a>
+                        </li>
+                        <li>
+                            <a href="https://support.ntt.com/mw-premiumr3/faq/search" target="_blank">よくあるご質問</a>
+                        </li>
+                        <li>
+                            <a href="https://support.ntt.com/mw-premiumr3/inquiry/search" target="_blank">お問い合わせ</a>
+                        </li>
+                        
+                        <li>
+                            <a href="https://support.ntt.com/mw-premiumr3/support/?subContentsType=2203" target="_blank">各種お手続き</a>
+                        </li>
+                        <li>
+                            
+                              <a href="#" class="otp_man">契約情報の確認・変更
+                              <br><small>(カスタマーサポートデスク)</small></a>
+                            
+                        </li>
+                        
+                    
+                
+                            </ul>
+                        </li>
+                        
+                    
+                    </ul>
+                </div>
+            </div>
+    </div>
+    
+    </form>
+    <div id="content" class="col-sm-9 col-lg-10">
+
+    <!--/span-->
+    <!-- left menu ends -->
+    <!-- content starts -->
+    
+<noscript>
+    <div class="alert alert-block col-md-12">
+        <h4 class="alert-heading">Warning!</h4>
+
+        <p>You need to have <a href="http://en.wikipedia.org/wiki/JavaScript" target="_blank">JavaScript</a>
+            enabled to use this site.</p>
+    </div>
+</noscript>
+<div id="loader-bg">
+  <div id="loader">
+    <img class="loadImg" src="/static/img/ajax-loaders/ajax-loader_blue_tp.gif">
+    <p style="margin-top: 5px;">保存しています。<br>しばらくお待ちください。</p>
+  </div>
+</div>
+
+
+    <!-- content starts -->
+    <div>
+        <ul class="breadcrumb">
+            <li>管理者設定</li>
+            <li>メールサーバー</li>
+            <li>メールアドレス</li>
+            <li>設定変更</li>
+        </ul>
+        <span class="alertMsg"></span>
+        <span class="bold text-success"></span>
+    </div>
+    <form action="/MailServer/MailaddressEdit" method="post" id="frm">
+        <input type="hidden" name="LoginHash" value="e52645fe51af0f1e783b80ab29f7370f9e3c6fbf4993f228dda97aa0d03938a9">
+        <input type="hidden" name="" value="" id="pressed">
+        <div class="row">
+            <div class="box col-md-12">
+                <div class="box-inner">
+                    <div class="box-header box_header_extend" data-original-title="">
+                        <h2><i class="glyphicon glyphicon-edit"></i>メールアドレス設定</h2>
+                    </div>
+                    <div class="box-content">
+                        メール受信時の処理方法を設定します。<br><br>
+
+                        <div class="form-group">
+                            <label for="mailaddress">メールアドレス</label>
+
+                            <div class="row">
+                                <div class="col-xs-8">
+                                    m_moriyama@forest.co.jp
+                                    <input type="hidden" name="mailaddress" value="m_moriyama@forest.co.jp">
+                                </div>
+                            </div>
+
+                        </div>
+
+                        <div class="form-group">
+
+                            <label for="delivery">処理方法</label>
+
+                            <div class="row" style="margin-bottom: 5px;">
+                                <div class="col-xs-7">
+                                    <input type="radio" id="mail_delivery_reject" name="mail_delivery" value="reject"><label for="mail_delivery_reject">受信拒否</label>
+                                </div>
+                            </div>
+
+                            <div class="row" style="margin-bottom: 5px;">
+                                <div class="col-xs-7">
+                                    <input type="radio" id="mail_delivery_delete" name="mail_delivery" value="delete"><label for="mail_delivery_delete">自動削除</label>
+                                </div>
+                            </div>
+
+                            <div class="row" style="margin-bottom: 5px;">
+                                <div class="col-xs-7">
+                                    <input type="radio" id="mail_delivery_mailbox" name="mail_delivery" value="mailbox"><label for="mail_delivery_mailbox">受信 - 受信ユーザー: </label>
+                                    <select name="mailbox" class="form-control" id="mailbox" style="display: inline-block; width: 70%;">
+                                    <option>ユーザーを選択</option>
+                                    
+                                        
+                                        <option value="c300ls1v">c300ls1v</option>
+                                        
+                                    
+                                        
+                                        <option value="forest.co.jp_admin">forest.co.jp_admin</option>
+                                        
+                                    
+                                        
+                                        <option value="cocodecow.com_admin">cocodecow.com_admin</option>
+                                        
+                                    
+                                        
+                                        <option value="forest_test">forest_test</option>
+                                        
+                                    
+                                        
+                                        <option value="cocodecow_test">cocodecow_test</option>
+                                        
+                                    
+                                        
+                                        <option value="nis_test">nis_test</option>
+                                        
+                                    
+                                        
+                                        <option value="thanks">thanks</option>
+                                        
+                                    
+                                        
+                                        <option value="a_aikawa">a_aikawa</option>
+                                        
+                                    
+                                        
+                                    
+                                        
+                                        <option value="a_nakagawa">a_nakagawa</option>
+                                        
+                                    
+                                        
+                                        <option value="a_nakaue">a_nakaue</option>
+                                        
+                                    
+                                        
+                                        <option value="a_sato">a_sato</option>
+                                        
+                                    
+                                        
+                                        <option value="a_yamazaki">a_yamazaki</option>
+                                        
+                                    
+                                        
+                                        <option value="administration">administration</option>
+                                        
+                                    
+                                        
+                                        <option value="amari">amari</option>
+                                        
+                                    
+                                        
+                                        <option value="amazon">amazon</option>
+                                        
+                                    
+                                        
+                                        <option value="am-hasegawa">am-hasegawa</option>
+                                        
+                                    
+                                        
+                                        <option value="a-sakata">a-sakata</option>
+                                        
+                                    
+                                        
+                                        <option value="bungubin.rakuten">bungubin.rakuten</option>
+                                        
+                                    
+                                        
+                                        <option value="bungubin.yahoo">bungubin.yahoo</option>
+                                        
+                                    
+                                        
+                                        <option value="c_akagi">c_akagi</option>
+                                        
+                                    
+                                        
+                                        <option value="c_kawahara">c_kawahara</option>
+                                        
+                                    
+                                        
+                                        <option value="c_koutaki">c_koutaki</option>
+                                        
+                                    
+                                        
+                                        <option value="c_miyasaka">c_miyasaka</option>
+                                        
+                                    
+                                        
+                                        <option value="c_tsukada">c_tsukada</option>
+                                        
+                                    
+                                        
+                                        <option value="call">call</option>
+                                        
+                                    
+                                        
+                                        <option value="cocodecow">cocodecow</option>
+                                        
+                                    
+                                        
+                                        <option value="cocodecow_yahoo">cocodecow_yahoo</option>
+                                        
+                                    
+                                        
+                                        <option value="cocodecow-drug">cocodecow-drug</option>
+                                        
+                                    
+                                        
+                                        <option value="cocodeliquors">cocodeliquors</option>
+                                        
+                                    
+                                        
+                                        <option value="d_fukazawa">d_fukazawa</option>
+                                        
+                                    
+                                        
+                                        <option value="dshop">dshop</option>
+                                        
+                                    
+                                        
+                                        <option value="e_horikawa">e_horikawa</option>
+                                        
+                                    
+                                        
+                                        <option value="e_kurumazuka">e_kurumazuka</option>
+                                        
+                                    
+                                        
+                                        <option value="edion">edion</option>
+                                        
+                                    
+                                        
+                                        <option value="edion.drop">edion.drop</option>
+                                        
+                                    
+                                        
+                                        <option value="eguchi-m">eguchi-m</option>
+                                        
+                                    
+                                        
+                                        <option value="eigyou">eigyou</option>
+                                        
+                                    
+                                        
+                                        <option value="e-order">e-order</option>
+                                        
+                                    
+                                        
+                                        <option value="foretest">foretest</option>
+                                        
+                                    
+                                        
+                                        <option value="frt_eigyo">frt_eigyo</option>
+                                        
+                                    
+                                        
+                                        <option value="frt_saiyo">frt_saiyo</option>
+                                        
+                                    
+                                        
+                                        <option value="fujita">fujita</option>
+                                        
+                                    
+                                        
+                                        <option value="fukutoku_stock">fukutoku_stock</option>
+                                        
+                                    
+                                        
+                                        <option value="h_aoki">h_aoki</option>
+                                        
+                                    
+                                        
+                                        <option value="h_ikeyama">h_ikeyama</option>
+                                        
+                                    
+                                        
+                                        <option value="h_kobayashi">h_kobayashi</option>
+                                        
+                                    
+                                        
+                                        <option value="h_matsukawa">h_matsukawa</option>
+                                        
+                                    
+                                        
+                                        <option value="h_sakota">h_sakota</option>
+                                        
+                                    
+                                        
+                                    
+                                        
+                                        <option value="hachiya_m">hachiya_m</option>
+                                        
+                                    
+                                        
+                                        <option value="haisou">haisou</option>
+                                        
+                                    
+                                        
+                                        <option value="hakouri.yahoo">hakouri.yahoo</option>
+                                        
+                                    
+                                        
+                                        <option value="hakourisenka.rakuten">hakourisenka.rakuten</option>
+                                        
+                                    
+                                        
+                                        <option value="hasegawa-a">hasegawa-a</option>
+                                        
+                                    
+                                        
+                                        <option value="hayashida">hayashida</option>
+                                        
+                                    
+                                        
+                                        <option value="henpin_frt">henpin_frt</option>
+                                        
+                                    
+                                        
+                                        <option value="higuchi">higuchi</option>
+                                        
+                                    
+                                        
+                                        <option value="i_yamamoto">i_yamamoto</option>
+                                        
+                                    
+                                        
+                                        <option value="ikegami">ikegami</option>
+                                        
+                                    
+                                        
+                                        <option value="info_forest">info_forest</option>
+                                        
+                                    
+                                        
+                                        <option value="ishinabe">ishinabe</option>
+                                        
+                                    
+                                        
+                                        <option value="isobe">isobe</option>
+                                        
+                                    
+                                        
+                                        <option value="jetprice.r">jetprice.r</option>
+                                        
+                                    
+                                        
+                                        <option value="jetprice.y">jetprice.y</option>
+                                        
+                                    
+                                        
+                                        <option value="k_aihara">k_aihara</option>
+                                        
+                                    
+                                        
+                                        <option value="k_kondo">k_kondo</option>
+                                        
+                                    
+                                        
+                                        <option value="k_shimono">k_shimono</option>
+                                        
+                                    
+                                        
+                                        <option value="k_yasuno">k_yasuno</option>
+                                        
+                                    
+                                        
+                                        <option value="kadota">kadota</option>
+                                        
+                                    
+                                        
+                                        <option value="kaizen_dept">kaizen_dept</option>
+                                        
+                                    
+                                        
+                                        <option value="kaneko_s">kaneko_s</option>
+                                        
+                                    
+                                        
+                                        <option value="kanie">kanie</option>
+                                        
+                                    
+                                        
+                                        <option value="kato">kato</option>
+                                        
+                                    
+                                        
+                                        <option value="kawaguchicc">kawaguchicc</option>
+                                        
+                                    
+                                        
+                                        <option value="keiri">keiri</option>
+                                        
+                                    
+                                        
+                                        <option value="keiri2">keiri2</option>
+                                        
+                                    
+                                        
+                                        <option value="kitazawa">kitazawa</option>
+                                        
+                                    
+                                        
+                                        <option value="kokyaku">kokyaku</option>
+                                        
+                                    
+                                        
+                                        <option value="kokyaku_tc">kokyaku_tc</option>
+                                        
+                                    
+                                        
+                                        <option value="ls-kaimono_forest">ls-kaimono_forest</option>
+                                        
+                                    
+                                        
+                                        <option value="ls-kaimono_cocodecow">ls-kaimono_cocodecow</option>
+                                        
+                                    
+                                        
+                                    
+                                        
+                                        <option value="m_kamimura">m_kamimura</option>
+                                        
+                                    
+                                        
+                                        <option value="m_kimura">m_kimura</option>
+                                        
+                                    
+                                        
+                                        <option value="m_kiyokuni">m_kiyokuni</option>
+                                        
+                                    
+                                        
+                                        <option value="m_kouno">m_kouno</option>
+                                        
+                                    
+                                        
+                                        <option value="m_kuribayashi">m_kuribayashi</option>
+                                        
+                                    
+                                        
+                                        <option value="m_kuroda">m_kuroda</option>
+                                        
+                                    
+                                        
+                                        <option value="m_nagashima">m_nagashima</option>
+                                        
+                                    
+                                        
+                                        <option value="m_nakai">m_nakai</option>
+                                        
+                                    
+                                        
+                                        <option value="m_ohno">m_ohno</option>
+                                        
+                                    
+                                        
+                                        <option value="m_okubo">m_okubo</option>
+                                        
+                                    
+                                        
+                                        <option value="m_ouchi">m_ouchi</option>
+                                        
+                                    
+                                        
+                                        <option value="m_saitou">m_saitou</option>
+                                        
+                                    
+                                        
+                                        <option value="m_shinoha">m_shinoha</option>
+                                        
+                                    
+                                        
+                                        <option value="m_sugeno">m_sugeno</option>
+                                        
+                                    
+                                        
+                                    
+                                        
+                                        <option value="matsuta">matsuta</option>
+                                        
+                                    
+                                        
+                                        <option value="mikata">mikata</option>
+                                        
+                                    
+                                        
+                                        <option value="mishima">mishima</option>
+                                        
+                                    
+                                        
+                                        <option value="murakami">murakami</option>
+                                        
+                                    
+                                        
+                                        <option value="muramoto">muramoto</option>
+                                        
+                                    
+                                        
+                                        <option value="n.otsuka">n.otsuka</option>
+                                        
+                                    
+                                        
+                                        <option value="n_goto">n_goto</option>
+                                        
+                                    
+                                        
+                                        <option value="n_honda">n_honda</option>
+                                        
+                                    
+                                        
+                                        <option value="n_kurokawa">n_kurokawa</option>
+                                        
+                                    
+                                        
+                                        <option value="n_murakami">n_murakami</option>
+                                        
+                                    
+                                        
+                                        <option value="n_shimizu">n_shimizu</option>
+                                        
+                                    
+                                        
+                                        <option value="n_takizawa">n_takizawa</option>
+                                        
+                                    
+                                        
+                                        <option value="n_uchida">n_uchida</option>
+                                        
+                                    
+                                        
+                                        <option value="naduka">naduka</option>
+                                        
+                                    
+                                        
+                                        <option value="nakaizumi">nakaizumi</option>
+                                        
+                                    
+                                        
+                                        <option value="nakamura">nakamura</option>
+                                        
+                                    
+                                        
+                                    
+                                        
+                                        <option value="narikawa_m">narikawa_m</option>
+                                        
+                                    
+                                        
+                                        <option value="new-business">new-business</option>
+                                        
+                                    
+                                        
+                                        <option value="nobukawa">nobukawa</option>
+                                        
+                                    
+                                        
+                                        <option value="nojiri">nojiri</option>
+                                        
+                                    
+                                        
+                                        <option value="nonaka">nonaka</option>
+                                        
+                                    
+                                        
+                                        <option value="nozaki">nozaki</option>
+                                        
+                                    
+                                        
+                                        <option value="obata">obata</option>
+                                        
+                                    
+                                        
+                                        <option value="officekagu-hr">officekagu-hr</option>
+                                        
+                                    
+                                        
+                                        <option value="officekagu-jk">officekagu-jk</option>
+                                        
+                                    
+                                        
+                                        <option value="officeliner_support">officeliner_support</option>
+                                        
+                                    
+                                        
+                                        <option value="oguro">oguro</option>
+                                        
+                                    
+                                        
+                                        <option value="ohsawa">ohsawa</option>
+                                        
+                                    
+                                        
+                                        <option value="okamoto">okamoto</option>
+                                        
+                                    
+                                        
+                                        <option value="okamura">okamura</option>
+                                        
+                                    
+                                        
+                                        <option value="orangestore.drop">orangestore.drop</option>
+                                        
+                                    
+                                        
+                                        <option value="orderdata">orderdata</option>
+                                        
+                                    
+                                        
+                                        <option value="ordr">ordr</option>
+                                        
+                                    
+                                        
+                                        <option value="ponparemall">ponparemall</option>
+                                        
+                                    
+                                        
+                                        <option value="r_kitayama">r_kitayama</option>
+                                        
+                                    
+                                        
+                                        <option value="r_kobayashi">r_kobayashi</option>
+                                        
+                                    
+                                        
+                                        <option value="r_matsumoto">r_matsumoto</option>
+                                        
+                                    
+                                        
+                                        <option value="rakuten">rakuten</option>
+                                        
+                                    
+                                        
+                                        <option value="rakuten_trans">rakuten_trans</option>
+                                        
+                                    
+                                        
+                                        <option value="rakuten-shop">rakuten-shop</option>
+                                        
+                                    
+                                        
+                                        <option value="root_forest">root_forest</option>
+                                        
+                                    
+                                        
+                                        <option value="root_cocodecow">root_cocodecow</option>
+                                        
+                                    
+                                        
+                                        <option value="s.mishima">s.mishima</option>
+                                        
+                                    
+                                        
+                                        <option value="s_adachi">s_adachi</option>
+                                        
+                                    
+                                        
+                                        <option value="s_aizawa">s_aizawa</option>
+                                        
+                                    
+                                        
+                                        <option value="s_fukawa">s_fukawa</option>
+                                        
+                                    
+                                        
+                                    
+                                        
+                                        <option value="s_kousaka">s_kousaka</option>
+                                        
+                                    
+                                        
+                                        <option value="s_narita">s_narita</option>
+                                        
+                                    
+                                        
+                                        <option value="s_nomoto">s_nomoto</option>
+                                        
+                                    
+                                        
+                                        <option value="s_sasaki">s_sasaki</option>
+                                        
+                                    
+                                        
+                                        <option value="s_shimamura">s_shimamura</option>
+                                        
+                                    
+                                        
+                                    
+                                        
+                                        <option value="s_watanabe">s_watanabe</option>
+                                        
+                                    
+                                        
+                                        <option value="sakai">sakai</option>
+                                        
+                                    
+                                        
+                                        <option value="sasajima-k">sasajima-k</option>
+                                        
+                                    
+                                        
+                                        <option value="shiirejigyou">shiirejigyou</option>
+                                        
+                                    
+                                        
+                                        <option value="shimomura">shimomura</option>
+                                        
+                                    
+                                        
+                                        <option value="shouhin">shouhin</option>
+                                        
+                                    
+                                        
+                                        <option value="soumu-jinji">soumu-jinji</option>
+                                        
+                                    
+                                        
+                                        <option value="stock">stock</option>
+                                        
+                                    
+                                        
+                                        <option value="stream.drop">stream.drop</option>
+                                        
+                                    
+                                        
+                                        <option value="sunaga">sunaga</option>
+                                        
+                                    
+                                        
+                                        <option value="support_forest">support_forest</option>
+                                        
+                                    
+                                        
+                                        <option value="support_cocodecow">support_cocodecow</option>
+                                        
+                                    
+                                        
+                                        <option value="suto">suto</option>
+                                        
+                                    
+                                        
+                                        <option value="suzuki">suzuki</option>
+                                        
+                                    
+                                        
+                                        <option value="t_asano">t_asano</option>
+                                        
+                                    
+                                        
+                                        <option value="t_hasegawa">t_hasegawa</option>
+                                        
+                                    
+                                        
+                                        <option value="t_kamezawa">t_kamezawa</option>
+                                        
+                                    
+                                        
+                                        <option value="t_kanazashi">t_kanazashi</option>
+                                        
+                                    
+                                        
+                                        <option value="t_kawarada">t_kawarada</option>
+                                        
+                                    
+                                        
+                                        <option value="t_nakazawa">t_nakazawa</option>
+                                        
+                                    
+                                        
+                                        <option value="t_ohata">t_ohata</option>
+                                        
+                                    
+                                        
+                                        <option value="t_sagae">t_sagae</option>
+                                        
+                                    
+                                        
+                                        <option value="t_sekiguchi">t_sekiguchi</option>
+                                        
+                                    
+                                        
+                                        <option value="takahashi-a">takahashi-a</option>
+                                        
+                                    
+                                        
+                                        <option value="takahashi-y">takahashi-y</option>
+                                        
+                                    
+                                        
+                                        <option value="takeshi_shimamura">takeshi_shimamura</option>
+                                        
+                                    
+                                        
+                                        <option value="tanaka">tanaka</option>
+                                        
+                                    
+                                        
+                                        <option value="tokuhan">tokuhan</option>
+                                        
+                                    
+                                        
+                                        <option value="toriyose2">toriyose2</option>
+                                        
+                                    
+                                        
+                                        <option value="toriyose5">toriyose5</option>
+                                        
+                                    
+                                        
+                                        <option value="tsuruda">tsuruda</option>
+                                        
+                                    
+                                        
+                                        <option value="uketsuke">uketsuke</option>
+                                        
+                                    
+                                        
+                                        <option value="uno_f">uno_f</option>
+                                        
+                                    
+                                        
+                                        <option value="warehouse-2">warehouse-2</option>
+                                        
+                                    
+                                        
+                                        <option value="wowma">wowma</option>
+                                        
+                                    
+                                        
+                                        <option value="y_endo">y_endo</option>
+                                        
+                                    
+                                        
+                                        <option value="y_hasegawa">y_hasegawa</option>
+                                        
+                                    
+                                        
+                                        <option value="y_hayakawa">y_hayakawa</option>
+                                        
+                                    
+                                        
+                                        <option value="y_hirano">y_hirano</option>
+                                        
+                                    
+                                        
+                                        <option value="y_ikeda">y_ikeda</option>
+                                        
+                                    
+                                        
+                                        <option value="y_kaneko">y_kaneko</option>
+                                        
+                                    
+                                        
+                                        <option value="y_kobayashi">y_kobayashi</option>
+                                        
+                                    
+                                        
+                                        <option value="y_kuraku">y_kuraku</option>
+                                        
+                                    
+                                        
+                                        <option value="y_narimatsu">y_narimatsu</option>
+                                        
+                                    
+                                        
+                                        <option value="y_nishijima">y_nishijima</option>
+                                        
+                                    
+                                        
+                                        <option value="y_takayama">y_takayama</option>
+                                        
+                                    
+                                        
+                                    
+                                        
+                                        <option value="yagasaki">yagasaki</option>
+                                        
+                                    
+                                        
+                                        <option value="yahoo">yahoo</option>
+                                        
+                                    
+                                        
+                                        <option value="yamamoto">yamamoto</option>
+                                        
+                                    
+                                        
+                                        <option value="yamanaka-h">yamanaka-h</option>
+                                        
+                                    
+                                        
+                                        <option value="yanaba_y">yanaba_y</option>
+                                        
+                                    
+                                        
+                                        <option value="zaiko">zaiko</option>
+                                        
+                                    
+                                        
+                                        <option value="y_tsurumaki">y_tsurumaki</option>
+                                        
+                                    
+                                        
+                                        <option value="k_okabe">k_okabe</option>
+                                        
+                                    
+                                        
+                                        <option value="t_toyama">t_toyama</option>
+                                        
+                                    
+                                        
+                                    
+                                        
+                                    
+                                        
+                                        <option value="m_takayama">m_takayama</option>
+                                        
+                                    
+                                        
+                                        <option value="y_kishikawa">y_kishikawa</option>
+                                        
+                                    
+                                        
+                                        <option value="kanri">kanri</option>
+                                        
+                                    
+                                        
+                                        <option value="y_okazaki">y_okazaki</option>
+                                        
+                                    
+                                        
+                                        <option value="y_agata">y_agata</option>
+                                        
+                                    
+                                        
+                                        <option value="officesoudan">officesoudan</option>
+                                        
+                                    
+                                        
+                                        <option value="n_wada">n_wada</option>
+                                        
+                                    
+                                        
+                                        <option value="hansoku_001">hansoku_001</option>
+                                        
+                                    
+                                        
+                                        <option value="hansoku_002">hansoku_002</option>
+                                        
+                                    
+                                        
+                                        <option value="k_araki">k_araki</option>
+                                        
+                                    
+                                        
+                                        <option value="m_sakamoto">m_sakamoto</option>
+                                        
+                                    
+                                        
+                                        <option value="t_ito">t_ito</option>
+                                        
+                                    
+                                        
+                                        <option value="t_miyazawa">t_miyazawa</option>
+                                        
+                                    
+                                        
+                                        <option value="y_uchikoshi">y_uchikoshi</option>
+                                        
+                                    
+                                        
+                                        <option value="h_azami">h_azami</option>
+                                        
+                                    
+                                        
+                                        <option value="r_yukawa">r_yukawa</option>
+                                        
+                                    
+                                        
+                                        <option value="t_sato">t_sato</option>
+                                        
+                                    
+                                        
+                                    
+                                        
+                                        <option value="shimojima">shimojima</option>
+                                        
+                                    
+                                        
+                                        <option value="oomiya.system">oomiya.system</option>
+                                        
+                                    
+                                        
+                                        <option value="y_shimizu">y_shimizu</option>
+                                        
+                                    
+                                        
+                                        <option value="primera">primera</option>
+                                        
+                                    
+                                        
+                                        <option value="y_ojima">y_ojima</option>
+                                        
+                                    
+                                        
+                                        <option value="a_habakari">a_habakari</option>
+                                        
+                                    
+                                        
+                                        <option value="y_sato">y_sato</option>
+                                        
+                                    
+                                        
+                                        <option value="m_aikawa">m_aikawa</option>
+                                        
+                                    
+                                        
+                                        <option value="y_kawano">y_kawano</option>
+                                        
+                                    
+                                        
+                                        <option value="takasaki-n">takasaki-n</option>
+                                        
+                                    
+                                        
+                                        <option value="h_takaki">h_takaki</option>
+                                        
+                                    
+                                        
+                                        <option value="frt_nas">frt_nas</option>
+                                        
+                                    
+                                        
+                                        <option value="k_sakaguchi">k_sakaguchi</option>
+                                        
+                                    
+                                        
+                                        <option value="syohin1.kyoyu">syohin1.kyoyu</option>
+                                        
+                                    
+                                        
+                                        <option value="kokyaku.kyoyu">kokyaku.kyoyu</option>
+                                        
+                                    
+                                        
+                                        <option value="syohin2.kyoyu">syohin2.kyoyu</option>
+                                        
+                                    
+                                        
+                                        <option value="kaihatu.kyoyu">kaihatu.kyoyu</option>
+                                        
+                                    
+                                        
+                                        <option value="buturyu.kyoyu">buturyu.kyoyu</option>
+                                        
+                                    
+                                        
+                                        <option value="haiso.kyoyu">haiso.kyoyu</option>
+                                        
+                                    
+                                        
+                                        <option value="kanri.kyoyu">kanri.kyoyu</option>
+                                        
+                                    
+                                        
+                                        <option value="fukuoka.system">fukuoka.system</option>
+                                        
+                                    
+                                        
+                                        <option value="sales.kyoyu">sales.kyoyu</option>
+                                        
+                                    
+                                        
+                                        <option value="frt_ilo">frt_ilo</option>
+                                        
+                                    
+                                        
+                                        <option value="h_sayama">h_sayama</option>
+                                        
+                                    
+                                        
+                                        <option value="a_shigeta">a_shigeta</option>
+                                        
+                                    
+                                        
+                                        <option value="order">order</option>
+                                        
+                                    
+                                        
+                                        <option value="shiire">shiire</option>
+                                        
+                                    
+                                        
+                                        <option value="frt_toiawase">frt_toiawase</option>
+                                        
+                                    
+                                        
+                                        <option value="yu_tsuda">yu_tsuda</option>
+                                        
+                                    
+                                        
+                                        <option value="yu_ojima">yu_ojima</option>
+                                        
+                                    
+                                        
+                                        <option value="salesperson">salesperson</option>
+                                        
+                                    
+                                        
+                                        <option value="big-ip">big-ip</option>
+                                        
+                                    
+                                        
+                                        <option value="salesorder">salesorder</option>
+                                        
+                                    
+                                        
+                                        <option value="salesshimojima">salesshimojima</option>
+                                        
+                                    
+                                        
+                                        <option value="m_aizawa">m_aizawa</option>
+                                        
+                                    
+                                        
+                                        <option value="mdsupport1">mdsupport1</option>
+                                        
+                                    
+                                        
+                                        <option value="m_tanaka">m_tanaka</option>
+                                        
+                                    
+                                        
+                                        <option value="a_kato">a_kato</option>
+                                        
+                                    
+                                        
+                                        <option value="oomiya_sys_app">oomiya_sys_app</option>
+                                        
+                                    
+                                        
+                                        <option value="oomiya_sys_app2">oomiya_sys_app2</option>
+                                        
+                                    
+                                        
+                                        <option value="oomiya_sys_app3">oomiya_sys_app3</option>
+                                        
+                                    
+                                        
+                                        <option value="oomiya_sys_app4">oomiya_sys_app4</option>
+                                        
+                                    
+                                        
+                                        <option value="m_fujihira">m_fujihira</option>
+                                        
+                                    
+                                        
+                                        <option value="frt_kanri">frt_kanri</option>
+                                        
+                                    
+                                        
+                                        <option value="e_okita">e_okita</option>
+                                        
+                                    
+                                        
+                                        <option value="h.jogu">h.jogu</option>
+                                        
+                                    
+                                        
+                                        <option value="m_kato">m_kato</option>
+                                        
+                                    
+                                        
+                                        <option value="admin">admin</option>
+                                        
+                                    
+                                        
+                                    
+                                        
+                                        <option value="frt_keiri">frt_keiri</option>
+                                        
+                                    
+                                        
+                                        <option value="officeliner-tokyo23.com_admin">officeliner-tokyo23.com_admin</option>
+                                        
+                                    
+                                        
+                                    
+                                        
+                                        <option value="directsales">directsales</option>
+                                        
+                                    
+                                        
+                                        <option value="s_kokubu">s_kokubu</option>
+                                        
+                                    
+                                        
+                                        <option value="kawaguchi_lc">kawaguchi_lc</option>
+                                        
+                                    
+                                        
+                                        <option value="f_zaiko">f_zaiko</option>
+                                        
+                                    
+                                        
+                                        <option value="r_yoshioka">r_yoshioka</option>
+                                        
+                                    
+                                        
+                                        <option value="k_fukunaga">k_fukunaga</option>
+                                        
+                                    
+                                        
+                                        <option value="m_sasaki">m_sasaki</option>
+                                        
+                                    
+                                        
+                                        <option value="gws_test">gws_test</option>
+                                        
+                                    
+                                        
+                                        <option value="a_kawamura">a_kawamura</option>
+                                        
+                                    
+                                        
+                                        <option value="s_omiya">s_omiya</option>
+                                        
+                                    
+                                        
+                                        <option value="y_aoto">y_aoto</option>
+                                        
+                                    
+                                        
+                                        <option value="am_sato">am_sato</option>
+                                        
+                                    
+                                        
+                                        <option value="ko_sato">ko_sato</option>
+                                        
+                                    
+                                        
+                                        <option value="saiken-seikyu">saiken-seikyu</option>
+                                        
+                                    
+                                        
+                                        <option value="henpin">henpin</option>
+                                        
+                                    
+                                        
+                                        <option value="y_maeda">y_maeda</option>
+                                        
+                                    
+                                        
+                                        <option value="h_umemori">h_umemori</option>
+                                        
+                                    
+                                    
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="row" style="margin-bottom: 5px;">
+                                <div class="col-xs-7">
+                                    <input type="radio" id="mail_delivery_custom" name="mail_delivery" value="custom" checked="checked">
+                                    <label for="mail_delivery_custom">受信 - 詳細設定:</label><br>
+                                    ユーザー名およびメールアドレスで受信者を指定できます。（複数設定可）<br>
+                                    <textarea id="custom_delivery" name="custom_delivery" cols="40" rows="5" class="form-control" placeholder="ユーザー名およびメールアドレスをカンマで区切って入力" style="display: inline-block; width: 70%;">sakai@forest.co.jp,tsuruda@forest.co.jp,shimomura@forest.co.jp,y_nishijima@forest.co.jp,tanaka@forest.co.jp,isobe@forest.co.jp,k_araki@forest.co.jp</textarea>
+                                </div>
+                            </div>
+
+                        </div><!-- endformgroup-->
+
+                        <div align="center" class="breadcrumb">
+                            <button type="button" class="btn btn-primary save">保存</button>
+
+                            <button type="button" class="btn btn-default cancel">キャンセル</button>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!--/span-->
+
+    </form>
+</div><!--/row-->
+<!-- content ends -->
+<script type="text/javascript">
+/*<![CDATA[*/
+function validate_email_addr (mail_address) {
+    var at_split = mail_address.split("@");
+    var local = at_split[0];
+    var domain = at_split[1];
+    if($.trim(mail_address) == ""){
+        return "メールアドレスを入力してください。";
+    } else if(at_split.length != 2){
+        return "有効なドメイン名を入力してください。";
+    } else if (local.length == 0 || local.length > 64){
+        return "ローカルパートは1〜64文字で入力してください。";
+    } else if (local.search(/^([a-zA-Z0-9\-\._\+])+$/)==-1){
+        return "半角英小文字(a～z)、半角英大文字(A～Z)、半角数字(0～9)、半角記号" + "(-._+)" + "以外使えません。";
+    } else if (local.search(/^([a-zA-Z0-9])/)==-1){
+        return "半角記号を1文字目に使用しないでください。";
+    } else if (local.search(/[a-zA-Z0-9\-\_\+]$/)==-1){
+        return "ローカルパートは.（ドット）で終了しないでください。";
+    } else if (local.search(/\.{2,}/)!=-1){
+        return "ローカルパートは.（ドット）を連続で使用しないでください。";
+    } else if (domain.length > 253){
+        return "有効なドメイン名を入力してください。";
+    }
+
+    var domain_spl = domain.split(".");
+    var domain_spl_len = domain_spl.length;
+    if(domain_spl_len < 2){
+        return "有効なドメイン名を入力してください。";
+    }
+    for(var i = 0; i < domain_spl_len; i++){
+        if(i == domain_spl_len - 1){
+            if(domain_spl[i].search(/^[a-zA-Z0-9]/) == -1
+                    || domain_spl[i].search(/[a-zA-Z0-9]$/) == -1
+                    || domain_spl[i].search(/^[a-zA-Z0-9-]{2,}$/) == -1){
+                return "有効なドメイン名を入力してください。";
+            }
+        } else {
+            if(domain_spl[i].search(/^[a-zA-Z0-9]/) == -1
+                    || domain_spl[i].search(/[a-zA-Z0-9]$/) == -1
+                    || domain_spl[i].search(/^[a-zA-Z0-9-]{1,63}$/) == -1){
+                return "有効なドメイン名を入力してください。";
+            }
+        }
+    }
+    return "";
+}
+
+function validate_localbox_addr (local) {
+    if (local.length == 0 || local.length > 64){
+        return "1〜64文字で入力してください。";
+    } else if (local.search(/^([a-zA-Z0-9\._-])+$/)==-1){
+        return "半角英小文字(a～z)、半角英大文字(A～Z)、半角数字(0～9)、半角記号(-._)以外使えません。";
+    } else if (local.search(/^([a-zA-Z0-9])/)==-1){
+        return "半角記号を1文字目に使用しないでください。";
+    } else if (local.search(/[a-zA-Z0-9_-]$/)==-1){
+        return ".（ドット）で終了しないでください。";
+    } else if (local.search(/\.{2,}/)!=-1){
+        return "ローカルパートは.（ドット）を連続で使用しないでください。";
+    }
+    return "";
+}
+
+
+$(function(){
+
+    function doSave() {
+
+        //メールアドレスのチェック
+        var mail_delivery_reject = $("#mail_delivery_reject").prop('checked');
+        var mail_delivery_delete = $("#mail_delivery_delete").prop('checked');
+        var mail_delivery_mailbox = $("#mail_delivery_mailbox").prop('checked');
+        var mailbox = $("#mailbox").val();
+        var mail_delivery_custom = $("#mail_delivery_custom").prop('checked');
+        var custom_delivery = $("#custom_delivery").val();
+
+        //いずれかの処理方法が選択されているかチェック
+        if(!mail_delivery_reject && !mail_delivery_delete && !mail_delivery_mailbox && !mail_delivery_custom){
+            alert("いずれかの処理方法を選択してください。");
+            return false;
+        }
+
+        //メールボックスが配送先の場合のチェック
+        if(mail_delivery_mailbox) {
+            if (mailbox == 'ユーザーを選択') {
+                alert("送信先を選択してください。");
+                return false;
+            }
+        }
+
+        //一覧入力チェック
+        if(mail_delivery_custom) {
+            if(custom_delivery == '') {
+                alert("正しい送信先のアドレスを入力してください。");
+                return false;
+            }
+            custom_delivery = (custom_delivery.replace(/^\s+/,'')).replace(/\s+$/,'');
+            var emailAddressList = custom_delivery.split(",");
+            for(index=0; index < emailAddressList.length; index++) {
+                emailAddress = emailAddressList[index];
+                emailAddress = (emailAddress.replace(/^\s+/,'')).replace(/\s+$/,'');
+
+                // @を含んでいればメールアドレスチェック 含んでいなければローカルチェック
+                if (emailAddress.search(/@/)==-1){
+                    //含んでいない
+                    var res2 = validate_localbox_addr(emailAddress); //localpart check
+                    if(res2 != "") { //local check NG
+                        alert("受信者は正しいユーザー名でなければなりません。" + res2);
+                        return false;
+                    }
+                }else{
+                    var res = validate_email_addr(emailAddress); //mailaddress check
+                    if (res != "") {
+                        alert("受信者は正しいメールアドレスでなければなりません。" + res);
+                        return false;
+                    }
+                }
+            }
+
+        }
+		return true;
+	}
+
+	$(".save, .add").click(function() {
+
+		var flg = doSave();
+
+		if (!flg) {
+			return false;
+		} else {
+			if($(this).hasClass("save")){
+				$("#pressed").attr("name", "save");
+			} else {
+				return false;
+			}
+
+            $("#frm button").attr("disabled","disabled");
+
+            // for saving animation
+            var h = $(window).height();
+            $('#content').css('display','none');
+            $('#loader-bg ,#loader').height(h).css('display','block');
+            $('#loader-bg').delay(900);
+            $('#loader').delay(600);
+            $('#content').css('display', 'block');
+
+
+			$("#frm").submit();
+		}
+	});
+
+
+	$(".cancel").click(function() {
+		$("#pressed").attr("name", "cancel");
+		$("#frm").submit();
+	});
+
+});
+/*]]>*/
+
+</script>
+
+    </div>
+    <!-- content ends -->
+</div>
+
+  <div class="sso-modal-content" id="sso-modal-content">
+    <div class="sso-modal-body subMenu">
+      <h4>二要素認証未設定</h4>
+      <div class="text-danger">
+        <p>カスタマーサポートデスクを利用するには、<a href="/UserSettings/otpauth">二要素認証の設定</a>が必要です。</p>
+      </div>
+    </div>
+      <div class="sso-modal-footer" style="text-align: right; margin-top: 10px;">
+        <button type="button" class="btn btn-default sso-modal-close">閉じる</button>
+      </div>
+    </div>
+<!--/fluid-row-->
+
+<script type="text/javascript">
+/*<![CDATA[*/
+$(function(){
+	$(".menu-li, .subMenu a, #homeMenu, #manageMenu, #topLogo, .hash_link").click(function(e){
+        if ($(this).attr("id") != "mailfilter"){
+            if ($(this).hasClass("sso_link")) {
+               $("#menuForm").attr("target", "_blank");
+            }
+            (e.preventDefault) ? e.preventDefault():e.returnValue=false;
+            $("#menuForm").attr("action", $(this).attr("href"));
+            $("#loginHash").click();
+            $("#menuForm").removeAttr("target");
+        }
+	});
+
+  $('.otp_man').on('click', function(e){
+    e.preventDefault();
+    if( $( "#sso-modal-overlay" )[0] ) return false ;//多重オーバーレイ禁止
+    $( "body" ).append( '<div id="sso-modal-overlay"></div>' ) ;//オーバーレイ追加
+    $( "#sso-modal-overlay" ).fadeIn( "fast" ) ;
+    $("#sso-modal-content").fadeIn();
+    var w = $( window ).width() ;
+    var h = $( window ).height() ;
+    var cw = $("#sso-modal-content").outerWidth() ;
+    var ch = $("#sso-modal-content").outerHeight() ;
+    $("#sso-modal-content").css( {"left": ((w - cw)/2) + "px","top": ((h - ch)/2) + "px"} ) ;
+    return false;
+  })
+  $(".sso-modal-close").unbind().click(function() {
+      $("#sso-modal-content").fadeOut("fast");
+      $("#sso-modal-overlay").fadeOut("fast");
+      $("#sso-modal-overlay").remove() ;
+  }) ;
+  
+
+
+    //highlight current / active link 追加分
+	function menu_group(this_url) {
+//Exception
+        if (/#/.test(this_url)) {
+            return false;
+//Domain
+        }else if (/\/ControlPanel\/Domain/.test(this_url)) {
+            return String("Domain");
+//Users
+        }else if (/\/ControlPanel\/Users/.test(this_url)) {
+            return String("Users");
+//MailServer
+        }else if (/\/MailServer\//.test(this_url)){
+            if (/\/MailAddress|\/Mailaddress|\/mailaddress/.test(this_url)){
+                return String("MailAddress");
+            }else if (/\/MailAlias|\/mailalias|\/alias_edit/.test(this_url) ) {
+                return String("MailAlias");
+            }else if (/\/MailingList/.test(this_url)) {
+                return String("MailingList");
+            }else if (/\/MailAuth/.test(this_url)) {
+                return String("MailAuth");
+            }else if (/\/DeliveryDestination/.test(this_url)) {
+                return String("DeliveryDestination");
+            }else if (/\/MailSecurity\//.test(this_url)) {
+                return String("MailSecurity");
+            }else if (/\/WebMail\//.test(this_url)) {
+                return String("WebMail");
+            }else if (/\/ClamAV/.test(this_url)) {
+                return String("ClamAV");
+            }else if (/\/SpamAssassin|\/MailSecurity/.test(this_url)) {
+                return String("SpamAssassin");
+            }else {
+                return String("MailServer");
+            }
+//WebServer
+        }else if (/\/WebServer\//.test(this_url)){
+            if (/\/Certificates\/|\/WebServer\/SSL/.test(this_url)){
+                return String("Certificates");
+            }else if (/\/Accessrestriction|\/Access/.test(this_url)) {
+                return String("AccessRestriction");
+            }else if (/\/webalias|\/remove_webalias/.test(this_url)) {
+                return String("WebAlias");
+            }else if (/\/BackUp|\/Backup|\/backup|\/change_domain/.test(this_url)) {
+                return String("WebBackup");
+            }else {
+                return String("WebServer");
+            }
+//Application
+        }else if (/\/Application\//.test(this_url)) {
+        if (/\/Core/.test(this_url)) {
+            return String("Core");
+        }else if (/\/Additional/.test(this_url)) {
+            return String("Additional");
+        }else if (/\/Database/.test(this_url)) {
+            return String("Database");
+        }else {
+            return String("Application");
+        }
+//System
+        }else if (/\/System\//.test(this_url)) {
+            if (/\/Schedule/.test(this_url)) {
+                return String("Schedule");
+            } else if (/\/KeySetting/.test(this_url)) {
+                return String("KeySetting");
+            } else if (/\/Resouces/.test(this_url)) {
+                return false;
+            }else if (/\/Firewall|\/SimpleFirewall|\/ChangeSimpleFirewall|\/firewall|\/changefirewall/.test(this_url)){
+                return String("Firewall");
+            }else {
+                return String("System");
+            }
+//System(Directory)
+        }else if (/\/Directory\//.test(this_url)) {
+            if (/\/BackupManager|\/manage_backup|\/bckp_/.test(this_url)) {
+                return String("BackupManager");
+            }else {
+                return String("Directory");
+            }
+//Mode2
+        }else if (/\/mode2\//.test(this_url)) {
+            if (/\/MailAnalysis/.test(this_url)) {
+                return String("MailAnalysis");
+            }else if (/\/WebAnalysis/.test(this_url)) {
+                return String("WebAnalysis");
+            }else {
+                return String("mode2");
+            }
+        }
+//その他
+        return false;
+    }
+
+    $('ul.main-menu li a').each(function () {
+        var window_url = menu_group(window.location);   //現在のURLの判定
+        var menu_url = menu_group($(this)[0].href);     //メニューのhrefの判定
+	    if ((window_url != false && menu_url != false) && window_url == menu_url){
+            $(this).parent().addClass('active');
+            $(this).parent().addClass(String(window_url));
+	    }
+    });
+
+
+
+	var dt_id;
+	var disp_length;
+
+	$(".datatable").on("init.dt", function(){
+		$(".datatable.searchable").each(function(){
+			var searchTxt = $(this).prev(".row").find(".dataTables_filter input[type='search']");
+			var searchDiv = $(this).prev(".row").find(".dataTables_filter");
+			searchTxt.attr("id", "searchTxt").addClass("form-control input-sm").addClass("filter_text").off("keyup.DT search.DT input.DT paste.DT cut.DT");
+
+			// add search button
+			var searchButton = $("<button/>").attr("id", "search").attr("type", "button")
+				.css("vertical-align", "top").addClass("btn-sm btn-default").html('絞込検索');
+			$(searchDiv).append(searchButton).addClass("text-right");
+
+		});
+
+		$(this).find("thead th").not(".unsort").click(function(){
+			$(this).parent("tr").children("th.presort").removeClass("presort");
+		});
+
+		if(!($(this).hasClass("pageless"))){
+			dt_id = $(this).attr("id");
+			var c_val = $.cookie(dt_id);
+			if (c_val == null){
+				disp_length = 10;
+			} else {
+				disp_length = c_val;
+			}
+			$(window).load(function(){
+				dataTableApi.page.len(disp_length).draw();
+			});
+		}
+	});
+
+	$(".datatable").on("draw.dt", function(){
+		$("span.pagemenu_bfr").text("表示");
+		$("span.pagemenu_aft").text(" / ページ");
+		$("span.data_empty").text("-- 現在、表示するレコードはありません --");
+		$("span.no_matched").text("-- 該当するデータがありません --");
+		$("span.paginate_first").text("先頭");
+		$("span.paginate_last").text("最後");
+		$("span.paginate_next").text("次へ");
+		$("span.paginate_previous").text("前へ");
+		$("span.rec_of").text("件目を表示　　全数:");
+    	$("#selectAll").prop("checked", false);
+		checkreseter();
+	});
+
+	$(".datatable").on("length.dt", function(e, settings, len){
+		dataTableApi.page(0).draw( false );
+		$.cookie(dt_id, len, { expires: 5 });
+	});
+
+	function checkreseter(){
+    	$("#selectAll").prop("checked", false);
+        $(".checks").each(function(){
+        	$(this).prop("checked", false);
+        });
+	}
+
+	// enter-key submit control
+	function enterSubmit(inputs, buttons){
+		$(inputs).keydown(function(e){
+			if ((e.which && e.which == 13) || (e.keyCode && e.keyCode == 13)) {
+				(e.preventDefault) ? e.preventDefault() : e.returnValue = false;
+				if(buttons != "") $(buttons).eq(0).click();
+			}
+		});
+	}
+	enterSubmit("input", "");
+
+/**
+	$("form").submit(function(){
+		$.blockUI({
+			message		: null,
+			overlayCSS	: {
+				opacity	: 0.0,
+				cursor	: 'default'
+			}
+		});
+	});
+*/
+
+// 一括選択チェックボックスの操作
+    $(document).on('change', '.allchecks', function(){
+        if($(this).prop('checked')){
+            $(this).closest('table').find('.checks').addClass('selected').prop('checked', true)
+        }else{
+            $(this).closest('table').find('.checks').removeClass('selected').prop('checked', false)
+        }
+    });
+
+// 個別選択チェックボックスの操作
+    $(document).on('change', '.checks, .allchecks', function(){
+        var closest_table = $(this).closest('table');
+        if ($(this).hasClass('checks')){
+            if ($(this).hasClass('selected')){
+                $(this).removeClass('selected');
+            }else{
+                $(this).addClass('selected');
+            }
+            if (closest_table.find('.checks').length == closest_table.find('.checks:checked').length) {
+                closest_table.find('input[class="allchecks"]').prop("checked", true);
+            }else{
+                closest_table.find('input[class="allchecks"]').prop("checked", false);
+            }
+        }
+        switch_show_btns($(this));
+    });
+
+//    allseleectのチェック
+    $(document).on('draw.dt', '.datatable', function () {
+        var closest_table = $(this).closest('table');
+        var closest_box_content = $(this).closest('.box-content');
+        closest_table.find('.allchecks').prop("checked", false);
+        closest_table.find('.checks').prop("checked", false);
+        closest_table.find('input[class*=selected]').prop("checked", true);
+        switch_show_btns($(this));
+    } );
+
+// チェックが一つでもあれば一括処理ボタンを表示
+    function switch_show_btns(target){
+        var closest_box_content = target.closest('.box-content');
+        var closest_table = target.closest('table');
+        var checks_num = closest_table.find('.checks').length;
+        var checked_num = closest_table.find('.selected').length;
+
+        if (checked_num > 0) {
+            if (checks_num == checked_num){
+                closest_table.find('.allchecks').prop('checked', true);
+            }else {
+                closest_table.find('.allchecks').prop('checked', false);
+            }
+            closest_box_content.find('.operation_box_default').hide();
+            closest_box_content.find('.operation_box_selected').show();
+        } else {
+            closest_box_content.find('.operation_box_selected').hide();
+            closest_box_content.find('.operation_box_default').show();
+            closest_box_content.find('.allchecks').prop('checked', false);
+        }
+    }
+
+});
+
+function nav_bar(e, thisObject) {
+    e.preventDefault();
+    $("#menuForm").attr("action", thisObject.attr("href"));
+    $("#loginHash").click();
+}
+
+function current_time() {
+    now = new Date();
+    nowyear = now.getFullYear();
+    document.write('Copyright (C) 2007-'+ nowyear +' All rights reserved.');
+}
+
+/*]]>*/
+</script>
+
+<div id="footer">
+<hr>
+    
+
+    <!-- theme selector starts -->
+    <div class="btn-group pull-right theme-container tada">
+        <button class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+            <i class="glyphicon glyphicon-tint"></i><span class="hidden-xs"> テーマ変更</span>
+            <span class="caret"></span>
+        </button>
+        <ul class="dropdown-menu" id="themes">
+            <li><a data-value="classic" href="#"><i class="whitespace"></i> Classic</a></li>
+            <li><a data-value="cerulean" href="#"><i class="glyphicon glyphicon-ok"></i> Cerulean</a></li>
+            <li><a data-value="cyborg" href="#"><i class="whitespace"></i> Cyborg</a></li>
+            <li><a data-value="simplex" href="#"><i class="whitespace"></i> Simplex</a></li>
+            <li><a data-value="darkly" href="#"><i class="whitespace"></i> Darkly</a></li>
+            <li><a data-value="lumen" href="#"><i class="whitespace"></i> Lumen</a></li>
+            <li><a data-value="slate" href="#"><i class="whitespace"></i> Slate</a></li>
+            <li><a data-value="spacelab" href="#"><i class="whitespace"></i> Spacelab</a></li>
+            <li><a data-value="united" href="#"><i class="whitespace"></i> United</a></li>
+        </ul>
+    </div>
+    <!-- theme selector ends -->
+    <table>
+        <tbody>
+        <tr>
+            <!-- DEBUG -->
+            <td>
+                Version=2.10.0, Host=conpane-deployment-5bdccfcb6-zljqw
+            </td>
+            <td>
+                Copyright ©NTT DOCOMO BUSINESS, Inc. All Rights Reserved.<br>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+
+
+    
+</div>
+
+
+<!--/.fluid-container-->
+
+<!-- external javascript -->
+
+<script type="text/javascript" src="/static/bower_components/bootstrap/dist/js/bootstrap.min.js"></script>
+
+<!-- library for cookie management -->
+<script type="text/javascript" src="/static/js/jquery.cookie.js"></script>
+<!-- calender plugin -->
+<script type="text/javascript" src="/static/bower_components/moment/min/moment.min.js"></script>
+<script type="text/javascript" src="/static/bower_components/fullcalendar/dist/fullcalendar.min.js"></script>
+<!-- data table plugin -->
+<script type="text/javascript" src="/static/js/jquery.dataTables.min_1-10-4.js"></script>
+
+<!-- select or dropdown enhancer -->
+<script type="text/javascript" src="/static/bower_components/chosen/chosen.jquery.min.js"></script>
+<!-- plugin for gallery image view -->
+<script type="text/javascript" src="/static/bower_components/colorbox/jquery.colorbox-min.js"></script>
+<!-- notification plugin -->
+<script type="text/javascript" src="/static/js/jquery.noty.js"></script>
+<!-- library for making tables responsive -->
+<script type="text/javascript" src="/static/bower_components/responsive-tables/responsive-tables.js"></script>
+<!-- tour plugin -->
+<script type="text/javascript" src="/static/bower_components/bootstrap-tour/build/js/bootstrap-tour.min.js"></script>
+<!-- star rating plugin -->
+<script type="text/javascript" src="/static/js/jquery.raty.min.js"></script>
+<!-- for iOS style toggle switch -->
+<script type="text/javascript" src="/static/js/jquery.iphone.toggle.js"></script>
+<!-- autogrowing textarea plugin -->
+<script type="text/javascript" src="/static/js/jquery.autogrow-textarea.js"></script>
+<!-- multiple file upload plugin -->
+<!-- <script type="text/javascript" src="/static/js/jquery.uploadify-3.1.min.js"></script>  -->
+<!-- history.js for cross-browser state change on ajax -->
+<script type="text/javascript" src="/static/js/jquery.history.js"></script>
+<!-- application script for Charisma demo -->
+<script type="text/javascript" src="/static/js/charisma.js"></script>
+<!-- jquery.blockUI.js -->
+<script type="text/javascript" src="/static/js/jquery.blockUI.js"></script>
+
+
+<div id="cboxOverlay" style="display: none;"></div><div id="colorbox" class="" role="dialog" tabindex="-1" style="display: none;"><div id="cboxWrapper"><div><div id="cboxTopLeft" style="float: left;"></div><div id="cboxTopCenter" style="float: left;"></div><div id="cboxTopRight" style="float: left;"></div></div><div style="clear: left;"><div id="cboxMiddleLeft" style="float: left;"></div><div id="cboxContent" style="float: left;"><div id="cboxTitle" style="float: left;"></div><div id="cboxCurrent" style="float: left;"></div><button type="button" id="cboxPrevious"></button><button type="button" id="cboxNext"></button><button id="cboxSlideshow"></button><div id="cboxLoadingOverlay" style="float: left;"></div><div id="cboxLoadingGraphic" style="float: left;"></div></div><div id="cboxMiddleRight" style="float: left;"></div></div><div style="clear: left;"><div id="cboxBottomLeft" style="float: left;"></div><div id="cboxBottomCenter" style="float: left;"></div><div id="cboxBottomRight" style="float: left;"></div></div></div><div style="position: absolute; width: 9999px; visibility: hidden; display: none; max-width: none;"></div></div></body></html>

@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>業務分析レポート - 20260727</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Noto+Sans+JP:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { background-color: #f8fafc; color: #334155; font-family: 'Inter', 'Noto Sans JP', sans-serif; }
+        .card { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 1rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); }
+        h2 { font-weight: 700; letter-spacing: 0.02em; }
+        h3 { color: #0f172a; font-weight: 700; margin-top: 1.5rem; margin-bottom: 0.75rem; font-size: 1.15rem; border-left: 4px solid #3b82f6; padding-left: 0.75rem; }
+        ul { list-style-type: disc; margin-left: 1.5rem; margin-bottom: 1.5rem; }
+        li { margin-bottom: 0.5rem; color: #475569; }
+        p { line-height: 1.7; margin-bottom: 1rem; color: #475569; font-size: 1rem; }
+    </style>
+</head>
+<body class="p-6 md:p-12">
+    <div class="max-w-6xl mx-auto">
+        <header class="mb-12 text-center">
+            <h1 class="text-3xl md:text-4xl font-extrabold text-slate-800 mb-3 tracking-tight">
+                Activity Intelligence Report
+            </h1>
+            <p class="text-slate-500 font-medium tracking-widest uppercase text-sm">
+                DATE: 20260727 &nbsp;|&nbsp; TOTAL TIME: 99m 44s
+            </p>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            <!-- Left Column: Charts -->
+            <div class="lg:col-span-4 space-y-8">
+                <div class="card p-8">
+                    <h2 class="text-xl mb-6 border-b border-gray-200 pb-3 text-slate-800 font-bold">⏱️ アプリケーション使用割合</h2>
+                    <div class="relative w-full" style="aspect-ratio: 1/1;">
+                        <canvas id="appPieChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column: AI Analysis -->
+            <div class="lg:col-span-8 space-y-8">
+                <div class="card p-8">
+                    <h2 class="text-2xl mb-4 border-b border-gray-300 pb-2 text-blue-700 font-bold">📊 業務サマリーと分析</h2>
+本日は、社内のITインフラ整備とシステム改善に注力した一日でした。具体的には、IT関連タスクの進捗状況確認から始まり、役員・社員向けPCの購入稟議書作成、そして関連するPDFファイルの結合処理と、一連のプロセスを効率的に推進されています。AIアシスタントや専門ツールを駆使し、迅速かつ正確な文書作成・処理能力が伺えます。これらの作業は、組織のIT基盤強化に直結する重要な業務と言えるでしょう。
+
+<h2 class="text-2xl mt-8 mb-4 border-b border-gray-300 pb-2 text-teal-700 font-bold">📝 主要業務ダイジェスト</h2>
+<h3>09:21 〜 09:31：IT関連業務の状況確認と情報収集</h3>
+一日の開始時、IT機器の管理、アプリ開発、業務改善といった広範なIT関連タスクの進捗状況を、チャット、メール、および社内メモを通じて確認しました。特にラップトップPCやモニターの見積もり、社内IT機器のトラブル対応、調達に関する課題に焦点を当て、関連情報の収集と現状把握を行いました。
+
+<h3>09:31 〜 10:49：社内IT機器（PC・メモリ）の購入稟議書作成</h3>
+社長および社員向けの新品ノートPC2台と増設メモリの購入に関する稟議書作成に集中的に取り組みました。Excelを用いて詳細な稟議内容を記述し、AIアシスタント（Gemini）を活用して情報収集や内容検討を進め、必要な画面キャプチャを添付するなど、決裁に向けた文書の完成度を高めました。
+
+<h3>10:49 〜 11:23：役員用PC刷新関連PDFの結合と最終確認</h3>
+「役員用PC刷新および故障代替端末調達の件」に関する複数のPDFファイルを、PDF24 Toolboxを使用して結合する作業を行いました。結合処理の完了後、生成された統合PDFファイルの内容を慎重に確認し、保存に向けた最終処理を進めました。
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const ctx = document.getElementById('appPieChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'pie',
+            data: {
+                labels: ["EXCEL.EXE", "chrome.exe", "Antigravity IDE.exe", "explorer.exe", "msedge.exe", "Acrobat.exe", "pdf24-Toolbox.exe", "Unknown", "sakura.exe", "SnippingTool.exe"],
+                datasets: [{
+                    data: [2957, 2076, 477, 240, 82, 79, 33, 17, 14, 9],
+                    backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#64748b'],
+                    borderColor: '#ffffff', borderWidth: 2, hoverOffset: 4
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'bottom', labels: { color: '#475569', font: { family: "'Inter', sans-serif", size: 13 }, padding: 15 } },
+                    tooltip: {
+                        backgroundColor: 'rgba(255, 255, 255, 0.95)', titleColor: '#0f172a', bodyColor: '#334155', borderColor: '#e2e8f0', borderWidth: 1, padding: 12,
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.label || '';
+                                if (label) label += ': ';
+                                if (context.parsed !== null) {
+                                    let mins = Math.floor(context.parsed / 60);
+                                    let secs = context.parsed % 60;
+                                    label += mins > 0 ? mins + '分' + secs + '秒' : secs + '秒';
+                                }
+                                return label;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>

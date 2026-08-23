@@ -1,0 +1,144 @@
+/* ========================================
+ * TaskMining Dashboard - 共通スタイル
+ * common.css
+ * 用途: user_dashboard.html / dashboard.html 両方で共有するスタイル
+ * ======================================== */
+
+/* ベース */
+body {
+    background-color: #0f172a;
+    color: #f8fafc;
+}
+
+/* グラフ凡例共通 */
+.chart-legend {
+    display: flex;
+    gap: 1rem;
+    font-size: 0.875rem;
+    color: #cbd5e1;
+    margin-bottom: 0.5rem;
+    justify-content: flex-end;
+}
+
+.legend-dot {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    margin-right: 6px;
+}
+
+/* カードスタイル（dashboard.html で使用） */
+.card {
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 0.75rem;
+    padding: 1.5rem;
+}
+
+/* ローディングスピナー */
+.spinner {
+    border: 3px solid #e2e8f0;
+    border-top-color: #6366f1;
+    border-radius: 50%;
+    width: 2rem;
+    height: 2rem;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* ========================================
+ * 画像エクスポート用スタイル (html2canvas)
+ * ======================================== */
+body.exporting-image {
+    background-color: white !important;
+    color: black !important;
+}
+
+body.exporting-image .print\:hidden { display: none !important; }
+
+body.exporting-image .card, 
+body.exporting-image .bg-slate-50, 
+body.exporting-image .bg-white, 
+body.exporting-image .bg-\[\#0f172a\], 
+body.exporting-image .bg-slate-800\/80, 
+body.exporting-image .bg-\[rgba\(30\,41\,59\,0\.7\)\] {
+    background-color: white !important;
+    border: 1px solid #ccc !important;
+    box-shadow: none !important;
+    color: black !important;
+}
+
+body.exporting-image h1, body.exporting-image h2, body.exporting-image h3, 
+body.exporting-image h4, body.exporting-image h5, body.exporting-image h6, 
+body.exporting-image p, body.exporting-image span, body.exporting-image div {
+    color: #111 !important;
+    text-shadow: none !important;
+}
+
+body.exporting-image .bg-clip-text {
+    background: none !important;
+    color: black !important;
+    -webkit-text-fill-color: black !important;
+}
+
+body.exporting-image .badge-vba, body.exporting-image .badge-python, 
+body.exporting-image .badge-powershell, body.exporting-image .badge-gas {
+    border: 1px solid #333 !important;
+    color: black !important;
+}
+
+/* ========================================
+ * 印刷最適化（PDF出力・白背景対応）
+ * ======================================== */
+@media print {
+    @page { size: A4 portrait; margin: 10mm; }
+    
+    body {
+        background-color: white !important;
+        color: black !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+    
+    .print\:hidden { display: none !important; }
+    
+    .card, .bg-slate-50, .bg-white, .bg-\[\#0f172a\], .bg-slate-800\/80, .bg-\[rgba\(30\,41\,59\,0\.7\)\] {
+        background-color: white !important;
+        border: 1px solid #ccc !important;
+        box-shadow: none !important;
+        color: black !important;
+        page-break-inside: avoid;
+    }
+    
+    h1, h2, h3, h4, h5, h6, p, span, div {
+        color: #111 !important;
+        text-shadow: none !important;
+    }
+    
+    .bg-clip-text {
+        background: none !important;
+        color: black !important;
+        -webkit-text-fill-color: black !important;
+    }
+    
+    .badge-vba, .badge-python, .badge-powershell, .badge-gas {
+        border: 1px solid #333 !important;
+        color: black !important;
+    }
+    
+    canvas {
+        max-width: 100% !important;
+        page-break-inside: avoid;
+    }
+    
+    .p-6, .p-8, .p-12, .mb-6, .mb-8 {
+        padding: 10px !important;
+        margin-bottom: 10px !important;
+    }
+    
+    .grid { gap: 10px !important; }
+}

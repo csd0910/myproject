@@ -1,0 +1,48 @@
+﻿Timestamp,ActiveApp,EventType,TargetName,Metadata
+2026-08-10 13:54:44,excel.exe,SheetChange,Excel,"Sheet:発注データ入力, Cell:$A$6:$G$15, Value:((None, None, None, None, None, None, None), (None, None, None, None, None, None, None), (None, None"
+2026-08-10 13:54:46,EXCEL.EXE,KeyLog,テスト発注業務_数式手入力用.xlsx - Excel,Keys:[delete]
+2026-08-10 13:54:49,excel.exe,SheetChange,Excel,"Sheet:発注データ入力, Cell:$A$6, Value:2026-08-12 00:00:00+00:00"
+2026-08-10 13:54:52,excel.exe,SheetChange,Excel,"Sheet:発注データ入力, Cell:$A$7, Value:2026-08-13 00:00:00+00:00"
+2026-08-10 13:54:55,excel.exe,SheetChange,Excel,"Sheet:発注データ入力, Cell:$A$8, Value:2026-08-14 00:00:00+00:00"
+2026-08-10 13:54:57,EXCEL.EXE,KeyLog,テスト発注業務_数式手入力用.xlsx - Excel,Keys:/[enter][enter][up]/[enter][up][down]/[enter]
+2026-08-10 13:54:59,excel.exe,SheetChange,Excel,"Sheet:発注データ入力, Cell:$A$9:$A$15, Value:((pywintypes.datetime(2026, 8, 15, 0, 0, tzinfo=TimeZoneInfo('GMT Standard Time', True)),), (pywinty"
+2026-08-10 13:55:04,excel.exe,SheetChange,Excel,"Sheet:発注データ入力, Cell:$B$6, Value:A001"
+2026-08-10 13:55:07,excel.exe,SheetChange,Excel,"Sheet:発注データ入力, Cell:$B$7, Value:A002"
+2026-08-10 13:55:10,excel.exe,SheetChange,Excel,"Sheet:発注データ入力, Cell:$B$8, Value:A003"
+2026-08-10 13:55:12,excel.exe,SheetChange,Excel,"Sheet:発注データ入力, Cell:$B$9, Value:A004"
+2026-08-10 13:55:14,EXCEL.EXE,KeyLog,テスト発注業務_数式手入力用.xlsx - Excel,Keys:[shift][shift][shift][shift][shift][shift]A[enter][shift][shift][shift][shift][shift][shift][shift][shift][shift]A[backspace][enter][shift][shift][shift][shift][shift][shift][shift]A[enter][shift][shift][shift][shift][shift][shift][shift][shift]A[enter]
+2026-08-10 13:55:23,excel.exe,SheetChange,Excel,"Sheet:発注データ入力, Cell:$B$10:$B$15, Value:(('A005',), ('A006',), ('A007',), ('A008',), ('A009',), ('A010',))"
+2026-08-10 13:55:42,EXCEL.EXE,KeyLog,テスト発注業務_数式手入力用.xlsx - Excel,Keys:[shift][shift][shift][shift][shift][shift][shift][shift][shift]=[shift][shift][shift][shift][shift][shift][shift][shift][shift][shift][shift][shift][shift][shift][shift][shift][shift][shift][shift][shift][shift]VLOOKUP[shift][shift][shift][shift][shift][shift][shift][shift])[ctrl_l][shift][shift][shift][shift][shift][shift][shift][shift][shift][shift][shift][shift][shift][shift][backspace][shift][shift][shift][shift][shift][shift][shift][shift][shift][shift][shift][shift]()
+2026-08-10 13:55:45,EXCEL.EXE,KeyLog,テスト発注業務_数式手入力用.xlsx - Excel,Keys:[left][enter]
+2026-08-10 13:55:52,EXCEL.EXE,KeyLog,テスト発注業務_数式手入力用.xlsx - Excel,"Keys:[shift][shift][shift][shift]B6,[backspace],"
+2026-08-10 13:55:58,EXCEL.EXE,KeyLog,テスト発注業務_数式手入力用.xlsx - Excel,Keys:syouhinnmasuta[space][enter]
+2026-08-10 13:56:03,EXCEL.EXE,KeyLog,テスト発注業務_数式手入力用.xlsx - Excel,Keys:[shift][shift][shift][shift][shift]!A:[shift][shift][shift][shift][shift]C
+2026-08-10 13:56:10,excel.exe,SheetChange,Excel,"Sheet:発注データ入力, Cell:$C$6, Formula:=VLOOKUP(B6,商品マスタ!A:C,2,FALSE), Value:ノートPC"
+2026-08-10 13:56:12,EXCEL.EXE,Copy,テスト発注業務_数式手入力用.xlsx - Excel,"Size:7 chars, Data:[ノートPC  ...]"
+2026-08-10 13:56:13,excel.exe,SheetChange,Excel,"Sheet:発注データ入力, Cell:$C$7, Formula:=VLOOKUP(B7,商品マスタ!A:C,2,FALSE), Value:マウス"
+2026-08-10 13:56:14,excel.exe,SheetChange,Excel,"Sheet:発注データ入力, Cell:$C$8, Formula:=VLOOKUP(B8,商品マスタ!A:C,2,FALSE), Value:キーボード"
+2026-08-10 13:56:15,excel.exe,SheetChange,Excel,"Sheet:発注データ入力, Cell:$C$9, Formula:=VLOOKUP(B9,商品マスタ!A:C,2,FALSE), Value:モニター"
+2026-08-10 13:56:15,excel.exe,SheetChange,Excel,"Sheet:発注データ入力, Cell:$C$10, Formula:=VLOOKUP(B10,商品マスタ!A:C,2,FALSE), Value:-2146826246"
+2026-08-10 13:56:15,excel.exe,SheetChange,Excel,"Sheet:発注データ入力, Cell:$C$11, Formula:=VLOOKUP(B11,商品マスタ!A:C,2,FALSE), Value:-2146826246"
+2026-08-10 13:56:16,excel.exe,SheetChange,Excel,"Sheet:発注データ入力, Cell:$C$12, Formula:=VLOOKUP(B12,商品マスタ!A:C,2,FALSE), Value:-2146826246"
+2026-08-10 13:56:16,excel.exe,SheetChange,Excel,"Sheet:発注データ入力, Cell:$C$13, Formula:=VLOOKUP(B13,商品マスタ!A:C,2,FALSE), Value:-2146826246"
+2026-08-10 13:56:16,excel.exe,SheetChange,Excel,"Sheet:発注データ入力, Cell:$C$14, Formula:=VLOOKUP(B14,商品マスタ!A:C,2,FALSE), Value:-2146826246"
+2026-08-10 13:56:17,excel.exe,SheetChange,Excel,"Sheet:発注データ入力, Cell:$C$15, Formula:=VLOOKUP(B15,商品マスタ!A:C,2,FALSE), Value:-2146826246"
+2026-08-10 13:56:18,EXCEL.EXE,KeyLog,テスト発注業務_数式手入力用.xlsx - Excel,"Keys:,2,[shift][shift]FALSE[shift])[enter][enter][up][ctrl_l][ctrl_l][ctrl_l][ctrl_l][Ctrl+C][down][ctrl_l][ctrl_l][ctrl_l][ctrl_l][ctrl_l][ctrl_l][ctrl_l][ctrl_l][ctrl_l][ctrl_l][ctrl_l][ctrl_l][ctrl_l][ctrl_l][ctrl_l][ctrl_l][Ctrl+V][down][ctrl_l][Ctrl+V][down][ctrl_l][Ctrl+V][down][ctrl_l][Ctrl+V][down][ctrl_l][Ctrl+V][down][ctrl_l][Ctrl+V][down][ctrl_l][Ctrl+V][down][ctrl_l][Ctrl+V][down][ctrl_l][Ctrl+V][down]"
+2026-08-10 13:56:22,excel.exe,SheetChange,Excel,"Sheet:発注データ入力, Cell:$D$6, Value:140000.0"
+2026-08-10 13:56:24,excel.exe,SheetChange,Excel,"Sheet:発注データ入力, Cell:$D$7, Value:1000.0"
+2026-08-10 13:56:26,excel.exe,SheetChange,Excel,"Sheet:発注データ入力, Cell:$D$8, Value:1500.0"
+2026-08-10 13:56:28,excel.exe,SheetChange,Excel,"Sheet:発注データ入力, Cell:$D$9, Value:15000.0"
+2026-08-10 13:56:30,excel.exe,SheetChange,Excel,"Sheet:発注データ入力, Cell:$E$6, Value:3.0"
+2026-08-10 13:56:31,excel.exe,SheetChange,Excel,"Sheet:発注データ入力, Cell:$E$7, Value:4.0"
+2026-08-10 13:56:32,excel.exe,SheetChange,Excel,"Sheet:発注データ入力, Cell:$E$8, Value:5.0"
+2026-08-10 13:56:33,excel.exe,SheetChange,Excel,"Sheet:発注データ入力, Cell:$E$9, Value:1.0"
+2026-08-10 13:56:45,excel.exe,SheetChange,Excel,"Sheet:発注データ入力, Cell:$G$6, Value:急ぎ"
+2026-08-10 13:56:48,excel.exe,SheetChange,Excel,"Sheet:発注データ入力, Cell:$G$7, Value:発注"
+2026-08-10 13:56:51,excel.exe,SheetChange,Excel,"Sheet:発注データ入力, Cell:$G$8, Value:見積"
+2026-08-10 13:56:52,EXCEL.EXE,KeyLog,テスト発注業務_数式手入力用.xlsx - Excel,Keys:[enter][enter][enter][enter][up][up][up][up][right][enter][enter][enter][enter][up][up][up][up][right][right]isogi[space][backspace][backspace][backspace][backspace][backspace][backspace]siogi[space][enter][backspace][backspace]isogi[space][enter][shift][enter][enter][enter]hattyuu[space][enter][enter]mitumori[space][enter][enter]
+2026-08-10 13:56:55,excel.exe,SheetChange,Excel,"Sheet:発注データ入力, Cell:$G$9, Value:急ぎ"
+2026-08-10 13:56:56,EXCEL.EXE,KeyLog,テスト発注業務_数式手入力用.xlsx - Excel,Keys:isogi[space][enter][enter]
+2026-08-10 13:56:58,excel.exe,WorkbookSave,テスト発注業務_数式手入力用.xlsx,
+2026-08-10 13:57:00,excel.exe,WorkbookSave,テスト発注業務_数式手入力用.xlsx,
+2026-08-10 13:57:01,EXCEL.EXE,KeyLog,テスト発注業務.xlsx - Excel,Keys:[ctrl_l][ctrl_l][ctrl_l][ctrl_l][ctrl_l][ctrl_l][ctrl_l][ctrl_l][ctrl_l][Ctrl+S][ctrl_l][ctrl_l][ctrl_l][ctrl_l][ctrl_l][ctrl_l][ctrl_l][ctrl_l][Ctrl+S]

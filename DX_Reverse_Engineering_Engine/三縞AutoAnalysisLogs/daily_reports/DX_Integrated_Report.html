@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>完全統合版 DX抽出レポート</title>
+    <script src="https://cdn.tailwindcss.com"></script><script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <script>mermaid.initialize({startOnLoad:true});</script>
+    <style>body { background-color: #f8fafc; color: #334155; }</style>
+</head>
+<body class="p-6 md:p-12">
+    <div class="max-w-7xl mx-auto bg-white p-8 rounded-xl shadow-lg border border-gray-100">
+        <header class="mb-12 border-b pb-6">
+            <h1 class="text-4xl font-extrabold text-slate-800 mb-2">完全統合版 DX抽出レポート</h1>
+            <p class="text-slate-500">全業務ログの統合AI分析と最終自動化提案</p>
+        </header>
+        
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-12">
+            <!-- 左カラム：グラフ -->
+            <div class="lg:col-span-3 space-y-12 border-r pr-8">
+                <div>
+                    <h2 class="text-lg font-bold mb-4 text-center text-slate-700">🖥️ アプリ使用割合 (総計)</h2>
+                    <div class="relative w-full aspect-square"><canvas id="appChart"></canvas></div>
+                </div>
+                <div>
+                    <h2 class="text-lg font-bold mb-4 text-center text-slate-700">⚙️ 操作ごとの割合 (作業分解)</h2>
+                    <div class="relative w-full aspect-square"><canvas id="taskChart"></canvas></div>
+                </div>
+            </div>
+            
+            <!-- 右カラム：AI解析結果 -->
+            <div class="lg:col-span-9">
+                <h2 class="text-2xl mb-4 border-b pb-2 text-blue-700 font-bold">📁 操作した主要ファイルと手作業のコスト</h2>
+<ul>
+    <li><strong>0812長期欠品管理表.xlsb</strong>: 長期欠品管理のメインファイル。複数シートへの大量データコピー、手入力、数式入力、調整作業の中心。
+        <ul>
+            <li>手作業の実時間: 約20分00秒</li>
+            <li>プログラムによる自動化後の想定削減時間: 約19分45秒</li>
+        </ul>
+    </li>
+    <li><strong>【長期欠品更新専用】品目情報.csv</strong>: 品目情報取得元のCSVファイル。
+        <ul>
+            <li>手作業の実時間: 約0分30秒</li>
+            <li>プログラムによる自動化後の想定削減時間: 約0分25秒</li>
+        </ul>
+    </li>
+    <li><strong>未入荷リスト_新.csv</strong>: 未入荷情報取得元のCSVファイル。手入力や数式入力の対象。
+        <ul>
+            <li>手作業の実時間: 約8分00秒</li>
+            <li>プログラムによる自動化後の想定削減時間: 約7分55秒</li>
+        </ul>
+    </li>
+    <li><strong>長期欠品設定解除依頼.xlsx</strong>: 長期欠品解除依頼情報のExcelファイル。データ収集元および貼り付け先。
+        <ul>
+            <li>手作業の実時間: 約1分00秒</li>
+            <li>プログラムによる自動化後の想定削減時間: 約0分55秒</li>
+        </ul>
+    </li>
+    <li><strong>レンズの分析 (アプリケーション)</strong>: 詳細不明ながら、商品情報取得元のアプリケーション。
+        <ul>
+            <li>手作業の実時間: 約0分30秒</li>
+            <li>プログラムによる自動化後の想定削減時間: 約0分29秒</li>
+        </ul>
+    </li>
+    <li><strong>基幹→OA (エクスプローラー)</strong>: データ転送先のエクスプローラーウィンドウ。
+        <ul>
+            <li>手作業の実時間: 約0分30秒</li>
+            <li>プログラムによる自動化後の想定削減時間: 約0分29秒</li>
+        </ul>
+    </li>
+</ul>
+
+<div class="mt-8 flex flex-col lg:flex-row gap-8">
+    <div class="flex-1 lg:w-1/2">
+        <h2 class="text-xl mb-4 border-b pb-2 text-teal-700 font-bold">🔄 現在の処理フロー図 (手動所要時間)</h2>
+        <div class="mermaid bg-slate-50 p-4 rounded shadow">
+        graph TD
+        A["0812長期欠品管理表.xlsbを開く"]
+        B["他ファイル(品目情報.csv, 未入荷リスト.csv)を開き、データコピー"]
+        C["長期欠品管理表 '③社外サイト販売休止' シートに手入力・フィルハンドル"]
+        D["長期欠品設定解除依頼.xlsxを開き、複数ファイル・アプリからデータ収集"]
+        E["長期欠品管理表 '未入荷' シートに手入力・数式入力（大量）"]
+        F["長期欠品管理表 '①長期欠品' シートへデータ貼り付け・調整"]
+        G["長期欠品設定解除依頼.xlsx '②長期欠品解除' シートへデータ貼り付け"]
+        H["長期欠品管理表 '①長期欠品' シートでデータ切り取り・クリア"]
+        I["長期欠品管理表 '①長期欠品' シートにVLOOKUP数式入力・フィルダウン"]
+        J["VLOOKUP結果をコピー・値貼り付け、Explorerへデータ転送"]
+        K["長期欠品管理表の各シートに最終データ貼り付け・調整"]
+        L["0812長期欠品管理表.xlsbを保存"]
+
+        A -->|約20秒| B
+        B -->|約2分00秒| C
+        C -->|約1分30秒| D
+        D -->|約1分30秒| E
+        E -->|約8分30秒| F
+        F -->|約2分00秒| G
+        G -->|約3分15秒| H
+        H -->|約1分30秒| I
+        I -->|約4分45秒| J
+        J -->|約2分00秒| K
+        K -->|約3分45秒| L
+        </div>
+    </div>
+    <div class="flex-1 lg:w-1/2">
+        <h2 class="text-xl mb-4 border-b pb-2 text-orange-600 font-bold">🚀 自動化後のフロー図 (短縮時間)</h2>
+        <div class="mermaid bg-slate-50 p-4 rounded shadow">
+        graph TD
+        A_auto["Pythonスクリプト実行開始"]
+        B_auto["全データソース(xlsb, csv, xlsx)を読み込み"]
+        C_auto["データクリーニング、結合、計算処理、シート更新"]
+        D_auto["更新された長期欠品管理表.xlsbを保存"]
+        E_auto["Explorerへのデータ転送 (ファイルコピーまたはテキスト出力)"]
+
+        A_auto -->|約1秒| B_auto
+        B_auto -->|約5秒| C_auto
+        C_auto -->|約15秒| D_auto
+        D_auto -->|約5秒| E_auto
+        </div>
+    </div>
+</div>
+
+<div class="mt-12 bg-orange-50 p-6 rounded-xl border border-orange-100">
+    <h2 class="text-2xl mb-4 text-orange-800 font-bold">💡 具体的な自動化案とステップ（統合版）</h2>
+    <p class="mb-4">現在の作業は複数のExcelファイル、CSVファイル、そして不明なアプリケーション「レンズの分析」を跨ぎ、大量の手動コピー＆ペースト、手入力、数式入力、そして頻繁なウィンドウ切り替えを伴っており、非常に非効率です。これらの作業はPythonによるデータ処理とExcel操作に置き換えることで、処理時間を大幅に短縮し、ヒューマンエラーのリスクを排除できます。</p>
+
+    <h3 class="text-xl mt-6 mb-3 text-orange-700 font-bold">Step 1: データソースの統合読み込みと前処理（Python）</h3>
+    <ul class="list-disc ml-6 mb-4">
+        <li><strong>Pythonの<code>pandas</code>ライブラリ</strong>を使用して、<code>0812長期欠品管理表.xlsb</code>、<code>【長期欠品更新専用】品目情報.csv</code>、<code>未入荷リスト_新.csv</code>、<code>長期欠品設定解除依頼.xlsx</code>の全データを、それぞれのシート・CSVごとにDataFrameとしてメモリ上に効率的に読み込みます。これにより、ファイルを開いたり閉じたりするオーバーヘッドをなくします。</li>
+        <li>不明なアプリケーション「レンズの分析」からデータがコピーされているログがあるため、もしこのアプリケーションがデータファイルを生成するのであれば、それをPythonで読み込む処理を組み込みます。Webアプリケーションであれば、Webスクレイピングも検討可能ですが、まずはファイル出力での連携を前提とします。</li>
+    </ul>
+
+    <h3 class="text-xl mt-6 mb-3 text-orange-700 font-bold">Step 2: データ加工・整形・連携ロジックの自動化（Python）</h3>
+    <ul class="list-disc ml-6 mb-4">
+        <li><strong>手入力・数式入力の代替</strong>:
+            <ul>
+                <li><code>③社外サイト販売休止</code> シートの「メーカー出荷8/27以降のため」などの手入力は、Pythonスクリプト内で条件に基づいて該当DataFrameのセルに直接値を設定します。</li>
+                <li><code>未入荷</code> シートの <code>E</code> 列への数値入力（<code>2.0</code>, <code>6.0</code>など）や <code>F</code> 列の数式（<code>=KXXX</code>）も、Pythonで条件判断し、直接値を設定または列コピーで実現します。</li>
+            </ul>
+        </li>
+        <li><strong>VLOOKUP関数の置き換え</strong>:
+            <ul>
+                <li><code>①長期欠品</code> シートのVLOOKUP関数によるデータ参照は、<code>pandas.merge</code> 関数を使用して、複数のDataFrame間でキー（商品コードなど）に基づいてデータを結合することで代替します。これにより、ExcelのVLOOKUP関数の負荷や計算エラー（#N/A, #VALUE!）の処理が不要になります。</li>
+            </ul>
+        </li>
+        <li><strong>データのコピー＆ペースト、切り取り、クリア操作の効率化</strong>:
+            <ul>
+                <li>大量のCtrl+C/V、Ctrl+X、Ctrl+Shift+Down/Rightなどのキーボード操作は、<code>pandas</code>のDataFrame操作（フィルタリング、列の追加・削除、値の更新など）に置き換えます。データはメモリ上で直接操作されるため、処理速度が大幅に向上し、ヒューマンエラーのリスクを排除できます。</li>
+            </ul>
+        </li>
+        <li><strong>「在庫ﾁｰﾑ」の入力</strong>: Pythonスクリプトで該当するDataFrameの列に文字列を直接書き込みます。</li>
+    </ul>
+
+    <h3 class="text-xl mt-6 mb-3 text-orange-700 font-bold">Step 3: 結果のExcelファイル出力とデータ転送（Python）</h3>
+    <ul class="list-disc ml-6 mb-4">
+        <li>加工されたデータは、<code>pandas.to_excel()</code>関数（バックエンドで<code>openpyxl</code>ライブラリを利用）を使用して、更新された<code>0812長期欠品管理表.xlsb</code>として出力します。これにより、既存のExcelファイルをPythonから直接操作し、最終結果を書き込むことができます。</li>
+        <li>Explorer（「基幹→OA」ウィンドウ）へのデータ貼り付けについては、もしそれが特定のテキストファイルへの出力であれば、Pythonのファイル書き込み機能で実現します。もしクリップボード経由でのファイルコピーや移動であれば、Pythonの<code>shutil</code>ライブラリなどを用いて、直接ファイルを指定フォルダにコピーまたは移動することで、手動での貼り付け作業を不要にします。</li>
+    </ul>
+
+    <h3 class="text-xl mt-6 mb-3 text-orange-700 font-bold">Step 4: 例外処理とログ機能の追加（Python）</h3>
+    <ul class="list-disc ml-6">
+        <li>スクリプトの実行中に予期せぬエラーが発生した場合に備え、適切な例外処理を実装します。</li>
+        <li>処理の進捗やエラー情報を記録するためのログ機能を追加し、スクリプトの安定性と運用監視を容易にします。</li>
+    </ul>
+    <p class="mt-4">この自動化により、約30分の手作業がわずか30秒程度のスクリプト実行で完了し、大幅な時間削減と業務品質の向上を実現できます。</p>
+</div>
+            </div>
+        </div>
+    </div>
+    <script>
+        new Chart(document.getElementById('appChart').getContext('2d'), {
+            type: 'pie', data: { labels: ["EXCEL.EXE", "explorer.exe", "AI_DX_Logger.exe", "WindowsTerminal.exe", "Unknown"], datasets: [{ data: [1729, 68, 8, 4, 1], backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#64748b'] }] }
+        });
+        new Chart(document.getElementById('taskChart').getContext('2d'), {
+            type: 'pie', data: { labels: ["\u624b\u5165\u529b\u30fb\u7de8\u96c6", "\u30b3\u30d4\u30da\u30fb\u53cd\u5fa9\u8ee2\u8a18", "\u95a2\u6570\u51e6\u7406", "\u305d\u306e\u4ed6\u95b2\u89a7\u30fb\u5f85\u6a5f"], datasets: [{ data: [189, 112, 29, 305], backgroundColor: ['#ef4444', '#3b82f6', '#10b981', '#64748b'] }] }
+        });
+    </script>
+</body></html>

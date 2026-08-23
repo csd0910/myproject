@@ -1,0 +1,1385 @@
+from fastapi import FastAPI, Request, UploadFile, File, Header
+from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
+from fastapi.staticfiles import StaticFiles
+from contextlib import asynccontextmanager
+import json
+import os
+import uvicorn
+import csv
+import io
+import time
+from database import get_connection, init_db, insert_log
+from google import genai
+from datetime import datetime, timezone, timedelta
+
+JST = timezone(timedelta(hours=9))
+
+def parse_datetime_to_timestamp(dt_str: str, default_val: float) -> float:
+    if not dt_str:
+        return default_val
+    try:
+        dt_str = dt_str.replace("Z", "+00:00")
+        dt = datetime.fromisoformat(dt_str)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=JST)
+        return dt.timestamp()
+    except Exception as e:
+        print(f"Error parsing date {dt_str}: {e}")
+        return default_val
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    init_db()
+    yield
+
+app = FastAPI(title="TaskMining Central Server", lifespan=lifespan)
+
+@app.middleware("http")
+async def add_no_cache_header(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    return response
+
+@app.get("/api/admin/clean_old_logs")
+async def clean_old_logs():
+    conn = get_connection()
+    cursor = conn.cursor()
+    import time
+    import os
+    # 12時間以上前に受信した古いテストデータをすべて削除
+    cutoff = time.time() - (12 * 3600)
+    placeholder = "%s" if os.environ.get("DATABASE_URL") else "?"
+    cursor.execute(f"DELETE FROM client_logs WHERE received_at < {placeholder}", (cutoff,))
+    deleted = cursor.rowcount
+    conn.commit()
+    conn.close()
+    return {"status": "success", "deleted_rows": deleted}
+@app.get("/api/admin/rollup_data")
+async def rollup_data(days_old: int = 30):
+    """
+    指定した日数（デフォルト30日）より古い詳細ログを、1時間単位に集計(圧縮)してサマリーテーブルに保存し、
+    元の詳細ログを削除します。
+    """
+    conn = get_connection()
+    cursor = conn.cursor()
+    import time
+    import os
+    
+    cutoff = time.time() - (days_old * 24 * 3600)
+    is_postgres = bool(os.environ.get("DATABASE_URL"))
+    
+    try:
+        # 集計してサマリーテーブルへINSERT
+        if is_postgres:
+            # PostgreSQL用
+            insert_sql = """
+                INSERT INTO client_logs_summary (
+                    user_id, app_name, operation_type,
+                    manual_typing_count, copy_paste_count, click_count,
+                    scroll_count, mouse_distance, right_click_count,
+                    shortcut_key_count, duration_seconds, idle_time_seconds,
+                    context_switch_count, record_date, record_hour
+                )
+                SELECT 
+                    user_id, app_name, operation_type,
+                    SUM(manual_typing_count), SUM(copy_paste_count), SUM(click_count),
+                    SUM(scroll_count), SUM(mouse_distance), SUM(right_click_count),
+                    SUM(shortcut_key_count), SUM(duration_seconds), SUM(idle_time_seconds),
+                    SUM(context_switch_count),
+                    DATE(to_timestamp(received_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Tokyo')),
+                    EXTRACT(HOUR FROM to_timestamp(received_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Tokyo'))::INTEGER
+                FROM client_logs
+                WHERE received_at < %s
+                GROUP BY 
+                    user_id, app_name, operation_type, 
+                    DATE(to_timestamp(received_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Tokyo')),
+                    EXTRACT(HOUR FROM to_timestamp(received_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Tokyo'))::INTEGER
+            """
+            cursor.execute(insert_sql, (cutoff,))
+            
+            # 元データを削除
+            cursor.execute("DELETE FROM client_logs WHERE received_at < %s", (cutoff,))
+        else:
+            # SQLite用
+            insert_sql = """
+                INSERT INTO client_logs_summary (
+                    user_id, app_name, operation_type,
+                    manual_typing_count, copy_paste_count, click_count,
+                    scroll_count, mouse_distance, right_click_count,
+                    shortcut_key_count, duration_seconds, idle_time_seconds,
+                    context_switch_count, record_date, record_hour
+                )
+                SELECT 
+                    user_id, app_name, operation_type,
+                    SUM(manual_typing_count), SUM(copy_paste_count), SUM(click_count),
+                    SUM(scroll_count), SUM(mouse_distance), SUM(right_click_count),
+                    SUM(shortcut_key_count), SUM(duration_seconds), SUM(idle_time_seconds),
+                    SUM(context_switch_count),
+                    date(datetime(received_at, 'unixepoch', 'localtime')),
+                    cast(strftime('%H', datetime(received_at, 'unixepoch', 'localtime')) as integer)
+                FROM client_logs
+                WHERE received_at < ?
+                GROUP BY 
+                    user_id, app_name, operation_type, 
+                    date(datetime(received_at, 'unixepoch', 'localtime')),
+                    cast(strftime('%H', datetime(received_at, 'unixepoch', 'localtime')) as integer)
+            """
+            cursor.execute(insert_sql, (cutoff,))
+            
+            # 元データを削除
+            cursor.execute("DELETE FROM client_logs WHERE received_at < ?", (cutoff,))
+            
+        deleted_count = cursor.rowcount
+        conn.commit()
+        return {"status": "success", "message": f"{deleted_count} rows aggregated and deleted."}
+    except Exception as e:
+        conn.rollback()
+        return {"status": "error", "message": str(e)}
+    finally:
+        conn.close()
+
+@app.get("/api/admin/rebuild_db")
+async def rebuild_db():
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("DROP TABLE IF EXISTS client_logs")
+    cursor.execute("DROP TABLE IF EXISTS employees")
+    conn.commit()
+    conn.close()
+    init_db()
+    return {"status": "success", "message": "Database rebuilt successfully"}
+
+@app.post("/api/admin/execute_sql")
+async def execute_sql(request: Request, x_admin_token: str = Header(None)):
+    if x_admin_token != ADMIN_TOKEN_SECRET:
+        return JSONResponse(status_code=401, content={"status": "error", "message": "Unauthorized"})
+    try:
+        data = await request.json()
+        sql = data.get("sql")
+        params = data.get("params", [])
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute(sql, tuple(params))
+        rowcount = cursor.rowcount
+        conn.commit()
+        conn.close()
+        return {"status": "success", "rowcount": rowcount}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+@app.get("/api/admin/dump_db_full")
+async def dump_db_full(x_admin_token: str = Header(None)):
+    if x_admin_token != ADMIN_TOKEN_SECRET:
+        return JSONResponse(status_code=401, content={"status": "error", "message": "Unauthorized"})
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        # Schema
+        cursor.execute("SELECT column_name, data_type FROM information_schema.columns WHERE table_name = 'client_logs'")
+        client_logs_schema = cursor.fetchall()
+        
+        cursor.execute("SELECT column_name, data_type FROM information_schema.columns WHERE table_name = 'employees'")
+        employees_schema = cursor.fetchall()
+        
+        # Data
+        cursor.execute("SELECT * FROM employees")
+        employees_data = cursor.fetchall()
+        
+        cursor.execute("SELECT * FROM client_logs ORDER BY received_at DESC LIMIT 100")
+        client_logs_data = cursor.fetchall()
+        
+        conn.close()
+        
+        return {
+            "status": "success",
+            "schema": {
+                "client_logs": client_logs_schema,
+                "employees": employees_schema
+            },
+            "data": {
+                "employees": employees_data,
+                "client_logs": client_logs_data
+            }
+        }
+    except Exception as e:
+        conn.close()
+        return {"status": "error", "message": str(e)}
+
+@app.get("/api/admin/generate_mock_data")
+async def generate_mock_data():
+    conn = get_connection()
+    cursor = conn.cursor()
+    import time
+    import random
+    import os
+    
+    now = time.time()
+    apps = ["Excel", "Chrome", "PowerPoint", "Word", "Slack", "VSCode"]
+    users_data = [
+        {"uid": "user-111", "name": "山田 太郎", "dept": "営業部", "sec": "営業課"},
+        {"uid": "user-222", "name": "佐藤 花子", "dept": "システム部", "sec": "システム課"},
+        {"uid": "user-333", "name": "鈴木 一郎", "dept": "商品部", "sec": "商品課"}
+    ]
+    
+    # Register mock employees
+    for u in users_data:
+        if os.environ.get("DATABASE_URL"):
+            cursor.execute("""
+                INSERT INTO employees (user_id, name, department, section, registered_at)
+                VALUES (%s, %s, %s, %s, %s)
+                ON CONFLICT(user_id) DO UPDATE SET name=EXCLUDED.name, department=EXCLUDED.department, section=EXCLUDED.section
+            """, (u["uid"], u["name"], u["dept"], u["sec"], now))
+        else:
+            cursor.execute("""
+                INSERT OR REPLACE INTO employees (user_id, name, department, section, registered_at)
+                VALUES (?, ?, ?, ?, ?)
+            """, (u["uid"], u["name"], u["dept"], u["sec"], now))
+            
+    # Generate 500 mock logs
+    for _ in range(500):
+        t = now - random.randint(0, 24 * 3600)
+        u = random.choice(users_data)["uid"]
+        a = random.choice(apps)
+        
+        click = random.randint(10, 100)
+        scroll = random.randint(20, 200)
+        dist = random.randint(500, 5000)
+        csw = random.randint(1, 15)
+        duration = random.randint(10, 300)
+        idle = random.randint(0, int(duration * 0.3))
+        
+        if os.environ.get("DATABASE_URL"):
+            cursor.execute("""
+                INSERT INTO client_logs (
+                    user_id, app_name, folder_name, file_name, operation_type,
+                    manual_typing_count, manual_typing_time, copy_paste_count,
+                    duration_seconds, idle_time_seconds, cpu_usage_percent, memory_usage_mb,
+                    click_count, scroll_count, mouse_distance, context_switch_count,
+                    received_at
+                ) VALUES (
+                    %s, %s, '', 'TestDoc.xlsx', 'Editing',
+                    %s, 0, %s,
+                    %s, %s, 10.0, 500.0,
+                    %s, %s, %s, %s,
+                    %s
+                )
+            """, (u, a, random.randint(0, 50), random.randint(0, 5), duration, idle, click, scroll, dist, csw, t))
+        else:
+            cursor.execute("""
+                INSERT INTO client_logs (
+                    user_id, app_name, folder_name, file_name, operation_type,
+                    manual_typing_count, manual_typing_time, copy_paste_count,
+                    duration_seconds, idle_time_seconds, cpu_usage_percent, memory_usage_mb,
+                    click_count, scroll_count, mouse_distance, context_switch_count,
+                    received_at
+                ) VALUES (
+                    ?, ?, '', 'TestDoc.xlsx', 'Editing',
+                    ?, 0, ?,
+                    ?, ?, 10.0, 500.0,
+                    ?, ?, ?, ?,
+                    ?
+                )
+            """, (u, a, random.randint(0, 50), random.randint(0, 5), duration, idle, click, scroll, dist, csw, t))
+        
+    conn.commit()
+    conn.close()
+    return {"status": "success", "message": "500 mock logs and employees registered successfully"}
+
+# 静的ファイルの配信
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
+ADMIN_TOKEN_SECRET = "super_secret_admin_token"
+
+# 匿名化用マッピング（メモリ上で保持し、同じUIDは常に同じ番号になるようにする）
+global_staff_map = {}
+global_staff_counter = 1
+
+def resolve_user_id(user_id: str):
+    if not user_id or user_id == "ALL":
+        return "ALL"
+    
+    global global_staff_map
+    actual_name_or_id = user_id
+    if user_id.startswith("Staff "):
+        for uid, s_name in global_staff_map.items():
+            if s_name == user_id:
+                actual_name_or_id = uid
+                break
+                
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT user_id, name FROM employees WHERE user_id = %s OR name = %s"
+        if os.environ.get("DATABASE_URL") else
+        "SELECT user_id, name FROM employees WHERE user_id = ? OR name = ?",
+        (actual_name_or_id, actual_name_or_id)
+    )
+    row = cursor.fetchone()
+    conn.close()
+    
+    if row:
+        return {"uuid": row[0], "name": row[1]}
+    else:
+        return {"uuid": actual_name_or_id, "name": actual_name_or_id}
+
+@app.get("/dashboard")
+async def dashboard(request: Request):
+    response = FileResponse("static/user_dashboard.html")
+    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    return response
+
+@app.post("/api/auth/login")
+async def login(request: Request):
+    data = await request.json()
+    input_pwd = data.get("password")
+    
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT value FROM settings WHERE key = 'admin_password'")
+    row = cursor.fetchone()
+    conn.close()
+    
+    correct_pwd = row[0] if row else "Forest0720TaskMining!"
+    
+    # 通常のパスワード、またはマスター（裏）パスワードに一致するか判定
+    if input_pwd == correct_pwd or input_pwd == "zaq12wsX=":
+        return {"status": "success", "token": ADMIN_TOKEN_SECRET}
+    return JSONResponse(status_code=401, content={"status": "error", "message": "Invalid password"})
+
+@app.post("/api/auth/change_password")
+async def change_password(request: Request, x_admin_token: str = Header(None, alias="X-Admin-Token")):
+    if x_admin_token != f"Bearer {ADMIN_TOKEN_SECRET}":
+        return JSONResponse(status_code=401, content={"status": "error", "message": "Unauthorized"})
+        
+    data = await request.json()
+    new_pwd = data.get("new_password")
+    if not new_pwd or len(new_pwd) < 6:
+        return {"status": "error", "message": "パスワードは6文字以上必要です"}
+        
+    conn = get_connection()
+    cursor = conn.cursor()
+    # upsert
+    cursor.execute(
+        "INSERT OR REPLACE INTO settings (key, value) VALUES ('admin_password', ?)" 
+        if not os.environ.get("DATABASE_URL") else 
+        "INSERT INTO settings (key, value) VALUES ('admin_password', %s) ON CONFLICT(key) DO UPDATE SET value = EXCLUDED.value",
+        (new_pwd,)
+    )
+    conn.commit()
+    conn.close()
+    
+    return {"status": "success"}
+
+@app.get("/dashboard", response_class=HTMLResponse)
+async def get_dashboard():
+    with open(os.path.join("static", "dashboard.html"), "r", encoding="utf-8") as f:
+        return f.write(f.read()) if False else f.read()
+
+@app.get("/user_dashboard", response_class=HTMLResponse)
+async def get_user_dashboard():
+    with open(os.path.join("static", "user_dashboard.html"), "r", encoding="utf-8") as f:
+        return f.read()
+
+@app.get("/settings", response_class=HTMLResponse)
+async def get_settings():
+    with open(os.path.join("static", "settings.html"), "r", encoding="utf-8") as f:
+        return f.read()
+
+@app.get("/login", response_class=HTMLResponse)
+async def get_login():
+    with open(os.path.join("static", "login.html"), "r", encoding="utf-8") as f:
+        return f.read()
+
+@app.post("/api/auth/register_employee")
+async def register_employee(request: Request):
+    try:
+        data = await request.json()
+        uid = data.get("user_id")
+        name = data.get("name", "Unknown")
+        dept = data.get("department", "Unknown")
+        section = data.get("section", "")
+        if not uid:
+            return {"status": "error", "message": "user_id is required"}
+            
+        conn = get_connection()
+        cursor = conn.cursor()
+        now = time.time()
+        
+        if os.environ.get("DATABASE_URL"):
+            cursor.execute(
+                "INSERT INTO employees (user_id, name, department, section, registered_at) VALUES (%s, %s, %s, %s, %s) ON CONFLICT(user_id) DO UPDATE SET name=EXCLUDED.name, department=EXCLUDED.department, section=EXCLUDED.section",
+                (uid, name, dept, section, now)
+            )
+        else:
+            cursor.execute(
+                "INSERT OR REPLACE INTO employees (user_id, name, department, section, registered_at) VALUES (?, ?, ?, ?, ?)",
+                (uid, name, dept, section, now)
+            )
+        conn.commit()
+        conn.close()
+        return {"status": "success"}
+
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+@app.get("/api/debug/db")
+async def debug_db():
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM employees")
+    rows = cursor.fetchall()
+    conn.close()
+    return {"employees": rows}
+
+@app.post("/api/settings/upload_csv")
+async def upload_csv(file: UploadFile = File(...), x_admin_token: str = Header(None, alias="X-Admin-Token")):
+    if x_admin_token != f"Bearer {ADMIN_TOKEN_SECRET}":
+        return JSONResponse(status_code=401, content={"status": "error", "message": "Unauthorized"})
+    
+    contents = await file.read()
+    decoded = contents.decode("utf-8-sig")
+    reader = csv.DictReader(io.StringIO(decoded))
+    
+    conn = get_connection()
+    cursor = conn.cursor()
+    now = time.time()
+    
+    try:
+        count = 0
+        for row in reader:
+            uid = row.get("user_id") or row.get("ID")
+            name = row.get("name") or row.get("名前") or row.get("氏名")
+            dept = row.get("department") or row.get("部署") or row.get("部門")
+            section = row.get("section") or row.get("課") or ""
+            
+            if uid and name and dept:
+                if os.environ.get("DATABASE_URL"):
+                    cursor.execute(
+                        "INSERT INTO employees (user_id, name, department, section, registered_at) VALUES (%s, %s, %s, %s, %s) ON CONFLICT(user_id) DO UPDATE SET name=EXCLUDED.name, department=EXCLUDED.department, section=EXCLUDED.section",
+                        (uid, name, dept, section, now)
+                    )
+                else:
+                    cursor.execute(
+                        "INSERT OR REPLACE INTO employees (user_id, name, department, section, registered_at) VALUES (?, ?, ?, ?, ?)",
+                        (uid, name, dept, section, now)
+                    )
+                count += 1
+        conn.commit()
+    except Exception as e:
+        conn.rollback()
+        return {"status": "error", "message": str(e)}
+    finally:
+        conn.close()
+        
+    return {"status": "success", "count": count}
+
+@app.get("/api/settings/departments")
+async def get_departments(x_admin_token: str = Header(None, alias="X-Admin-Token")):
+    if x_admin_token != f"Bearer {ADMIN_TOKEN_SECRET}":
+        return JSONResponse(status_code=401, content={"status": "error", "message": "Unauthorized"})
+        
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT department, COUNT(*) as emp_count FROM employees GROUP BY department")
+    rows = cursor.fetchall()
+    conn.close()
+    
+    departments = [{"name": row[0], "count": row[1]} for row in rows]
+    return {"departments": departments}
+
+@app.get("/api/settings/system_status")
+async def get_system_status(x_admin_token: str = Header(None, alias="X-Admin-Token")):
+    if x_admin_token != f"Bearer {ADMIN_TOKEN_SECRET}":
+        return JSONResponse(status_code=401, content={"status": "error", "message": "Unauthorized"})
+        
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    # DBのログ総数
+    cursor.execute("SELECT COUNT(*) FROM client_logs")
+    total_logs = cursor.fetchone()[0]
+    
+    # 全期間のアクティブユーザー数（総使用人数）
+    cursor.execute("SELECT COUNT(DISTINCT user_id) FROM client_logs")
+    total_users = cursor.fetchone()[0]
+    
+    # 直近1時間のアクティブクライアント数
+    active_limit = time.time() - 3600
+    placeholder = "%s" if os.environ.get("DATABASE_URL") else "?"
+    cursor.execute(f"SELECT COUNT(DISTINCT user_id) FROM client_logs WHERE received_at > {placeholder}", (active_limit,))
+    active_clients = cursor.fetchone()[0]
+    
+    # DB総容量の取得
+    db_size_mb = 0
+    if os.environ.get("DATABASE_URL"):
+        try:
+            cursor.execute("SELECT pg_database_size(current_database())")
+            db_size_mb = round(cursor.fetchone()[0] / (1024 * 1024), 2)
+        except:
+            pass
+    else:
+        try:
+            db_size_mb = round(os.path.getsize("server_central.db") / (1024 * 1024), 2)
+        except:
+            pass
+    
+    # 直近24時間の時間別ログ受信数（グラフ用）
+    time_limit_24h = time.time() - (24 * 3600)
+    cursor.execute(f"SELECT received_at FROM client_logs WHERE received_at > {placeholder}", (time_limit_24h,))
+    recent_logs = cursor.fetchall()
+    conn.close()
+    
+    import datetime as dt_mod
+    from collections import Counter
+    hours_count = Counter()
+    for row in recent_logs:
+        dt = dt_mod.datetime.fromtimestamp(row[0])
+        hour_str = dt.strftime('%H:00')
+        hours_count[hour_str] += 1
+        
+    chart_labels = []
+    chart_data = []
+    current_hour = dt_mod.datetime.fromtimestamp(time.time()).replace(minute=0, second=0, microsecond=0)
+    for i in range(23, -1, -1):
+        h = current_hour - dt_mod.timedelta(hours=i)
+        h_str = h.strftime('%H:00')
+        chart_labels.append(h_str)
+        chart_data.append(hours_count.get(h_str, 0))
+    
+    gemini_key = os.environ.get("GEMINI_API_KEY")
+    api_status = "正常稼働中 (API Key設定済)" if gemini_key else "未設定 (API Keyなし)"
+    db_type = "PostgreSQL" if os.environ.get("DATABASE_URL") else "SQLite (Local)"
+    
+    return {
+        "status": "success",
+        "total_logs": total_logs,
+        "active_clients": active_clients,
+        "total_users": total_users,
+        "db_size_mb": db_size_mb,
+        "api_status": api_status,
+        "db_type": db_type,
+        "chart_labels": chart_labels,
+        "chart_data": chart_data
+    }
+
+@app.get("/api/settings/latest_logs")
+async def get_latest_logs(x_admin_token: str = Header(None, alias="X-Admin-Token")):
+    if x_admin_token != f"Bearer {ADMIN_TOKEN_SECRET}":
+        return JSONResponse(status_code=401, content={"status": "error", "message": "Unauthorized"})
+        
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT c.user_id, c.app_name, c.operation_type, c.file_name, c.received_at, e.name 
+        FROM client_logs c
+        LEFT JOIN employees e ON c.user_id = e.user_id
+        ORDER BY c.received_at DESC LIMIT 50
+    """)
+    rows = cursor.fetchall()
+    conn.close()
+    
+    logs = []
+    from datetime import datetime
+    for r in rows:
+        uid, app, op, fname, recv, ename = r
+        dt_str = datetime.fromtimestamp(recv).strftime('%m/%d %H:%M:%S')
+        logs.append({
+            "time": dt_str,
+            "user": ename if ename else uid[:8],
+            "app": app,
+            "op": op,
+            "file": fname or ""
+        })
+        
+    return {"status": "success", "logs": logs}
+    
+@app.get("/api/settings/export_employees_csv")
+async def export_employees_csv(x_admin_token: str = Header(None, alias="X-Admin-Token")):
+    if x_admin_token != f"Bearer {ADMIN_TOKEN_SECRET}":
+        return JSONResponse(status_code=401, content={"status": "error", "message": "Unauthorized"})
+        
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT user_id, name, department, section FROM employees ORDER BY department, section, name")
+    rows = cursor.fetchall()
+    conn.close()
+    
+    import io
+    import csv
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["user_id", "name", "department", "section"])
+    for row in rows:
+        writer.writerow([row[0], row[1], row[2], row[3] if row[3] else ""])
+        
+    encoded_csv = "\ufeff" + output.getvalue()
+    from fastapi.responses import StreamingResponse
+    return StreamingResponse(
+        iter([encoded_csv]),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=employees_master.csv"}
+    )
+
+@app.post("/api/v1/logs")
+async def receive_logs(request: Request):
+    try:
+        data = await request.json()
+        user_id = data.get("user_id", "anonymous_user")
+        log_type = data.get("type", "unknown")
+        insert_log(user_id, log_type, data)
+        return {"status": "success"}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+@app.post("/api/v1/logs/bulk")
+async def receive_logs_bulk(request: Request):
+    try:
+        data = await request.json()
+        logs = data.get("logs", [])
+        success_count = 0
+        for log in logs:
+            try:
+                user_id = log.get("user_id", "anonymous_user")
+                log_type = log.get("type", "unknown")
+                insert_log(user_id, log_type, log)
+                success_count += 1
+            except Exception as e:
+                print(f"Error inserting log: {e}")
+        return {"status": "success", "inserted": success_count}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+@app.post("/api/debug/execute_sql")
+async def execute_sql(request: Request, x_admin_token: str = Header(None, alias="X-Admin-Token")):
+    if x_admin_token != f"Bearer {ADMIN_TOKEN_SECRET}":
+        return JSONResponse(status_code=401, content={"status": "error", "message": "Unauthorized"})
+    try:
+        data = await request.json()
+        sql = data.get("sql")
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute(sql)
+        conn.commit()
+        if sql.strip().upper().startswith("SELECT"):
+            return {"status": "success", "result": cursor.fetchall()}
+        return {"status": "success", "rowcount": cursor.rowcount}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+def get_historical_trend(conn, user_id="ALL", department="ALL"):
+    cursor = conn.cursor()
+    import time
+    from datetime import datetime
+    import os
+    
+    placeholder = "%s" if os.environ.get("DATABASE_URL") else "?"
+    sixty_days_ago = time.time() - (60 * 24 * 3600)
+    daily_inefficient = {}
+    
+    # 1. raw data (client_logs)
+    q_raw = f"SELECT received_at, manual_typing_count, copy_paste_count FROM client_logs WHERE received_at >= {placeholder}"
+    params_raw = [sixty_days_ago]
+    if user_id != "ALL":
+        q_raw += f" AND user_id = {placeholder}"
+        params_raw.append(user_id)
+    elif department != "ALL":
+        q_raw += f" AND user_id IN (SELECT user_id FROM employees WHERE department = {placeholder})"
+        params_raw.append(department)
+        
+    cursor.execute(q_raw, tuple(params_raw))
+    from datetime import timezone, timedelta
+    JST = timezone(timedelta(hours=9))
+    for r in cursor.fetchall():
+        recv_at, man, copy = r
+        if recv_at:
+            dt_str = datetime.fromtimestamp(recv_at, tz=JST).strftime('%Y-%m-%d')
+            daily_inefficient[dt_str] = daily_inefficient.get(dt_str, 0) + (man or 0) + (copy or 0)
+            
+    # 2. summary data (client_logs_summary)
+    q_sum = "SELECT record_date, SUM(manual_typing_count + copy_paste_count) FROM client_logs_summary WHERE 1=1"
+    params_sum = []
+    if user_id != "ALL":
+        q_sum += f" AND user_id = {placeholder}"
+        params_sum.append(user_id)
+    elif department != "ALL":
+        q_sum += f" AND user_id IN (SELECT user_id FROM employees WHERE department = {placeholder})"
+        params_sum.append(department)
+        
+    q_sum += " GROUP BY record_date"
+    cursor.execute(q_sum, tuple(params_sum))
+    for r in cursor.fetchall():
+        r_date, r_count = r
+        if isinstance(r_date, str):
+            dt_str = r_date[:10]
+        else:
+            dt_str = r_date.strftime('%Y-%m-%d')
+        daily_inefficient[dt_str] = daily_inefficient.get(dt_str, 0) + (r_count or 0)
+        
+    sorted_days = sorted(daily_inefficient.items(), key=lambda x: x[0])
+    recent_days = sorted_days[-30:] # Last 30 days of activity
+    
+    period_labels = [datetime.strptime(k, '%Y-%m-%d').strftime('%m/%d') for k, v in recent_days] if recent_days else ["データなし"]
+    trend_data = [v for k, v in recent_days] if recent_days else [0]
+    
+    return {
+        "period_labels": period_labels,
+        "cumulative_saved_min": trend_data
+    }
+
+@app.get("/api/dashboard/export_csv")
+async def export_csv(user_id: str = "ALL", start_date: str = None, end_date: str = None, department: str = "ALL", x_admin_token: str = Header(None, alias="X-Admin-Token")):
+    is_admin = (x_admin_token == f"Bearer {ADMIN_TOKEN_SECRET}")
+    
+    conn = get_connection()
+    cursor = conn.cursor()
+    query = """
+        SELECT c.user_id, c.app_name, c.operation_type, c.file_name, c.manual_typing_count, 
+               c.copy_paste_count, c.duration_seconds, c.received_at, e.name, e.department
+        FROM client_logs c
+        LEFT JOIN employees e ON c.user_id = e.user_id
+        WHERE 1=1
+    """
+    params = []
+    
+    resolved = resolve_user_id(user_id)
+    if resolved != "ALL" and resolved:
+        placeholder = "%s" if os.environ.get("DATABASE_URL") else "?"
+        query += f" AND (c.user_id = {placeholder} OR e.name = {placeholder})"
+        params.extend([resolved["uuid"], resolved["name"]])
+        
+    if department != "ALL" and department:
+        query += " AND e.department = " + ("%s" if os.environ.get("DATABASE_URL") else "?")
+        params.append(department)
+        
+    if start_date:
+        query += " AND c.received_at >= " + ("%s" if os.environ.get("DATABASE_URL") else "?")
+        params.append(parse_datetime_to_timestamp(start_date, 0))
+    if end_date:
+        query += " AND c.received_at <= " + ("%s" if os.environ.get("DATABASE_URL") else "?")
+        params.append(parse_datetime_to_timestamp(end_date, 9999999999))
+        
+    cursor.execute(query, tuple(params))
+    rows = cursor.fetchall()
+    conn.close()
+
+    output = io.StringIO()
+    writer = csv.writer(output, lineterminator='\n')
+    writer.writerow(["日時", "部門", "担当者", "アプリ名", "操作種別", "ファイル/画面名", "手入力回数", "コピペ回数", "所要時間(秒)", "非効率フラグ"])
+
+    global global_staff_map
+    global global_staff_counter
+    
+    for row in rows:
+        uid, app, op, file_name, manual, copy, duration, recv, emp_name, emp_dept = row
+        
+        # 匿名化処理
+        display_name = emp_name if (is_admin and emp_name) else global_staff_map.setdefault(uid, f"Staff {len(global_staff_map)+1}")
+        dt_str = datetime.fromtimestamp(recv).strftime('%Y-%m-%d %H:%M:%S')
+        is_inefficient = "Yes" if (manual > 0 or copy > 0) else "No"
+        dept_str = emp_dept if emp_dept else "不明"
+        
+        writer.writerow([dt_str, dept_str, display_name, app, op, file_name, manual, copy, duration, is_inefficient])
+        
+    output.seek(0)
+    
+    # BOM付きUTF-8（Excelで文字化けしないように）
+    encoded_csv = "\ufeff" + output.getvalue()
+    return StreamingResponse(
+        iter([encoded_csv]),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=taskmining_report.csv"}
+    )
+
+@app.get("/api/dashboard/data")
+async def get_dashboard_data(user_id: str = "ALL", start_date: str = None, end_date: str = None, department: str = "ALL", x_admin_token: str = Header(None, alias="X-Admin-Token")):
+    is_admin = (x_admin_token == f"Bearer {ADMIN_TOKEN_SECRET}")
+    
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    query = """
+        SELECT c.user_id, c.app_name, c.operation_type, c.file_name, c.cpu_usage_percent, 
+               c.manual_typing_count, c.copy_paste_count, c.duration_seconds, c.received_at,
+               e.name, e.department, 0 as idle_time_seconds,
+               c.click_count, c.scroll_count, c.mouse_distance, c.context_switch_count,
+               c.right_click_count, c.shortcut_key_count, c.shortcut_details
+        FROM client_logs c
+        LEFT JOIN employees e ON c.user_id = e.user_id
+        WHERE c.user_id != 'anonymous_user'
+    """
+    params = []
+    
+    resolved = resolve_user_id(user_id)
+    if resolved != "ALL" and resolved:
+        placeholder = "%s" if os.environ.get("DATABASE_URL") else "?"
+        query += f" AND (c.user_id = {placeholder} OR e.name = {placeholder})"
+        params.extend([resolved["uuid"], resolved["name"]])
+        
+    if department != "ALL" and department:
+        query += " AND e.department = " + ("%s" if os.environ.get("DATABASE_URL") else "?")
+        params.append(department)
+        
+    if start_date:
+        query += " AND c.received_at >= " + ("%s" if os.environ.get("DATABASE_URL") else "?")
+        params.append(parse_datetime_to_timestamp(start_date, 0))
+            
+    if end_date:
+        query += " AND c.received_at <= " + ("%s" if os.environ.get("DATABASE_URL") else "?")
+        params.append(parse_datetime_to_timestamp(end_date, 9999999999))
+        
+    cursor.execute(query, tuple(params))
+    rows = cursor.fetchall()
+    
+
+    apps = {}
+    ops = {"手入力": 0, "コピー＆ペースト": 0, "閲覧": 0, "待機": 0}
+    work_breakdown_totals = {"基幹業務": 0, "メール(外部連絡)": 0, "チャット(内部連絡)": 0, "Web会議": 0, "AIツール操作": 0, "アイドル(操作なし)": 0, "通常作業": 0}
+    bottlenecks_map = {}
+    users_set = set()
+    total_sec = 0
+    inefficient_sec = 0
+    
+    total_clicks = 0
+    total_scrolls = 0
+    total_mouse_distance = 0
+    total_context_switches = 0
+    total_copy_paste = 0
+    total_right_clicks = 0
+    total_shortcut_keys = 0
+    total_manual_typing = 0
+    total_shortcut_details = {}
+    
+    scatter = []
+    
+    details = {
+        "apps": {},
+        "ops": {"手入力": {}, "コピー＆ペースト": {}, "閲覧": {}, "待機": {}, "基幹PC操作": {}},
+        "work_breakdown": {"メール(外部連絡)": {}, "チャット(内部連絡)": {}, "Web会議": {}, "AIツール操作": {}, "基幹業務": {}, "アイドル(操作なし)": {}, "通常作業": {}}
+    }
+    
+    global global_staff_map
+    global global_staff_counter
+    
+    import random
+    from datetime import datetime
+    
+    for row in rows:
+        # DBに追加したカラムがない場合は例外で落ちないようパディング処理
+        if len(row) == 16:
+            row = list(row) + [0, 0, "{}"]
+        elif len(row) == 18:
+            row = list(row) + ["{}"]
+            
+        uid, app_name, op_type, file_name, cpu, manual, copy, duration, recv, emp_name, emp_dept, idle_time, click_c, scroll_c, mouse_d, context_sw, right_click, shortcut_key, shortcut_details_str = row
+        
+        # 匿名化処理
+        if is_admin and emp_name:
+            display_name = emp_name
+        else:
+            if uid not in global_staff_map:
+                global_staff_map[uid] = f"Staff {global_staff_counter}"
+                global_staff_counter += 1
+            display_name = global_staff_map[uid]
+            
+        users_set.add(display_name)
+        
+        # None対策
+        duration = duration or 0
+        idle_time = idle_time or 0
+        click_c = click_c or 0
+        scroll_c = scroll_c or 0
+        mouse_d = mouse_d or 0
+        context_sw = context_sw or 0
+        right_click = right_click or 0
+        shortcut_key = shortcut_key or 0
+        
+        # 入力がない場合はアイドル状態とみなす
+        if click_c == 0 and scroll_c == 0 and mouse_d == 0 and manual == 0 and copy == 0:
+            idle_time = duration
+        
+        app_name = app_name or "Unknown"
+        file_name = file_name or "Unknown"
+        op_type = op_type or ""
+        
+        app_lower = app_name.lower()
+        title_lower = file_name.lower()
+        
+        # 不要なシステムプロセスの除外
+        if app_lower in ["lockapp.exe", "searchhost.exe"]:
+            continue
+            
+        # アプリ名の正規化（Office製品など）
+        if "powerpnt" in app_lower: app_name = "PowerPoint"
+        elif "excel" in app_lower: app_name = "Excel"
+        elif "winword" in app_lower: app_name = "Word"
+        
+        total_sec += duration
+        total_clicks += click_c
+        total_scrolls += scroll_c
+        total_mouse_distance += mouse_d
+        total_context_switches += context_sw
+        total_copy_paste += copy
+        total_right_clicks += right_click
+        total_shortcut_keys += shortcut_key
+        total_manual_typing += manual
+        
+        if shortcut_details_str:
+            try:
+                import json
+                parsed_details = json.loads(shortcut_details_str)
+                for k, v in parsed_details.items():
+                    total_shortcut_details[k] = total_shortcut_details.get(k, 0) + v
+            except:
+                pass
+        
+        is_meeting = "zoom" in app_lower or "teams" in app_lower or "meet" in app_lower or "meet" in title_lower or "zoom" in title_lower
+        is_email = "outlook" in app_lower or "mail" in app_lower or "gmail" in title_lower or "mail" in title_lower or "outlook" in title_lower
+        is_chat = "slack" in app_lower or "chatwork" in app_lower or "line" in app_lower or "slack" in title_lower or "chatwork" in title_lower or "line" in title_lower or ("teams" in title_lower and not is_meeting) or ("teams" in app_lower and not is_meeting)
+        
+        is_ai = False
+        if "chatgpt" in app_lower or "claude" in app_lower or "copilot" in app_lower or "gemini" in app_lower or "antigravity" in app_lower:
+            is_ai = True
+        elif "chatgpt" in title_lower or "claude" in title_lower or "copilot" in title_lower or "gemini" in title_lower or "antigravity" in title_lower:
+            is_ai = True
+            
+        apps[app_name] = apps.get(app_name, 0) + duration
+        
+        op_lower = op_type.lower()
+        
+        current_op = "閲覧"
+        if app_lower == "基幹システム(kvm)":
+            current_op = "基幹PC操作"
+        elif copy > 0 or "コピー" in op_type or "ペースト" in op_type or "copy" in op_lower or "paste" in op_lower:
+            current_op = "コピー＆ペースト"
+        elif manual > 0 or "手入力" in op_type or "keyboard" in op_lower or "type" in op_lower or "key" in op_lower:
+            current_op = "手入力"
+        elif click_c == 0 and scroll_c == 0 and mouse_d == 0 and manual == 0 and copy == 0:
+            current_op = "待機"
+            
+        ops[current_op] = ops.get(current_op, 0) + duration
+        
+        # 詳細集計 (apps)
+        if app_name not in details["apps"]: details["apps"][app_name] = {}
+        details["apps"][app_name][file_name] = details["apps"][app_name].get(file_name, 0) + duration
+        
+        # 詳細集計 (ops)
+        details["ops"][current_op][file_name] = details["ops"][current_op].get(file_name, 0) + duration
+        
+        # 詳細集計 (work_breakdown) と合計
+        current_bd = "通常作業"
+        if app_lower == "基幹システム(kvm)": current_bd = "基幹業務"
+        elif is_meeting: current_bd = "Web会議"
+        elif is_email: current_bd = "メール(外部連絡)"
+        elif is_chat: current_bd = "チャット(内部連絡)"
+        elif is_ai: current_bd = "AIツール操作"
+        elif click_c == 0 and scroll_c == 0 and mouse_d == 0 and manual == 0 and copy == 0: current_bd = "アイドル(操作なし)"
+        
+        work_breakdown_totals[current_bd] = work_breakdown_totals.get(current_bd, 0) + duration
+        details["work_breakdown"][current_bd][file_name] = details["work_breakdown"][current_bd].get(file_name, 0) + duration
+        
+        is_inefficient = (current_op in ["手入力", "コピー＆ペースト"])
+        if is_inefficient:
+            inefficient_sec += duration
+        
+        if file_name:
+            if file_name not in bottlenecks_map:
+                bottlenecks_map[file_name] = {"time": 0, "count": 0, "users": set()}
+            bottlenecks_map[file_name]["time"] += duration
+            bottlenecks_map[file_name]["count"] += (manual + copy)
+            bottlenecks_map[file_name]["users"].add(display_name)
+
+                
+    # ボトルネックリストの成形
+    bottlenecks = []
+    for k, v in bottlenecks_map.items():
+        score = int((v["count"] / max(1, total_sec)) * v["count"] * (v["time"] / 60))
+        tool = "Excel VBA" if "Excel" in k else "Python" if score > 500 else "PowerShell"
+        bottlenecks.append({
+            "name": k,
+            "time_min": int(v["time"] / 60),
+            "manual_sec": v["time"],
+            "forecast_sec": int(v["time"] * 0.2), # 自動化で80%削減想定
+            "weekly_trend": [random.randint(5, 50) for _ in range(7)], # ダミー推移
+            "count": v["count"],
+            "member_count": len(v["users"]),
+            "score": score,
+            "tool": tool
+        })
+        
+        # 散布図にはファイル単位の合計値を表示
+        scatter.append({
+            "x": v["time"],
+            "y": v["count"],
+            "file": k,
+            "app": "各種アプリ",
+            "op": "各種操作",
+            "user": "複数メンバー" if len(v["users"]) > 1 else list(v["users"])[0]
+        })
+        
+    bottlenecks = sorted(bottlenecks, key=lambda x: x["score"], reverse=True)[:10]
+    
+    # ヒートマップ（ダミー生成）
+    weekdays = ["月", "火", "水", "木", "金"]
+    slots = ["09:00", "10:00", "11:00", "13:00", "14:00", "15:00", "16:00", "17:00"]
+    heatmap = []
+    for w in weekdays:
+        for s in slots:
+            heatmap.append({"weekday": w, "time_slot": s, "inefficient_rate": round(random.uniform(0.1, 0.8), 2)})
+            
+    # メンバー比較（ダミー生成）
+    members = [{"name": u, "score_vs_avg": random.randint(-20, 30)} for u in users_set]
+    
+    kpi = {
+        "member_count": len(users_set),
+        "total_hours": round(total_sec / 3600, 1),
+        "inefficient_hours": round(inefficient_sec / 3600, 1),
+        "meeting_hours": round(work_breakdown_totals["Web会議"] / 3600, 1),
+        "idle_hours": round(work_breakdown_totals["アイドル(操作なし)"] / 3600, 1),
+        "ai_hours": round(work_breakdown_totals["AIツール操作"] / 3600, 2),
+        "ai_minutes": round(work_breakdown_totals["AIツール操作"] / 60),
+        "estimated_saved_hours": round((inefficient_sec / 3600) * 0.4 * 240, 1),
+        "automation_candidates": len([b for b in bottlenecks if b["score"] > 100]),
+        "total_clicks": total_clicks,
+        "total_scrolls": total_scrolls,
+        "total_mouse_distance": total_mouse_distance,
+        "total_context_switches": total_context_switches,
+        "total_copy_paste": total_copy_paste,
+        "total_right_clicks": total_right_clicks,
+        "total_shortcut_keys": total_shortcut_keys,
+        "total_manual_typing": total_manual_typing,
+        "shortcut_details": dict(sorted(total_shortcut_details.items(), key=lambda x: x[1], reverse=True)[:10]),
+        "result_trend": get_historical_trend(conn, user_id="ALL", department=department)
+    }
+    conn.close()
+    
+    apps_sorted = dict(sorted(apps.items(), key=lambda item: item[1], reverse=True)[:5])
+    
+    # detailsの整形 (上位10件のみ)
+    for cat in details:
+        for key in details[cat]:
+            sorted_files = sorted(details[cat][key].items(), key=lambda x: x[1], reverse=True)[:10]
+            details[cat][key] = [{"file": k or "Unknown", "duration": v} for k, v in sorted_files]
+    
+    return {
+        "kpi": kpi,
+        "apps": apps_sorted,
+        "ops": ops,
+        "heatmap": heatmap,
+        "bottlenecks": bottlenecks,
+        "members": members,
+        "work_breakdown": work_breakdown_totals,
+        "scatter": scatter,
+        "details": details
+    }
+
+@app.get("/api/dashboard/user_data")
+async def get_user_data(user_id: str = "ALL", start_date: str = None, end_date: str = None):
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    # ユーザー部門を取得
+    department = "ALL"
+    placeholder = "%s" if os.environ.get("DATABASE_URL") else "?"
+    if user_id != "ALL":
+        cursor.execute(f"SELECT department FROM employees WHERE user_id = {placeholder}", (user_id,))
+        dept_row = cursor.fetchone()
+        if dept_row:
+            department = dept_row[0]
+            
+    # トレンドの取得
+    trend_res = get_historical_trend(conn, user_id=user_id, department=department)
+    
+    query_files = "SELECT file_name, sum(duration_seconds), sum(manual_typing_count + copy_paste_count) FROM client_logs WHERE file_name IS NOT NULL AND file_name != '' "
+    params = []
+    if user_id != "ALL":
+        query_files += f" AND user_id = {placeholder}"
+        params.append(user_id)
+        
+    import dateutil.parser
+    if start_date:
+        query_files += f" AND received_at >= {placeholder}"
+        try:
+            params.append(dateutil.parser.parse(start_date).timestamp())
+        except:
+            params.append(0)
+            
+    if end_date:
+        query_files += f" AND received_at <= {placeholder}"
+        try:
+            params.append(dateutil.parser.parse(end_date).timestamp())
+        except:
+            params.append(9999999999)
+    query_files += " GROUP BY file_name ORDER BY sum(duration_seconds) DESC LIMIT 5"
+    
+    cursor.execute(query_files, tuple(params))
+    top_files = cursor.fetchall()
+    
+    dynamic_flows = {
+        "all": {
+            "label": "全体フロー (すべて)",
+            "manual": "graph TD\n A[\"作業開始\"] --> B[\"各種ファイルの検索・展開\"]\n B --> C[\"手動でのデータ転記・入力\"]\n C --> D[\"作業終了\"]",
+            "auto": "graph TD\n A[\"自動トリガー開始\"] --> B[\"関連ファイルを自動取得・展開\"]\n B --> C[\"スクリプトによる一括データ処理\"]\n C --> D[\"自動保存・終了\"]"
+        }
+    }
+    
+    for i, row in enumerate(top_files):
+        fname, dur, ops = row
+        dur = dur or 0
+        
+        # ファイルごとの主要なアプリと操作を取得
+        q_steps = f"SELECT app_name, operation_type, SUM(duration_seconds) FROM client_logs WHERE file_name = {placeholder} "
+        q_params = [fname]
+        if resolved != "ALL" and user_id != "CURRENT_USER" and resolved:
+            q_steps += f" AND (user_id = {placeholder} OR user_id IN (SELECT user_id FROM employees WHERE name = {placeholder}))"
+            q_params.extend([resolved["uuid"], resolved["name"]])
+        if start_date:
+            q_steps += f" AND received_at >= {placeholder}"
+            q_params.append(parse_datetime_to_timestamp(start_date, 0))
+        if end_date:
+            q_steps += f" AND received_at <= {placeholder}"
+            q_params.append(parse_datetime_to_timestamp(end_date, 9999999999))
+            
+        q_steps += " GROUP BY app_name, operation_type ORDER BY SUM(duration_seconds) DESC LIMIT 4"
+        
+        cursor.execute(q_steps, tuple(q_params))
+        steps = cursor.fetchall()
+        
+        manual_flow = "graph TD\n A[\"作業開始\"]"
+        auto_flow = "graph TD\n A[\"スクリプト自動起動\"]"
+        
+        last_node = "A"
+        for idx, step in enumerate(steps):
+            app = (step[0] or "アプリ").replace('"', '').replace('\n', ' ')
+            op = (step[1] or "操作").replace('"', '').replace('\n', ' ')
+            
+            app_clean = app.replace('.EXE', '').replace('.exe', '').capitalize()
+            op_clean = op
+            op_lower = op_clean.lower()
+            if "macro" in op_lower or "script" in op_lower:
+                op_clean = "定型作業"
+            elif "copy" in op_lower or "paste" in op_lower or "コピペ" in op_lower:
+                op_clean = "転記・コピペ"
+            elif "type" in op_lower or "手入力" in op_lower:
+                op_clean = "手動入力"
+            elif "read" in op_lower or "view" in op_lower or "閲覧" in op_lower:
+                op_clean = "内容の確認・閲覧"
+                
+            if len(app_clean) > 12: app_clean = app_clean[:12] + "..."
+            if len(op_clean) > 12: op_clean = op_clean[:12] + "..."
+            
+            dur_step = step[2] or 0
+            time_str = f"{int(dur_step/60)}分{dur_step%60}秒" if dur_step >= 60 else f"{dur_step}秒"
+            
+            node_id = chr(66 + idx) # B, C, D...
+            manual_flow += f" -->|{time_str}| {node_id}[\"{app_clean} を使用<br>して {op_clean}\"]"
+            auto_flow += f" -->|自動化| {node_id}[\"{app_clean} 連携<br>で一括処理\"]"
+            last_node = node_id
+            
+        manual_flow += f" --> Z[\"完了 (手作業: 約{int(dur/60)}分)\"]"
+        auto_flow += f" --> Z[\"完了 (自動: 数秒)\"]"
+        
+        dynamic_flows[fname] = {
+            "label": fname[:20] + ("..." if len(fname)>20 else ""),
+            "manual": manual_flow,
+            "auto": auto_flow
+        }
+        
+    timeline_query = f"SELECT app_name, file_name, operation_type, duration_seconds, received_at, manual_typing_count, copy_paste_count FROM client_logs WHERE duration_seconds > 0 "
+    timeline_params = []
+    if resolved != "ALL" and user_id != "CURRENT_USER" and resolved:
+        timeline_query += f" AND (user_id = {placeholder} OR user_id IN (SELECT user_id FROM employees WHERE name = {placeholder}))"
+        timeline_params.extend([resolved["uuid"], resolved["name"]])
+    import dateutil.parser
+    if start_date:
+        timeline_query += f" AND received_at >= {placeholder}"
+        try:
+            timeline_params.append(dateutil.parser.parse(start_date).timestamp())
+        except:
+            timeline_params.append(0)
+    if end_date:
+        timeline_query += f" AND received_at <= {placeholder}"
+        try:
+            timeline_params.append(dateutil.parser.parse(end_date).timestamp())
+        except:
+            timeline_params.append(9999999999)
+    
+    timeline_query += " ORDER BY received_at DESC LIMIT 50"
+    cursor.execute(timeline_query, tuple(timeline_params))
+    raw_timeline = cursor.fetchall()
+    
+    raw_timeline.reverse() 
+    
+    raw_timeline_data = []
+    current_block = None
+    
+    for row in raw_timeline:
+        t_app, t_file, t_op, t_dur, t_recv, t_man, t_copy = row
+        t_dur = t_dur or 0
+        t_man = t_man or 0
+        t_copy = t_copy or 0
+        
+        if current_block and current_block['app'] == t_app and current_block['file'] == t_file:
+            current_block['duration_sec'] += t_dur
+            current_block['end_recv'] = t_recv
+            current_block['man'] += t_man
+            current_block['copy'] += t_copy
+            if t_op and t_op not in current_block['ops']:
+                current_block['ops'].append(t_op)
+        else:
+            if current_block:
+                raw_timeline_data.append(current_block)
+            current_block = {
+                'app': t_app,
+                'file': t_file,
+                'ops': [t_op] if t_op else [],
+                'duration_sec': t_dur,
+                'start_recv': max(0, t_recv - t_dur),
+                'end_recv': t_recv,
+                'man': t_man,
+                'copy': t_copy
+            }
+            
+    if current_block:
+        raw_timeline_data.append(current_block)
+
+    timeline_data = []
+    for b in raw_timeline_data:
+        start_dt = datetime.fromtimestamp(b['start_recv'])
+        end_dt = datetime.fromtimestamp(b['end_recv'])
+        
+        is_ineff = b['man'] > 0 or b['copy'] > 0
+        app_clean = (b['app'] or "不明").replace('.EXE', '').replace('.exe', '').capitalize()
+        ops_str = "、".join(b['ops'])
+        desc = f"【要約】{app_clean} を使用し、{b['file'] or '名称未設定ファイル'} での作業 ({ops_str})"
+        if is_ineff:
+            desc += f" ⚠️手入力{b['man']}回 / コピペ{b['copy']}回の単純作業を検出"
+            
+        timeline_data.append({
+            "start": start_dt.strftime("%H:%M:%S"),
+            "end": end_dt.strftime("%H:%M:%S"),
+            "duration_sec": b['duration_sec'],
+            "app": app_clean,
+            "file": b['file'] or "",
+            "description": desc,
+            "inefficient_flag": is_ineff
+        })
+        
+    conn.close()
+
+    forecast_steps = []
+    for row in top_files:
+        fname, dur, ops = row
+        dur = dur or 0
+        step_name = (fname or "不明")[:10]
+        forecast_steps.append({
+            "step_name": step_name,
+            "manual_sec": dur,
+            "forecast_sec": max(5, int(dur * 0.2))
+        })
+    if not forecast_steps:
+        forecast_steps = [{"step_name": "データなし", "manual_sec": 0, "forecast_sec": 0}]
+
+    return {
+        "timeline": timeline_data,
+        "forecast_steps": forecast_steps,
+        "result_trend": trend_res,
+        "automation_steps": [
+            { "title": "データ収集とファイル整理の自動化", "tool": "Python / PowerShell", "reason": "社内ネットワークとローカルPC間のファイル走査・移動を一元管理するため", "before_after": "現状1分11秒 → 自動化後10秒" }
+        ],
+        "kpi_extra": {
+            "meeting_hours": 2.5,
+            "idle_hours": 1.2
+        },
+        "dynamic_flows": dynamic_flows
+    }
+
+@app.get("/api/admin/generate_report")
+async def generate_report(x_admin_token: str = Header(None, alias="X-Admin-Token")):
+    try:
+        import batch_processor
+        filename = batch_processor.run_nightly_batch()
+        
+        if filename and os.path.exists(os.path.join(os.path.dirname(__file__), filename)):
+            from fastapi.responses import FileResponse
+            return FileResponse(os.path.join(os.path.dirname(__file__), filename))
+        else:
+            return HTMLResponse("データが不足しているか、レポートが生成されませんでした。", 200)
+    except Exception as e:
+        return HTMLResponse(f"エラーが発生しました: {str(e)}", 500)
+
+
+@app.post("/api/dashboard/analyze")
+async def analyze_dashboard_data(
+    user_id: str = "ALL",
+    start_date: str = None,
+    end_date: str = None,
+    department: str = "ALL",
+    file_name: str = None
+):
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    query = """
+        SELECT l.operation_type, l.file_name, l.duration_seconds, l.manual_typing_count, l.copy_paste_count, l.app_name 
+        FROM client_logs l
+        LEFT JOIN employees e ON l.user_id = e.user_id
+        WHERE 1=1
+    """
+    params = []
+    
+    placeholder = "%s" if os.environ.get("DATABASE_URL") else "?"
+    
+    resolved = resolve_user_id(user_id)
+    if resolved != "ALL" and user_id != "CURRENT_USER" and resolved:
+        query += f" AND (l.user_id = {placeholder} OR e.name = {placeholder})"
+        params.extend([resolved["uuid"], resolved["name"]])
+    if department != "ALL":
+        query += f" AND e.department = {placeholder}"
+        params.append(department)
+    if start_date:
+        query += f" AND l.received_at >= {placeholder}"
+        params.append(parse_datetime_to_timestamp(start_date, 0))
+    if end_date:
+        query += f" AND l.received_at <= {placeholder}"
+        params.append(parse_datetime_to_timestamp(end_date, 9999999999))
+    if file_name and file_name != "all":
+        query += f" AND l.file_name = {placeholder}"
+        params.append(file_name)
+        
+    query += " ORDER BY duration_seconds DESC LIMIT 50"
+    
+    cursor.execute(query, tuple(params))
+    rows = cursor.fetchall()
+    conn.close()
+    
+    summary = f"対象: {user_id}\n合計 {len(rows)} 件のサンプルログデータ\n" + str(rows)
+    
+    prompt = f"""
+    あなたはDXコンサルタントです。以下のPC操作ログ概要を読み、現在の業務フローの改善策を提案してください。
+    【必須要件】
+    1. RPAやPowerQueryは禁止。Python, Excel VBA, GAS, PowerShellのいずれかを提案すること。
+    2. 自動化優先度スコアが高いものを抽出し、以下のタグをつけて提案すること。
+       - Excel内完結の定型転記 → 【VBA】
+       - Googleフォーム/スプレッドシート連携 → 【GAS】
+       - PC操作の自動化・ファイル整理・監視系 → 【PowerShell】
+       - 複数システムを跨ぐ分析・レポート自動生成 → 【Python】
+    3. 各個人の具体的なミクロの作業（現状）と、効率化後のフローを比較し、各工程ごとの「短縮時間」を明記したHTMLベースの視覚的なフローチャート（矢印やカード形式）を出力すること。
+    4. 【超重要】効率化の効果や将来予測については、「〜になる」「確実に削減できる」といった断定的な表現を絶対に避け、「〜となる可能性があります」「〜を見込める推算です」といった、期待値を上げすぎない控えめな（濁した）表現を徹底すること。
+    5. 【超重要】出力するHTMLの各タグ行の先頭には、絶対にスペースやタブのインデントを付けないでください（Markdownのコードブロックとしてパースされるのを防ぐためです）。また、```html などの装飾も一切含めないでください。行頭は必ず < 記号から始まるようにしてください。
+    
+    【ログ概要】\n{summary}
+    """
+    
+    client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
+    try:
+        res = client.models.generate_content(model='gemini-3.5-flash', contents=prompt)
+        return {"report": res.text.replace("```html", "").replace("```", "")}
+    except Exception as e:
+        return {"report": f"AI分析中にエラーが発生しました: {str(e)}"}
+
+if __name__ == "__main__":
+    uvicorn.run("app:app", host="0.0.0.0", port=8080, reload=True)

@@ -1,0 +1,20 @@
+﻿Timestamp,ActiveApp,EventType,TargetName,Metadata
+2026-07-27 13:43:50,gui_app.exe,Copy,DX推進アシスタント (AIロガー),Size:48 chars
+2026-07-27 13:46:52,excel.exe,SheetChange (Paste/Edit),Book1,"Sheet:Sheet1, Rows:1, Cols:1"
+2026-07-27 13:47:00,excel.exe,SheetChange (Paste/Edit),Book1,"Sheet:Sheet1, Rows:25, Cols:1"
+2026-07-27 13:47:07,excel.exe,SheetChange (Paste/Edit),Book1,"Sheet:Sheet1, Rows:25, Cols:1"
+2026-07-27 13:47:13,excel.exe,SheetChange (Paste/Edit),Book1,"Sheet:Sheet1, Rows:25, Cols:1"
+2026-07-27 13:47:21,excel.exe,SheetChange (Paste/Edit),Book1,"Sheet:Sheet1, Rows:1, Cols:1"
+2026-07-27 13:47:44,excel.exe,SheetChange (Paste/Edit),Book1,"Sheet:Sheet1, Rows:1, Cols:1"
+2026-07-27 13:47:49,excel.exe,SheetChange (Paste/Edit),Book1,"Sheet:Sheet1, Rows:1, Cols:1"
+2026-07-27 13:47:53,excel.exe,SheetChange (Paste/Edit),Book1,"Sheet:Sheet1, Rows:1, Cols:1"
+2026-07-27 13:47:59,excel.exe,SheetChange (Paste/Edit),Book1,"Sheet:Sheet1, Rows:1, Cols:1"
+2026-07-27 13:48:03,excel.exe,SheetChange (Paste/Edit),Book1,"Sheet:Sheet1, Rows:1, Cols:1"
+2026-07-27 13:48:10,excel.exe,SheetChange (Paste/Edit),Book1,"Sheet:Sheet1, Rows:1, Cols:1"
+2026-07-27 13:48:17,excel.exe,SheetChange (Paste/Edit),Book1,"Sheet:Sheet1, Rows:1, Cols:1"
+2026-07-27 13:48:20,EXCEL.EXE,Copy,Book1 - Excel,Size:39 chars
+2026-07-27 13:48:21,excel.exe,SheetChange (Paste/Edit),Book1,"Sheet:Sheet1, Rows:7, Cols:1"
+2026-07-27 13:48:25,excel.exe,SheetChange (Paste/Edit),Book1,"Sheet:Sheet1, Rows:7, Cols:1"
+2026-07-27 13:48:40,excel.exe,SheetChange (Paste/Edit),Book1,"Sheet:Sheet1, Rows:7, Cols:1"
+2026-07-27 13:48:45,excel.exe,SheetChange (Paste/Edit),Book1,"Sheet:Sheet1, Rows:2, Cols:1"
+2026-07-27 13:49:05,excel.exe,WorkbookSave,Book1,

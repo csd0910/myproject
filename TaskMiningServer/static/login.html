@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>管理者ログイン - TaskMining</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        body { background-color: #0f172a; color: #f8fafc; font-family: 'Inter', sans-serif; }
+        .card { background-color: rgba(30,41,59,0.7); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 2rem; backdrop-filter: blur(10px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); }
+    </style>
+</head>
+<body class="p-6 h-screen flex items-center justify-center">
+    <div class="card w-full max-w-md">
+        <div class="text-center mb-8">
+            <h1 class="text-2xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-emerald-400 mb-2">
+                🔒 管理者ログイン
+            </h1>
+            <p class="text-slate-400 text-sm">マスター設定や本名表示には管理者権限が必要です</p>
+        </div>
+        
+        <div class="space-y-6">
+            <div>
+                <label class="block text-sm font-semibold text-slate-300 mb-2">パスワード</label>
+                <input type="password" id="password" class="w-full px-4 py-3 bg-slate-800 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-blue-500 transition-colors" placeholder="••••••••">
+            </div>
+            
+            <div id="errorMsg" class="text-red-400 text-sm font-semibold hidden text-center"></div>
+            
+            <button onclick="login()" class="w-full py-3 bg-gradient-to-r from-blue-600 to-emerald-600 hover:from-blue-500 hover:to-emerald-500 rounded-lg font-bold text-white shadow-lg transition-transform transform hover:-translate-y-1">
+                サインイン
+            </button>
+            
+            <div class="text-center mt-4">
+                <a href="/dashboard" class="text-slate-400 hover:text-white text-sm transition-colors">← ダッシュボードへ戻る</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function login() {
+            const pwd = document.getElementById('password').value;
+            const err = document.getElementById('errorMsg');
+            
+            try {
+                const res = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ password: pwd })
+                });
+                const data = await res.json();
+                
+                if (data.status === 'success') {
+                    // ローカルストレージにトークンを保存
+                    localStorage.setItem('admin_token', data.token);
+                    window.location.href = '/dashboard';
+                } else {
+                    err.innerText = "❌ パスワードが間違っています";
+                    err.classList.remove('hidden');
+                }
+            } catch(e) {
+                err.innerText = "❌ 通信エラーが発生しました";
+                err.classList.remove('hidden');
+            }
+        }
+
+        // Enterキーでログイン
+        document.getElementById('password').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') login();
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>簡易業務日報 - 20260810</title>
+    <script src="https://cdn.tailwindcss.com"></script><script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>body { background-color: #f8fafc; color: #334155; }</style>
+</head>
+<body class="p-6 md:p-12">
+    <div class="max-w-5xl mx-auto bg-white p-8 rounded-xl shadow-lg border border-gray-100">
+        <h1 class="text-3xl font-extrabold mb-8 border-b pb-4 text-slate-800">簡易業務日報 (20260810)</h1>
+        <div class="flex flex-col md:flex-row gap-8">
+            <div class="md:w-1/3 border-r pr-8">
+                <h2 class="text-xl font-bold mb-4 text-center text-slate-700">アプリ使用割合</h2>
+                <div class="relative w-full aspect-square"><canvas id="appChart"></canvas></div>
+            </div>
+            <div class="md:w-2/3">
+                <div style="font-family: Arial, sans-serif; max-width: 800px; margin: 20px auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px; background-color: #f9f9f9;">
+    <h1 style="color: #333; border-bottom: 2px solid #4CAF50; padding-bottom: 10px;">日報 - 2026年08月10日</h1>
+
+    <div style="margin-top: 20px;">
+        <h2 style="color: #555;">本日の主な業務サマリ</h2>
+        <p style="line-height: 1.6;">
+            本日、Excelファイル「テスト発注業務_数式手入力用.xlsx」を使用し、発注データの入力および処理を行いました。主な作業内容は以下の通りです。
+        </p>
+        <ul style="list-style-type: disc; margin-left: 20px; line-height: 1.6;">
+            <li><strong>データ初期化と基本情報入力:</strong> 「発注データ入力」シートの既存データをクリアした後、A列に発注日付（2026/08/12から複数日）、B列に商品コード（A001からA010まで）を手入力で入力しました。</li>
+            <li><strong>VLOOKUP関数の手入力と適用:</strong> C6セルに商品名を自動取得するためのVLOOKUP関数 <code>=VLOOKUP(B6,商品マスタ!A:C,2,FALSE)</code> を手入力しました。これは、B列の商品コードを基に「商品マスタ」シートから商品名を検索するものです。関数入力後、C6セルの数式をC7からC15セルまで手動でコピー＆ペースト（Ctrl+C, Ctrl+V操作）し、商品名を一括で反映させました。</li>
+            <li><strong>追加データの入力:</strong> D列に単価、E列に数量、G列に発注ステータス（「急ぎ」「発注」「見積」など）を手入力で追加入力しました。</li>
+            <li><strong>ファイル保存:</strong> 作業の途中で複数回、Excelファイルの保存を行いました。</li>
+        </ul>
+        <p style="line-height: 1.6;">
+            これらの作業により、発注データの基本的な入力と、商品コードに基づいた商品名の自動取得処理が完了しました。
+        </p>
+    </div>
+
+    <div style="margin-top: 30px;">
+        <h2 style="color: #555;">タイムライン</h2>
+        <ul style="list-style-type: none; padding-left: 0;">
+            <li style="margin-bottom: 8px; padding-left: 15px; text-indent: -15px;"><strong style="color: #4CAF50;">13:54:41 - 13:54:43:</strong> DX推進アシスタント (AIロガー) を短時間起動。</li>
+            <li style="margin-bottom: 8px; padding-left: 15px; text-indent: -15px;"><strong style="color: #4CAF50;">13:54:43 - 13:55:43:</strong> Excelファイル「テスト発注業務_数式手入力用.xlsx」にて、発注日の入力（A列）および商品コード（B列）の初期データ入力。</li>
+            <li style="margin-bottom: 8px; padding-left: 15px; text-indent: -15px;"><strong style="color: #4CAF50;">13:55:44 - 13:56:09:</strong> Excelにて、C列に商品名を自動入力するためのVLOOKUP関数を手入力で構築。</li>
+            <li style="margin-bottom: 8px; padding-left: 15px; text-indent: -15px;"><strong style="color: #4CAF50;">13:56:11 - 13:57:02:</strong> VLOOKUP関数を他のセルにコピー＆ペーストで適用。その後、単価、数量、発注ステータス（D, E, G列）の追加入力を行い、ファイルを複数回保存。</li>
+        </ul>
+    </div>
+</div>
+            </div>
+        </div>
+    </div>
+    <script>
+        new Chart(document.getElementById('appChart').getContext('2d'), {
+            type: 'pie', data: { labels: ["EXCEL.EXE", "python.exe"], datasets: [{ data: [137, 2] }] }
+        });
+    </script>
+</body></html>

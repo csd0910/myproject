@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>業務分析レポート - 20260727</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Noto+Sans+JP:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { background-color: #f8fafc; color: #334155; font-family: 'Inter', 'Noto Sans JP', sans-serif; }
+        .card { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 1rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); }
+        h2 { font-weight: 700; letter-spacing: 0.02em; }
+        h3 { color: #0f172a; font-weight: 700; margin-top: 1.5rem; margin-bottom: 0.75rem; font-size: 1.15rem; border-left: 4px solid #3b82f6; padding-left: 0.75rem; }
+        ul { list-style-type: disc; margin-left: 1.5rem; margin-bottom: 1.5rem; }
+        li { margin-bottom: 0.5rem; color: #475569; }
+        p { line-height: 1.7; margin-bottom: 1rem; color: #475569; font-size: 1rem; }
+    </style>
+</head>
+<body class="p-6 md:p-12">
+    <div class="max-w-6xl mx-auto">
+        <header class="mb-12 text-center">
+            <h1 class="text-3xl md:text-4xl font-extrabold text-slate-800 mb-3 tracking-tight">
+                Activity Intelligence Report
+            </h1>
+            <p class="text-slate-500 font-medium tracking-widest uppercase text-sm">
+                DATE: 20260727 &nbsp;|&nbsp; TOTAL TIME: 15m 3s
+            </p>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            <!-- Left Column: Charts -->
+            <div class="lg:col-span-4 space-y-8">
+                <div class="card p-8">
+                    <h2 class="text-xl mb-6 border-b border-gray-200 pb-3 text-slate-800 font-bold">⏱️ アプリケーション使用割合</h2>
+                    <div class="relative w-full" style="aspect-ratio: 1/1;">
+                        <canvas id="appPieChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column: AI Analysis -->
+            <div class="lg:col-span-8 space-y-8">
+                <div class="card p-8">
+                    <div class="summary-report">
+<h2 class="text-2xl mb-4 border-b border-gray-300 pb-2 text-blue-700 font-bold">📊 業務サマリーと分析</h2>
+本日は、AIロガーを活用したExcel業務のPython自動化に向けた検討を進めつつ、Excelでのデータ入力、VLOOKUP関数の手作業での適用、WebやPDFからの見積データのExcelへの集約と計算といった、非効率が疑われる手作業が多く発生する業務を実施しました。特にデータ転記や繰り返し作業に時間を要しており、自動化によるDX推進が期待されます。
+
+<h2 class="text-2xl mt-8 mb-4 border-b border-gray-300 pb-2 text-orange-600 font-bold">💡 転記作業の抽出と自動化の提案（DXターゲット）</h2>
+
+本日のログから、以下の3つの主要な転記・手作業のボトルネックが特定されました。
+
+<ul>
+    <li>
+        <strong>1. Excel内での繰り返しデータ入力・編集（13:46:52 - 13:48:45）</strong><br>
+        <p><strong>詳細:</strong> 約2分間にわたり、Excelファイル「Book1」の「Sheet1」に対して、合計17回のセル編集（Paste/Edit）操作が行われました。内訳としては、25行1列のデータが3回、7行1列のデータが3回、そして多数の単一セル編集が含まれます。これは、何らかの外部データソース（例えばテキストファイル、Webページ、または他のアプリケーション）からExcelへの手動での転記、またはExcel内部での頻繁なデータ整理・入力作業を示唆しています。転記元は明確には特定できませんが、AIロガーの検討をしているタイミングであることから、システムログのような情報を手動でExcelに転記している可能性も考えられます。</p>
+        <p><strong>DXターゲットと解決策:</strong><br>
+        この反復的な手動データ入力は、データ量が増えるほど時間とヒューマンエラーのリスクを増大させます。
+        <ul>
+            <li><strong>Pythonによる自動化:</strong>
+                <br>もし転記元が定型的なテキストファイルやCSVファイルであれば、Pythonの<code>pandas</code>ライブラリを使用してファイルを読み込み、<code>openpyxl</code>または<code>pandas</code>の<code>to_excel</code>メソッドで直接Excelシートにデータを書き込むスクリプトを開発します。これにより、手動でのコピー＆ペースト作業を完全に排除できます。転記元がWebページであれば、<code>BeautifulSoup</code>や<code>Selenium</code>を用いたWebスクレイピングも有効です。
+            </li>
+            <li><strong>VBAによる自動化:</strong>
+                <br>クリップボードのデータをExcelの指定範囲に自動で貼り付け、必要に応じて整形するVBAマクロを実装することも可能です。また、特定のフォルダ内のテキストファイル群を読み込み、Excelにインポートするマクロも有効でしょう。
+            </li>
+        </ul>
+        </p>
+    </li>
+    <li>
+        <strong>2. ExcelでのVLOOKUP関数と積算式の手動入力・オートフィル（15:05:49 - 15:07:25）</strong><br>
+        <p><strong>詳細:</strong> 約2分間、Excelの「VLOOKUPテスト用.xlsx」において、VLOOKUP関数と積算式を手作業で入力し、さらにオートフィル機能を使って複数のセルに適用していました。この作業は、商品コードや商品名、単価といったマスターデータとトランザクションデータを突き合わせる際に頻繁に行われる定型業務であり、手動での数式入力は時間とミスの原因となります。</p>
+        <p><strong>DXターゲットと解決策:</strong><br>
+        Excelの重要な機能であるVLOOKUP関数を手動で繰り返し設定することは、自動化の大きな機会です。
+        <ul>
+            <li><strong>Pythonによる自動化:</strong>
+                <br>Pythonの<code>pandas</code>ライブラリを用いてExcelファイルを読み込み、<code>merge</code>メソッド（SQLのJOINに相当）を使ってVLOOKUPと同様のデータ結合処理を実行します。結合後のデータに対して積算処理もPythonスクリプト内で完結させ、最終結果を新しいExcelファイルまたは既存ファイルに追加のシートや列として出力します。これにより、Excelの数式に依存せず、高速かつ正確な処理が可能になります。
+            </li>
+            <li><strong>VBAによる自動化:</strong>
+                <br>特定のシート範囲にVLOOKUP関数や積算式を自動で挿入し、その後オートフィルを実行するVBAマクロを作成します。これにより、ユーザーはボタン一つでこれらの複雑な計算を適用できるようになります。
+            </li>
+        </ul>
+        </p>
+    </li>
+    <li>
+        <strong>3. Web/PDFからの見積データ集約とExcel化（20:36:28 - 20:37:22）</strong><br>
+        <p><strong>詳細:</strong> Google Gemini（ウェブサービス）を利用し、PDFの見積書や複数のWeb上の見積もりデータを手動でExcelに集約し、新規・機種変更の月額合計（税抜・税込）を計算する作業が行われました。これは、非構造化データ（PDFやWebページ）から必要な情報を抽出し、Excelという構造化された形式に転記するプロセスであり、手動でのコピペやデータ入力、その後の計算が含まれます。</p>
+        <p><strong>DXターゲットと解決策:</strong><br>
+        多様な形式のデータソースからの情報抽出とExcelへの集約は、RPAやAI OCRの得意分野です。
+        <ul>
+            <li><strong>Pythonによる自動化:</strong>
+                <br>PDFからのデータ抽出には<code>PyPDF2</code>や<code>tabula-py</code> (特に表形式データ向け) を、Webページからの情報抽出には<code>BeautifulSoup</code>や<code>Selenium</code>を用いたWebスクレイピングを活用します。抽出したデータは<code>pandas</code>で整形し、税抜・税込の計算ロジックをPythonスクリプトで実装した後、<code>openpyxl</code>でExcelファイルに書き出します。
+            </li>
+            <li><strong>RPAツールによる自動化:</strong>
+                <br>UiPathやPower Automate DesktopなどのRPAツールを導入し、PDFの読み込み（必要であればOCR機能）、Webページのブラウザ操作（データ選択、コピー）、Excelへの自動ペースト、そしてExcel内での計算式入力と実行といった一連の操作をシナリオとして自動化します。これにより、多岐にわたるデータソースからの情報集約作業をノンコードで実現できます。
+            </li>
+        </ul>
+        </p>
+    </li>
+</ul>
+
+<h2 class="text-2xl mt-8 mb-4 border-b border-gray-300 pb-2 text-teal-700 font-bold">📝 主要業務ダイジェスト</h2>
+
+<h3>13時台: RPA導入検討とExcelデータ入力</h3>
+DX推進アシスタント（AIロガー）の起動・設定を行い、Excel業務のPython自動化に向けたログ活用について検討しました。その中で、13:46:52から13:48:45にかけて、Excelの「Book1」の「Sheet1」に対して、約2分間にわたり合計17回のセル編集・ペースト操作を行いました。25行1列のデータや7行1列のデータが繰り返し入力されており、何らかの定型的なリストデータの手動転記や整形作業が行われていたと推測されます。
+
+<h3>15時台: VLOOKUP自動化スクリプト開発と手作業の確認</h3>
+ExcelのVLOOKUPなどの手作業をPythonで自動化するスクリプト開発を進める一方で、15:05:49から15:07:25までの約2分間、Excelの「VLOOKUPテスト用.xlsx」にてVLOOKUP関数と積算式を手入力し、オートフィルで広範囲のデータ処理を行いました。これは自動化検討の対象となる典型的な手作業であり、現状では時間を要するボトルネックとなっています。
+
+<h3>16時台: ログ管理とプロジェクトファイル整理</h3>
+DX推進アシスタントのログ記録停止、日報出力設定、および自身の開発プロジェクトのbinフォルダやアプリケーション更新テスト用フォルダのファイル管理・確認を実施しました。また、WindowsUpdate関連アプリの開発作業も行いました。
+
+<h3>20時台: 見積データ集約とExcel化</h3>
+Google GeminiやBingでの情報収集を行いながら、20:36:28から20:37:22にかけて、Excelでデータ化やコピペ用テキスト作成の作業を行いました。特に、Geminiを通じてPDFの見積書や複数の見積もりデータをExcelに集約し、新規・機種変更の月額合計を税抜き・税込で計算し、まとめる手作業を行っていたことが確認されました。この作業は、多様な情報源からのデータ集約とExcelでの計算負荷が高い業務です。
+
+</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const ctx = document.getElementById('appPieChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'pie',
+            data: {
+                labels: ["EXCEL.EXE", "gui_app.exe", "explorer.exe", "Antigravity IDE.exe", "chrome.exe", "msedge.exe", "SearchHost.exe", "ShellExperienceHost.exe", "StartMenuExperienceHost.exe"],
+                datasets: [{
+                    data: [359, 207, 151, 76, 62, 25, 10, 9, 4],
+                    backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#64748b'],
+                    borderColor: '#ffffff', borderWidth: 2, hoverOffset: 4
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'bottom', labels: { color: '#475569', font: { family: "'Inter', sans-serif", size: 13 }, padding: 15 } },
+                    tooltip: {
+                        backgroundColor: 'rgba(255, 255, 255, 0.95)', titleColor: '#0f172a', bodyColor: '#334155', borderColor: '#e2e8f0', borderWidth: 1, padding: 12,
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.label || '';
+                                if (label) label += ': ';
+                                if (context.parsed !== null) {
+                                    let mins = Math.floor(context.parsed / 60);
+                                    let secs = context.parsed % 60;
+                                    label += mins > 0 ? mins + '分' + secs + '秒' : secs + '秒';
+                                }
+                                return label;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>

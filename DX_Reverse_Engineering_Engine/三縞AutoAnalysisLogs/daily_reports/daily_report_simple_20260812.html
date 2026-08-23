@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>簡易業務日報 - 20260812</title>
+    <script src="https://cdn.tailwindcss.com"></script><script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>body { background-color: #f8fafc; color: #334155; }</style>
+</head>
+<body class="p-6 md:p-12">
+    <div class="max-w-5xl mx-auto bg-white p-8 rounded-xl shadow-lg border border-gray-100">
+        <h1 class="text-3xl font-extrabold mb-8 border-b pb-4 text-slate-800">簡易業務日報 (20260812)</h1>
+        <div class="flex flex-col md:flex-row gap-8">
+            <div class="md:w-1/3 border-r pr-8">
+                <h2 class="text-xl font-bold mb-4 text-center text-slate-700">アプリ使用割合</h2>
+                <div class="relative w-full aspect-square"><canvas id="appChart"></canvas></div>
+            </div>
+            <div class="md:w-2/3">
+                <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 800px; margin: 20px auto; border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); padding: 20px;">
+    <h1 style="color: #333; border-bottom: 2px solid #007bff; padding-bottom: 10px; margin-top: 0;">日報 - 2026年8月12日</h1>
+
+    <h2 style="color: #007bff; margin-top: 30px;">本日の主な業務サマリ</h2>
+    <div style="background-color: #f9f9f9; border-left: 4px solid #007bff; padding: 15px; border-radius: 4px;">
+        <p>本日、以下の長期欠品関連業務を実施いたしました。</p>
+        <ul style="list-style-type: disc; margin-left: 20px;">
+            <li>長期欠品管理に必要な各種Excel/CSVファイル（<code>0812長期欠品管理表.xlsb</code>、<code>【長期欠品更新専用】品目情報.csv</code>、<code>未入荷リスト_新.csv</code>、<code>長期欠品設定解除依頼.xlsx</code>）を開き、作業環境を整えました。</li>
+            <li><strong>長期欠品管理表への手動更新：</strong> <code>0812長期欠品管理表.xlsb</code> の「①長期欠品」シートに、欠品品目の担当者として「在庫チーム」と手入力で追記しました。また、「③社外サイト販売休止」シートには「メーカー出荷8/27以降のため」という備考を手入力し、複数行に適用しました。一部の不要なデータは削除しています。</li>
+            <li><strong>外部データからの情報取り込み：</strong>
+                <ul>
+                    <li><code>【長期欠品更新専用】品目情報.csv</code> から全品目データをコピーし、管理表の関連シートへ取り込みました。</li>
+                    <li><code>未入荷リスト_新.csv</code> から未入荷データをコピーし、管理表の「未入荷」シートへ取り込みました。</li>
+                </ul>
+            </li>
+            <li><strong>長期欠品解除依頼の処理：</strong> <code>長期欠品設定解除依頼.xlsx</code> から解除対象の品目コードと品目名を抽出し、<code>0812長期欠品管理表.xlsb</code> の「②長期欠品解除」シートに転記しました。</li>
+            <li><strong>データ連携と自動更新：</strong>
+                <ul>
+                    <li>「未入荷」シートでは、特定列（例: K列）の値をF列に参照する数式 (例: <code>=K893</code>) を複数セルに適用し、未入荷状況を自動反映させました。</li>
+                    <li>「①長期欠品」シートのF列に、<code>=VLOOKUP(C243,未入荷!C:F,4,0)</code> というVLOOKUP関数を挿入し、「未入荷」シートから品目コードに基づいた長期欠品理由などの詳細情報を自動的に取得・表示するように設定しました。この関数は、多くの行にコピー＆ペーストで適用されています。</li>
+                    <li>数式が適用された箇所の計算結果を確定させるため、値貼り付けによるデータ更新を複数回実施しました。</li>
+                </ul>
+            </li>
+            <li><strong>ファイル整理：</strong> 作業中に発生した不要なファイルや中間ファイルをエクスプローラーで削除し、環境を整理しました。</li>
+            <li>最終的に、更新した<code>0812長期欠品管理表.xlsb</code>を保存しました。</li>
+        </ul>
+    </div>
+
+    <h2 style="color: #007bff; margin-top: 30px;">タイムライン</h2>
+    <div style="background-color: #f9f9f9; border-left: 4px solid #007bff; padding: 15px; border-radius: 4px;">
+        <ul style="list-style-type: none; padding-left: 0;">
+            <li style="margin-bottom: 8px;"><strong style="color: #555;">14:43:22 - 14:45:27:</strong> DX推進アシスタントを起動し、共有フォルダのパスをコピー。エクスプローラーでファイルにアクセスし、長期欠品関連のExcelファイル（管理表、品目情報、未入荷リスト、設定解除依頼）を順次開きました。</li>
+            <li style="margin-bottom: 8px;"><strong style="color: #555;">14:59:39 - 15:03:45:</strong> <code>0812長期欠品管理表.xlsb</code>を再開し、長期欠品データの追加（「在庫チーム」手入力）と一部削除を実施。「③社外サイト販売休止」シートに備考を手入力し、<code>【長期欠品更新専用】品目情報.csv</code>や<code>未入荷リスト_新.csv</code>のデータを管理表へコピーしました。</li>
+            <li style="margin-bottom: 8px;"><strong style="color: #555;">15:03:45 - 15:22:25:</strong> <code>0812長期欠品管理表.xlsb</code> 内で集中的にデータ更新作業を実施。「未入荷」シートのF列にK列参照式を、さらに「①長期欠品」シートのF列にVLOOKUP関数を適用し、未入荷情報と欠品理由を自動取得しました。手動での数値修正や、数式結果の値貼り付けを繰り返し行いました。</li>
+            <li style="margin-bottom: 8px;"><strong style="color: #555;">15:22:25 - 15:28:08:</strong> エクスプローラーで不要なファイルを削除し、作業環境を整理。その後、<code>長期欠品設定解除依頼.xlsx</code> から追加の解除依頼情報を抽出し、長期欠品管理表の関連シートに転記しました。最終的に<code>0812長期欠品管理表.xlsb</code>を保存して業務を完了しました。</li>
+        </ul>
+    </div>
+</div>
+            </div>
+        </div>
+    </div>
+    <script>
+        new Chart(document.getElementById('appChart').getContext('2d'), {
+            type: 'pie', data: { labels: ["EXCEL.EXE", "explorer.exe", "AI_DX_Logger.exe", "WindowsTerminal.exe", "Unknown"], datasets: [{ data: [1729, 68, 8, 4, 1] }] }
+        });
+    </script>
+</body></html>

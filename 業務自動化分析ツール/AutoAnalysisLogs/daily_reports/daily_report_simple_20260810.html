@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>簡易業務日報 - 20260810</title>
+    <script src="https://cdn.tailwindcss.com"></script><script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>body { background-color: #f8fafc; color: #334155; }</style>
+</head>
+<body class="p-6 md:p-12">
+    <div class="max-w-5xl mx-auto bg-white p-8 rounded-xl shadow-lg border border-gray-100">
+        <h1 class="text-3xl font-extrabold mb-8 border-b pb-4 text-slate-800">簡易業務日報 (20260810)</h1>
+        <div class="flex flex-col md:flex-row gap-8">
+            <div class="md:w-1/3 border-r pr-8">
+                <h2 class="text-xl font-bold mb-4 text-center text-slate-700">アプリ使用割合</h2>
+                <div class="relative w-full aspect-square"><canvas id="appChart"></canvas></div>
+            </div>
+            <div class="md:w-2/3">
+                <div>
+    <h1>日報：2026年08月10日</h1>
+
+    <section>
+        <h2>本日の主な業務サマリ</h2>
+        <p>本日、従業員は主に「0810長期欠品管理表.xlsb」の更新と、関連ファイル「コピー ～ 長期欠品設定解除依頼.xlsx」との連携作業を行いました。</p>
+        <ul>
+            <li>**長期欠品管理表の更新とデータ整理**:
+                <ul>
+                    <li>特定の品目に関連する情報（「syun 」という入力や、ステータスコード「2」「3」「1」など）の手動入力およびコピー＆ペーストによる追記を行いました。</li>
+                    <li>「在庫チーム」といった担当部署名の入力、および欠品が「解消」された品目のステータス更新を実施しました。</li>
+                    <li>長期欠品管理表から、商品コード、商品名、数量、日付などを含む大量の品目データ（例: 「J901WR 日仏貿易/P5-02/ﾍﾟﾘｴ 瓶 330ml 6 2026/8/18」や「9608AJ ﾌﾗﾝｸﾘﾝ/PAD52968C2/FS Tour Dynasty 14mm Pink」など）を繰り返しコピーし、リストの抽出や整理を行いました。</li>
+                    <li>欠品が解消された品目については、管理表からデータをごっそり切り取り（Ctrl+X）して移動または削除する作業も行われています。</li>
+                </ul>
+            </li>
+            <li>**長期欠品設定解除依頼ファイルとの連携**:
+                <ul>
+                    <li>「コピー ～ 長期欠品設定解除依頼.xlsx」を開き、長期欠品管理表からコピーした品目コード（例: 「J1420X」「J068WF」など）を、検索機能（Ctrl+F + Ctrl+V）を用いて照合し、解除対象品目の確認を行いました。</li>
+                    <li>この連携作業中に、VLOOKUPなどの参照関数が関連すると推測される「#N/A」エラー値のコピー＆ペーストが複数回確認されており、データの整合性確認やエラー処理が行われた可能性があります。</li>
+                    <li>品目に関する備考情報（例: 「メーカー出荷8/27以降のため 蟹江 8/6先行でマスタ対応済、リストへの追加のみ」）のコピーも行われました。</li>
+                </ul>
+            </li>
+            <li>**情報収集**:
+                <ul>
+                    <li>Microsoft Edgeにて「sakamoto」や「nagareyama」といったキーワードでWeb検索を行い、業務に必要な情報を収集しました。</li>
+                </ul>
+            </li>
+        </ul>
+    </section>
+
+    <section>
+        <h2>タイムライン</h2>
+        <dl>
+            <dt>14:19 - 14:24</dt>
+            <dd>Excel「0810長期欠品管理表.xlsb」を開き、品目情報の入力（「旬」など）とステータスコード（「2」「3」）のコピペ、および入力ミスの修正（Ctrl+Z）を実施。</dd>
+            <dt>14:25 - 14:27</dt>
+            <dd>Microsoft Edgeにて「sakamoto」「nagareyama」などに関するWeb検索を実施。</dd>
+            <dt>14:30 - 14:45</dt>
+            <dd>Excel「0810長期欠品管理表.xlsb」にて、ステータスコード（「1」）のコピペ、「在庫チーム」や「解消」の入力、複数の商品情報（品目コード、商品名など）の抽出（コピペ）作業を継続。</dd>
+            <dt>14:46 - 14:53</dt>
+            <dd>Excel「コピー ～ 長期欠品設定解除依頼.xlsx」を開き、長期欠品管理表と連携。品目コードのコピー、解除依頼ファイルでの検索（Ctrl+F）による照合、および「#N/A」エラーの確認・処理。欠品解消品目の切り取りと、最終的なファイルの保存を実施。</dd>
+        </dl>
+    </section>
+</div>
+            </div>
+        </div>
+    </div>
+    <script>
+        new Chart(document.getElementById('appChart').getContext('2d'), {
+            type: 'pie', data: { labels: [], datasets: [{ data: [] }] }
+        });
+    </script>
+</body></html>

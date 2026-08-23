@@ -1,0 +1,247 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--_SIG=GxB6gSC6LS9H1Rq5t9Web/rbcHUg1TF3P8hLllM9at+Er7VxYXEcpyld22lxcJPatevc2pVg/rD0eHlRMLFvrzkD/FdVZU8D1MLy/i1fMaT0MPWYVyYhVg/Sxke520WrgWSLNmd7M6tGY163V2VUwoHEgs/PBdsD8zDvC4OC9ZE=-->
+<Package Id="ExcelWW" Type="MSI" Path="ExcelWW.MSI" Version="1.0" ProductCode="{90140000-0016-0000-0000-0000000FF1CE}" MSIVersion="14.0.4763.1000" Platform="x86" LocalizationTransform="ShellUI">
+	<Feature Id="OfficeAppSupport" Cost="0">
+		<OptionRef Id="AlwaysInstalled"/>
+	</Feature>
+	<Feature Id="DocumentImagingUtils" Cost="4759826">
+		<OptionRef Id="DocumentImagingUtils"/>
+	</Feature>
+	<Feature Id="ProductFiles_B2TR" Cost="72976860">
+		<OptionRef Id="ProductFiles"/>
+	</Feature>
+	<Feature Id="XDOCSEditorFiles" Cost="6561568">
+		<OptionRef Id="XDOCSEditorFiles"/>
+	</Feature>
+	<Feature Id="Excel_PIA" Cost="18449296">
+		<OptionRef Id="Excel_PIA"/>
+	</Feature>
+	<Feature Id="OfficeMSProof6" Cost="218464">
+		<OptionRef Id="ProductFiles"/>
+	</Feature>
+	<Feature Id="MSTagPluginNamesFiles" Cost="143744">
+		<OptionRef Id="MSTagPluginNamesFiles"/>
+	</Feature>
+	<Feature Id="AceRepl" Cost="44480">
+		<OptionRef Id="AceFiles"/>
+	</Feature>
+	<Feature Id="SmartTag_PIA" Cost="16348584">
+		<OptionRef Id="SmartTag_PIA"/>
+	</Feature>
+	<Feature Id="CAGCat10Clips" Cost="1813450">
+		<OptionRef Id="CAGCat10Clips"/>
+	</Feature>
+	<Feature Id="VSTO" Cost="706987">
+		<OptionRef Id="VSTO"/>
+	</Feature>
+	<Feature Id="WebDriveFiles" Cost="42942">
+		<OptionRef Id="WebDriveFiles"/>
+	</Feature>
+	<Feature Id="Office10Fix1" Cost="0">
+		<OptionRef Id="AlwaysInstalled"/>
+	</Feature>
+	<Feature Id="dummy_MSCOMCTL_PIA" Cost="16533504">
+		<OptionRef Id="dummy_MSCOMCTL_PIA"/>
+	</Feature>
+	<Feature Id="DCubeHidden" Cost="0">
+		<OptionRef Id="DCubeHidden"/>
+	</Feature>
+	<Feature Id="OISFiles" Cost="2027976">
+		<OptionRef Id="OISFiles"/>
+	</Feature>
+	<Feature Id="InternationalSupportFiles_JPN" Cost="165248">
+		<OptionRef Id="InternationalSupportFiles_JPN"/>
+	</Feature>
+	<Feature Id="ProofingParent" Cost="591680">
+		<OptionRef Id="ProofingTools"/>
+	</Feature>
+	<Feature Id="SetupExeArpEntry" Cost="0">
+		<OptionRef Id="AlwaysInstalled"/>
+	</Feature>
+	<Feature Id="Ace_PIA" Cost="92316">
+		<OptionRef Id="Ace_PIA"/>
+	</Feature>
+	<Feature Id="Gimme_OnDemandData" Cost="0">
+		<OptionRef Id="Gimme_OnDemandData"/>
+	</Feature>
+	<Feature Id="LISTFiles" Cost="2831768">
+		<OptionRef Id="LISTFiles"/>
+	</Feature>
+	<Feature Id="NonC2R_ProductFiles" Cost="0">
+		<OptionRef Id="ProductFiles"/>
+	</Feature>
+	<Feature Id="CAGFiles" Cost="2033392">
+		<OptionRef Id="CAGFiles"/>
+	</Feature>
+	<Feature Id="TextConverters" Cost="119160">
+		<OptionRef Id="TextConverters"/>
+	</Feature>
+	<Feature Id="OfficeIntlRDC" Cost="0">
+		<OptionRef Id="AlwaysInstalled"/>
+	</Feature>
+	<Feature Id="OfficeOLESupport" Cost="0">
+		<OptionRef Id="AlwaysInstalled"/>
+	</Feature>
+	<Feature Id="OfficeCoreRDC" Cost="0">
+		<OptionRef Id="AlwaysInstalled"/>
+	</Feature>
+	<Feature Id="VSTOCLR35" Cost="4787238">
+		<OptionRef Id="VSTOCLR35"/>
+	</Feature>
+	<Feature Id="AceFiles" Cost="10144960">
+		<OptionRef Id="AceFiles"/>
+	</Feature>
+	<Feature Id="SetupExeAddRegistry" Cost="0">
+		<OptionRef Id="AlwaysInstalled"/>
+	</Feature>
+	<Feature Id="WebDiscussFiles" Cost="842736">
+		<OptionRef Id="WebDiscussFiles"/>
+	</Feature>
+	<Feature Id="SetupXmlFiles" Cost="468">
+		<OptionRef Id="AlwaysInstalled"/>
+	</Feature>
+	<Feature Id="TCDRegistration" Cost="0">
+		<OptionRef Id="TCDRegistration"/>
+	</Feature>
+	<Feature Id="SetLanguageFiles" Cost="33152">
+		<OptionRef Id="SetLanguageFiles"/>
+	</Feature>
+	<Feature Id="GRAPHFiles" Cost="4301372">
+		<OptionRef Id="GRAPHFiles"/>
+	</Feature>
+	<Feature Id="Excel_WISPFiles" Cost="2165248">
+		<OptionRef Id="EXCELFiles"/>
+	</Feature>
+	<Feature Id="CAGCategoryFiles" Cost="0">
+		<OptionRef Id="CAGCategoryFiles"/>
+	</Feature>
+	<Feature Id="CAGCat10" Cost="394200">
+		<OptionRef Id="CAGCat10"/>
+	</Feature>
+	<Feature Id="AceOdbc" Cost="0">
+		<OptionRef Id="AceFiles"/>
+	</Feature>
+	<Feature Id="MsoInstalledPackagesScoped" Cost="0">
+		<OptionRef Id="AlwaysInstalled"/>
+	</Feature>
+	<Feature Id="MsoCommonShellHandler" Cost="970640">
+		<OptionRef Id="ProductFiles"/>
+	</Feature>
+	<Feature Id="OfficePostBoot" Cost="0">
+		<OptionRef Id="AlwaysInstalled"/>
+	</Feature>
+	<Feature Id="InternationalSupportFiles_ArialUni" Cost="23275812">
+		<OptionRef Id="InternationalSupportFiles_ArialUni"/>
+	</Feature>
+	<Feature Id="AlwaysInstalled" Cost="983032">
+		<OptionRef Id="AlwaysInstalled"/>
+	</Feature>
+	<Feature Id="TCWorks7Files" Cost="1246016">
+		<OptionRef Id="TCWorks7Files"/>
+	</Feature>
+	<Feature Id="dummy_Office_PIA" Cost="16864772">
+		<OptionRef Id="dummy_Office_PIA"/>
+	</Feature>
+	<Feature Id="RhdInspector" Cost="57312">
+		<OptionRef Id="ProductFiles"/>
+	</Feature>
+	<Feature Id="LOBiFiles" Cost="13725545">
+		<OptionRef Id="LOBiFiles"/>
+	</Feature>
+	<Feature Id="CAGOffice10" Cost="492624">
+		<OptionRef Id="CAGOffice10"/>
+	</Feature>
+	<Feature Id="GraphicsFiltersFile" Cost="0">
+		<OptionRef Id="GraphicsFiltersFile"/>
+	</Feature>
+	<Feature Id="EXCELNonBootFiles" Cost="45822214">
+		<OptionRef Id="EXCELFiles"/>
+	</Feature>
+	<Feature Id="SetupControllerFiles" Cost="7616916">
+		<OptionRef Id="AlwaysInstalled"/>
+	</Feature>
+	<Feature Id="OSpp" Cost="4233281">
+		<OptionRef Id="OSpp"/>
+	</Feature>
+	<Feature Id="ExcelAddInEuroToolFiles" Cost="392028">
+		<OptionRef Id="ExcelAddInEuroToolFiles"/>
+	</Feature>
+	<Feature Id="CARegistryFeature" Cost="0">
+		<OptionRef Id="ProductFiles"/>
+	</Feature>
+	<Feature Id="WxpFiles" Cost="1079032">
+		<OptionRef Id="AlwaysInstalled"/>
+	</Feature>
+	<Feature Id="EXCELFiles" Cost="27705074">
+		<OptionRef Id="EXCELFiles"/>
+	</Feature>
+	<Feature Id="MSTagPluginsFiles" Cost="244608">
+		<OptionRef Id="MSTagPluginsFiles"/>
+	</Feature>
+	<Feature Id="IMNFiles" Cost="190568">
+		<OptionRef Id="SHAREDFiles"/>
+	</Feature>
+	<Feature Id="MSSOAP3" Cost="577792">
+		<OptionRef Id="AlwaysInstalled"/>
+	</Feature>
+	<Feature Id="ProductFiles" Cost="93362680">
+		<OptionRef Id="ProductFiles"/>
+	</Feature>
+	<Feature Id="OSpp_Core" Cost="6139790">
+		<OptionRef Id="OSpp_Core"/>
+	</Feature>
+	<Feature Id="VBAFiles" Cost="2724040">
+		<OptionRef Id="VBAFiles"/>
+	</Feature>
+	<Feature Id="Graph_PIA" Cost="646744">
+		<OptionRef Id="Graph_PIA"/>
+	</Feature>
+	<Feature Id="ExcelAddinFiles" Cost="0">
+		<OptionRef Id="ExcelAddinFiles"/>
+	</Feature>
+	<Feature Id="TranslationCore" Cost="195360">
+		<OptionRef Id="TranslationCore"/>
+	</Feature>
+	<Feature Id="OSetupController" Cost="7616448">
+		<OptionRef Id="AlwaysInstalled"/>
+	</Feature>
+	<Feature Id="ClviewFiles" Cost="397840">
+		<OptionRef Id="AlwaysInstalled"/>
+	</Feature>
+	<Feature Id="OArt_DocTheme" Cost="15554748">
+		<OptionRef Id="OArt_DocTheme"/>
+	</Feature>
+	<Feature Id="Forms_PIA" Cost="374640">
+		<OptionRef Id="Forms_PIA"/>
+	</Feature>
+	<Feature Id="WISPFiles" Cost="2165248">
+		<OptionRef Id="WISPFiles"/>
+	</Feature>
+	<Feature Id="QueryFiles" Cost="670048">
+		<OptionRef Id="QueryFiles"/>
+	</Feature>
+	<Feature Id="OfficeDigitalSFiles" Cost="521616">
+		<OptionRef Id="OfficeDigitalSFiles"/>
+	</Feature>
+	<Feature Id="VSCommonPIAHidden" Cost="16392504">
+		<OptionRef Id="VSCommonPIAHidden"/>
+	</Feature>
+	<Feature Id="LOBiMain" Cost="174966">
+		<OptionRef Id="LOBiMain"/>
+	</Feature>
+	<Feature Id="WhiteRabbitHidden" Cost="433331">
+		<OptionRef Id="WhiteRabbitHidden"/>
+	</Feature>
+	<Feature Id="ProductNonBootFiles" Cost="62059766">
+		<OptionRef Id="ProductFiles"/>
+	</Feature>
+	<Feature Id="WISPHidden" Cost="2320736">
+		<OptionRef Id="WISPHidden"/>
+	</Feature>
+	<Feature Id="MSTagPluginDateFiles" Cost="71040">
+		<OptionRef Id="MSTagPluginDateFiles"/>
+	</Feature>
+	<Feature Id="CAGOffice10Clips" Cost="451460">
+		<OptionRef Id="CAGOffice10Clips"/>
+	</Feature>
+</Package>

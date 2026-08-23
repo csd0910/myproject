@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>業務分析レポート - 20260727</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <script>mermaid.initialize({startOnLoad:true});</script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Noto+Sans+JP:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { background-color: #f8fafc; color: #334155; font-family: 'Inter', 'Noto Sans JP', sans-serif; }
+        .card { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 1rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); }
+        h2 { font-weight: 700; letter-spacing: 0.02em; }
+        h3 { color: #0f172a; font-weight: 700; margin-top: 1.5rem; margin-bottom: 0.75rem; font-size: 1.15rem; border-left: 4px solid #3b82f6; padding-left: 0.75rem; }
+        ul { list-style-type: disc; margin-left: 1.5rem; margin-bottom: 1.5rem; }
+        li { margin-bottom: 0.5rem; color: #475569; }
+        p { line-height: 1.7; margin-bottom: 1rem; color: #475569; font-size: 1rem; }
+    </style>
+</head>
+<body class="p-6 md:p-12">
+    <div class="max-w-6xl mx-auto">
+        <header class="mb-12 text-center">
+            <h1 class="text-3xl md:text-4xl font-extrabold text-slate-800 mb-3 tracking-tight">
+                Activity Intelligence Report
+            </h1>
+            <p class="text-slate-500 font-medium tracking-widest uppercase text-sm">
+                DATE: 20260727 &nbsp;|&nbsp; TOTAL TIME: 17m 23s
+            </p>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            <!-- Left Column: Charts -->
+            <div class="lg:col-span-4 space-y-8">
+                <div class="card p-8">
+                    <h2 class="text-xl mb-6 border-b border-gray-200 pb-3 text-slate-800 font-bold">⏱️ アプリケーション使用割合</h2>
+                    <div class="relative w-full" style="aspect-ratio: 1/1;">
+                        <canvas id="appPieChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column: AI Analysis -->
+            <div class="lg:col-span-8 space-y-8">
+                <div class="card p-8">
+                    <h2 class="text-2xl mb-4 border-b border-gray-300 pb-2 text-blue-700 font-bold">📊 作業フローと時間対効果（手作業 vs 自動化）</h2>
+<ul>
+    <li>
+        <strong>作業1: 複数のExcel・CSVファイル参照・検索・整理</strong>
+        <ul>
+            <li>手作業での所要時間（推測）: <strong>約2分30秒 (150秒)</strong></li>
+            <li>プログラム（Python等）で自動化した場合の参考時間: <strong>約5秒</strong></li>
+            <li>時間短縮効果（削減時間）: <strong>145秒</strong></li>
+            <li>詳細: 共有ドライブやローカルフォルダに散在する週次販売・商品管理データ、受領明細、受注・売上明細、発注明細などのファイルを探索し、開く作業。</li>
+        </ul>
+    </li>
+    <li>
+        <strong>作業2: 受注明細データのフィルター設定・内容確認</strong>
+        <ul>
+            <li>手作業での所要時間（推測）: <strong>約3分 (180秒)</strong></li>
+            <li>プログラム（Python等）で自動化した場合の参考時間: <strong>約10秒</strong></li>
+            <li>時間短縮効果（削減時間）: <strong>170秒</strong></li>
+            <li>詳細: 受注明細CSVデータをExcelで開き、特定の期間（例: 2025年7月と8月）でフィルター設定し、売上や顧客情報、商品詳細などを確認する作業。</li>
+        </ul>
+    </li>
+    <li>
+        <strong>作業3: データ転記（コピペ操作）</strong>
+        <ul>
+            <li>手作業での所要時間（推測）: <strong>約1分45秒 (105秒)</strong> (複数箇所で発生)</li>
+            <li>プログラム（Python等）で自動化した場合の参考時間: <strong>約14秒</strong></li>
+            <li>時間短縮効果（削減時間）: <strong>91秒</strong></li>
+            <li>詳細: 他データから週次報告書の実績表へ複数列をコピペ転記、CH列からCV列のデータ転記、大分類実績データをコピペ転記など、手作業でのデータ移行が頻繁に発生。</li>
+        </ul>
+    </li>
+    <li>
+        <strong>作業4: 受注明細の分類・集計、ピボットテーブル作成検討</strong>
+        <ul>
+            <li>手作業での所要時間（推測）: <strong>約1分 (60秒)</strong></li>
+            <li>プログラム（Python等）で自動化した場合の参考時間: <strong>約5秒</strong></li>
+            <li>時間短縮効果（削減時間）: <strong>55秒</strong></li>
+            <li>詳細: 複数ファイルを参照しながらの受注明細の分類・集計作業、およびExcelのピボットテーブル機能を使って集計を試みる作業。</li>
+        </ul>
+    </li>
+    <li>
+        <strong>作業5: 週次報告書・商品政策書へのデータ入力・更新</strong>
+        <ul>
+            <li>手作業での所要時間（推測）: <strong>約5分 (300秒)</strong></li>
+            <li>プログラム（Python等）で自動化した場合の参考時間: <strong>約15秒</strong></li>
+            <li>時間短縮効果（削減時間）: <strong>285秒</strong></li>
+            <li>詳細: 集計した実績データを週次報告書や商品政策書のフォーマットに入力・更新し、好不調コメントや今後の施策内容を確認・記載する作業。</li>
+        </ul>
+    </li>
+    <li>
+        <strong>合計削減時間（推測）: 約12分26秒 (746秒)</strong><br>
+        この作業は週次で行われていると推測されるため、年間で約10時間の単純作業時間を削減できます。これにより、担当者はより戦略的な分析や意思決定に時間を割くことが可能になります。
+    </li>
+</ul>
+
+<div class="mt-8 flex flex-col lg:flex-row gap-8">
+    <div class="flex-1 lg:w-1/2">
+        <h2 class="text-2xl mb-4 border-b border-gray-300 pb-2 text-teal-700 font-bold">🔄 自動化案を組み込んだコンパクトな処理フロー</h2>
+        <div class="mermaid bg-white p-4 rounded shadow">
+        graph TD
+            A[週次報告プロセス開始] --> B{"データソース検索<br>(RPA)"};
+            B --> C1["受注明細CSVデータ取得"];
+            B --> C2["商品マスタ/他週次データ取得"];
+            C1 & C2 --"RPA/Pythonが実行"--> D["データ統合・整形"];
+            D --> E["期間フィルタリング・カテゴリ別集計"];
+            E --> F["週次報告書フォーマット開く<br>(Excel)"];
+            F --"RPAが転記"--> G["集計実績データ自動入力"];
+            G --> H["好不調要因/施策コメント追記<br>(手動/AIサジェスト検討)"];
+            H --> I["報告書保存・完了"];
+        </div>
+    </div>
+    
+    <div class="flex-1 lg:w-1/2">
+        <h2 class="text-2xl mb-4 border-b border-gray-300 pb-2 text-orange-600 font-bold">💡 手作業の分析と自動化へのアクション</h2>
+        <h3 class="text-xl mt-0 mb-2 font-bold text-slate-700">🤖 自動化への具体的なステップ（DX化案）</h3>
+        <ol class="list-decimal list-inside space-y-2">
+            <li><strong>Step 1: データソースの標準化と特定</strong>
+                <ul class="list-disc list-inside ml-4">
+                    <li>週次報告書作成に必要な全てのExcel/CSVファイル（受注明細、商品マスタ、週次販売データ等）の最新版が格納される共有フォルダとファイル名規則を明確にします。</li>
+                    <li>ファイル名の命名規則（例: 「受注明細_YYYYMMDD.csv」）を統一し、ロボットが自動的に最新ファイルを特定できるようにします。</li>
+                </ul>
+            </li>
+            <li><strong>Step 2: データ抽出・統合スクリプトの開発（Python/RPA）</strong>
+                <ul class="list-disc list-inside ml-4">
+                    <li>Python（pandasライブラリ）またはRPAツールを用いて、Step1で特定した複数のデータソースから必要なデータを自動的に抽出し、一つのデータセットに統合するスクリプトを開発します。</li>
+                    <li>CSVからのデータ読み込み、Excelシートからのデータ抽出、およびそれらの結合処理を実装します。</li>
+                </ul>
+            </li>
+            <li><strong>Step 3: データ加工・集計ロジックの実装</strong>
+                <ul class="list-disc list-inside ml-4">
+                    <li>統合されたデータに対し、週次報告書に必要な集計ロジック（商品分類別売上・粗利計算、期間フィルター、前週比較など）をPythonで実装します。</li>
+                    <li>手動で行っていたピボットテーブル作成や特定の列範囲の集計を自動化し、報告書フォーマットに合う形にデータを整形します。</li>
+                </ul>
+            </li>
+            <li><strong>Step 4: 週次報告書フォーマットへの自動転記（RPA）</strong>
+                <ul class="list-disc list-inside ml-4">
+                    <li>RPAツールを利用して、Step3で生成された集計結果を既存の週次報告書Excelフォーマットの指定されたセルに自動で転記します。</li>
+                    <li>グラフの自動更新や、定型化された「好不調コメント」「今後の取り組み内容」の自動挿入も検討します。</li>
+                </ul>
+            </li>
+            <li><strong>Step 5: 最終確認と運用自動化</strong>
+                <ul class="list-disc list-inside ml-4">
+                    <li>RPAロボットが作成した週次報告書のドラフトを業務担当者が確認し、人間系の判断が必要なコメントなどを追記するプロセスを確立します。</li>
+                    <li>ロボットの定期実行スケジュールを設定し、エラー発生時の通知機能などを実装して安定運用を目指します。</li>
+                </ul>
+            </li>
+        </ol>
+        
+        <h3 class="text-xl mt-6 mb-2 font-bold text-slate-700">❓ 担当者へのヒアリング事項</h3>
+        <ul class="list-disc list-inside space-y-2">
+            <li>現在、週次報告書作成のトリガーとなるイベントや、報告書の提出期限はいつですか？</li>
+            <li>現在、週次報告書作成に利用している全てのデータソース（Excelファイル名、CSVファイル名、それぞれの具体的な格納フォルダパス、利用するシート名、必要なデータ項目）をリストアップいただけますか？</li>
+            <li>「非効率疑い」と指摘されているコピペ作業（例: CH列からCV列、大分類実績データ）は、具体的にどのシートのどの範囲から、どの報告書のどのセルに転記されていますか？その際、何らかの加工は行われていますか？</li>
+            <li>「好不調コメント」や「今後の取り組み内容」といったテキスト情報は、どのような情報を基に、どのような思考プロセスで作成されていますか？定型化や、数値データに基づく自動生成の可能性はありますか？</li>
+            <li>データ加工や集計において、Excelのピボットテーブル以外で、特に複雑な関数（VLOOKUP、SUMIFSなど）や手動での集計作業があれば教えてください。</li>
+            <li>データソースとなるファイルのフォーマットや命名規則が将来的に変更される可能性はありますか？その場合、どのくらいの頻度で、どのような変更が予想されますか？</li>
+            <li>自動化後、ロボットが生成した報告書に対して、担当者様はどのような最終確認や修正作業を行うことを想定されていますか？</li>
+            <li>週次報告書作成以外に、日常業務で繰り返し行われている時間のかかる作業があれば、ぜひ教えてください。</li>
+        </ul>
+    </div>
+</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const ctx = document.getElementById('appPieChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'pie',
+            data: {
+                labels: ["EXCEL.EXE", "explorer.exe", "ShellExperienceHost.exe", "gui_app.exe"],
+                datasets: [{
+                    data: [797, 234, 10, 2],
+                    backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#64748b'],
+                    borderColor: '#ffffff', borderWidth: 2, hoverOffset: 4
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'bottom', labels: { color: '#475569', font: { family: "'Inter', sans-serif", size: 13 }, padding: 15 } },
+                    tooltip: {
+                        backgroundColor: 'rgba(255, 255, 255, 0.95)', titleColor: '#0f172a', bodyColor: '#334155', borderColor: '#e2e8f0', borderWidth: 1, padding: 12,
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.label || '';
+                                if (label) label += ': ';
+                                if (context.parsed !== null) {
+                                    let mins = Math.floor(context.parsed / 60);
+                                    let secs = context.parsed % 60;
+                                    label += mins > 0 ? mins + '分' + secs + '秒' : secs + '秒';
+                                }
+                                return label;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--_SIG=1RbK6JZ7aruVonzqAU3WgGj2SLBuRQiEMpvdXktW77sFa6FeaMjhJzrpwYnbAO0egL1yWlIGprFKVHh+nsjQMbfr77FWKsuLRNiDPY5v3q3VJAMdYQfEcImJeLQTcXxGyWtuAek+BW+IBPLmUyHOpHgo59CCV9ESfVmJ7o+3+yY=-->
+<Package Id="Proof.ja-jp" Type="MSI" Path="Proof.MSI" Version="1.0" ProductCode="{90140000-001F-0411-0000-0000000FF1CE}" MSIVersion="14.0.4763.1000" Platform="x86">
+	<Feature Id="RRLoc_1041" Cost="80298103">
+		<OptionRef Id="RRLoc_1041"/>
+	</Feature>
+	<Feature Id="Gimme_OnDemandData" Cost="0">
+		<OptionRef Id="Gimme_OnDemandData"/>
+	</Feature>
+	<Feature Id="FindAllWordFormsFiles_1041" Cost="0">
+		<OptionRef Id="FindAllWordFormsFiles_1041"/>
+	</Feature>
+	<Feature Id="SetupControllerFiles" Cost="234">
+		<OptionRef Id="AlwaysInstalled"/>
+	</Feature>
+	<Feature Id="SpellingAndGrammarFiles_1041" Cost="9486668">
+		<OptionRef Id="SpellingAndGrammarFiles_1041"/>
+	</Feature>
+	<Feature Id="OCR_1041" Cost="6745962">
+		<OptionRef Id="OCR_1041"/>
+	</Feature>
+	<Feature Id="TranslationFiles_1041" Cost="11411716">
+		<OptionRef Id="TranslationFiles_1041"/>
+	</Feature>
+	<Feature Id="MsoInstalledPackagesScopedIntl_1041" Cost="0">
+		<OptionRef Id="AlwaysInstalled"/>
+	</Feature>
+	<Feature Id="SetupXmlFiles" Cost="234">
+		<OptionRef Id="AlwaysInstalled"/>
+	</Feature>
+</Package>

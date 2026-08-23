@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--_SIG=aacP5ENC4Us2j0/Irq8DHQ8ALXbdWldGCq4k8hofmRmBSm7Q9cJo9R+HAXWJHM0M2AF5ZU+GIv7bTlw6YXIIce+8iJafIj9ksjLiT7gnGRjDnylXf5ntrDflMtjhildmjx6rGrvSYBc2o5FkLEsY2COmNWfgpCvOUWa/TDpLMFI=-->
+<Package Id="Office64MUI.ja-jp" Type="MSI" Path="Office64MUI.MSI" Version="1.0" ProductCode="{90140000-002A-0411-1000-0000000FF1CE}" MSIVersion="14.0.4763.1000" Platform="x64">
+	<Feature Id="ProductFilesIntl64_1041" Cost="11128">
+		<OptionRef Id="ProductFiles"/>
+	</Feature>
+	<Feature Id="VSTO64Intl_1041" Cost="48432">
+		<OptionRef Id="VSTO64"/>
+	</Feature>
+	<Feature Id="Gimme_OnDemandData" Cost="0">
+		<OptionRef Id="Gimme_OnDemandData"/>
+	</Feature>
+	<Feature Id="Outlook64SearchShellRegIntl_1041" Cost="591320">
+		<OptionRef Id="Outlook64SearchShellRegIntl"/>
+	</Feature>
+	<Feature Id="OneNoteToLinkedNotesIEAddin64Intl_1041" Cost="0">
+		<OptionRef Id="OneNoteToLinkedNotesIntl"/>
+	</Feature>
+	<Feature Id="OfficeExample64bitFilesAIntl_1041" Cost="84">
+		<OptionRef Id="ProductFiles"/>
+	</Feature>
+	<Feature Id="OfficeExample64bitFilesBIntl_1041" Cost="84">
+		<OptionRef Id="TOOLSFiles"/>
+	</Feature>
+	<Feature Id="GrooveFiles64Intl_1041" Cost="8555912">
+		<OptionRef Id="GrooveFiles64Intl"/>
+	</Feature>
+	<Feature Id="SetupXmlFiles" Cost="468">
+		<OptionRef Id="AlwaysInstalled"/>
+	</Feature>
+	<Feature Id="MsoInstalledPackagesScopedIntl_1041" Cost="0">
+		<OptionRef Id="AlwaysInstalled"/>
+	</Feature>
+	<Feature Id="SetupControllerFiles" Cost="468">
+		<OptionRef Id="AlwaysInstalled"/>
+	</Feature>
+</Package>

@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>詳細DX抽出レポート - トレンド推移 | TaskMining</title>
+    <!-- 外部ライブラリ -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- アプリ固有スタイル -->
+    <link rel="stylesheet" href="/static/css/common.css">
+</head>
+<body class="bg-slate-900 text-slate-200">
+
+    <!-- ===== ヘッダー & フィルターバー ===== -->
+    <div class="w-full bg-slate-900 text-[#f8fafc] px-6 pt-6 pb-8 md:px-12 md:pt-8 md:pb-12 border-b border-slate-800">
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+            <header>
+                <h1 class="text-3xl font-extrabold mb-2 bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-teal-300">
+                    📈 詳細DX抽出レポート - トレンド推移
+                </h1>
+                <p class="text-sm text-slate-400">期間を指定して、日別の変動（作業時間、非効率操作、AI活用割合など）を確認します。</p>
+                <div class="mt-4">
+                    <a href="/static/user_dashboard.html"
+                        class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded border border-slate-600 transition-colors text-sm font-semibold flex items-center gap-2 shadow-sm inline-flex">
+                        <span>🔙</span> ミクロビューへ戻る
+                    </a>
+                    <a href="/static/dashboard.html"
+                        class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded border border-slate-600 transition-colors text-sm font-semibold flex items-center gap-2 shadow-sm inline-flex ml-2">
+                        <span>🏢</span> マクロビューへ戻る
+                    </a>
+                </div>
+            </header>
+            
+            <div class="bg-slate-800/80 border border-[rgba(255,255,255,0.1)] rounded-xl p-4 flex flex-wrap items-end gap-4 shadow-lg" style="backdrop-filter:blur(10px)">
+                <div>
+                    <label class="block text-xs text-slate-400 mb-1">📅 開始日</label>
+                    <input type="date" id="filterStart" class="bg-slate-700 border border-slate-600 rounded px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-blue-500 w-48 shadow-inner">
+                </div>
+                <div>
+                    <label class="block text-xs text-slate-400 mb-1">📅 終了日</label>
+                    <input type="date" id="filterEnd" class="bg-slate-700 border border-slate-600 rounded px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-blue-500 w-48 shadow-inner">
+                </div>
+                <div>
+                    <label class="block text-xs text-slate-400 mb-1">👤 ユーザー絞り込み</label>
+                    <input type="text" id="filterUser" placeholder="ユーザーID または ALL" value="ALL" class="bg-slate-700 border border-slate-600 rounded px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-blue-500 w-48 shadow-inner">
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="loadTrendData()" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded text-sm transition-colors">トレンド更新</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== メインコンテンツ ===== -->
+    <div class="w-full px-6 py-8 md:px-12 md:py-10">
+        <main class="max-w-[1600px] mx-auto">
+            <div id="loading" class="text-center py-20 text-slate-400 text-lg" style="display:none;">データを集計中です...</div>
+            <div id="errorMsg" class="text-center py-10 text-red-400 text-lg font-bold" style="display:none;"></div>
+            
+            <div id="trendContent" class="grid grid-cols-1 lg:grid-cols-2 gap-8" style="display:none;">
+                
+                <!-- 稼働時間の推移 -->
+                <div class="bg-slate-800 border border-slate-700 p-6 rounded-sm shadow-none flex flex-col">
+                    <h3 class="text-lg font-semibold mb-2">🕒 日別 総稼働時間の推移</h3>
+                    <div class="chart-legend">
+                        <div><span class="legend-dot" style="background-color:#3b82f6"></span>稼働時間 (時間)</div>
+                    </div>
+                    <div class="flex-grow relative h-80"><canvas id="trendWorkHours"></canvas></div>
+                </div>
+                
+                <!-- 非効率操作の推移 -->
+                <div class="bg-slate-800 border border-slate-700 p-6 rounded-sm shadow-none flex flex-col">
+                    <h3 class="text-lg font-semibold mb-2">⚠️ 日別 非効率操作の推移</h3>
+                    <div class="chart-legend">
+                        <div><span class="legend-dot" style="background-color:#ef4444"></span>非効率時間 (分)</div>
+                        <div><span class="legend-dot" style="background-color:#f59e0b"></span>手入力・コピペ回数</div>
+                    </div>
+                    <div class="flex-grow relative h-80"><canvas id="trendInefficient"></canvas></div>
+                </div>
+                
+                <!-- アプリ別使用割合の推移 (積み上げ棒) -->
+                <div class="bg-slate-800 border border-slate-700 p-6 rounded-sm shadow-none flex flex-col lg:col-span-2">
+                    <h3 class="text-lg font-semibold mb-2">🤖 日別 AIツール・手作業の比率推移</h3>
+                    <div class="chart-legend">
+                        <div><span class="legend-dot" style="background-color:#8b5cf6"></span>AIツール (%)</div>
+                        <div><span class="legend-dot" style="background-color:#10b981"></span>手作業・通常アプリ (%)</div>
+                    </div>
+                    <div class="flex-grow relative h-80"><canvas id="trendAiUsage"></canvas></div>
+                </div>
+
+                <!-- 操作種類(入力/コピペ/閲覧)の推移 -->
+                <div class="bg-slate-800 border border-slate-700 p-6 rounded-sm shadow-none flex flex-col">
+                    <h3 class="text-lg font-semibold mb-2">⌨️ 日別 操作種類の割合推移</h3>
+                    <div class="chart-legend">
+                        <div><span class="legend-dot" style="background-color:#14b8a6"></span>手入力 (%)</div>
+                        <div><span class="legend-dot" style="background-color:#f59e0b"></span>コピペ (%)</div>
+                        <div><span class="legend-dot" style="background-color:#94a3b8"></span>閲覧・その他 (%)</div>
+                    </div>
+                    <div class="flex-grow relative h-80"><canvas id="trendOperationTypes"></canvas></div>
+                </div>
+
+                <!-- ショートカットキー利用率の推移 -->
+                <div class="bg-slate-800 border border-slate-700 p-6 rounded-sm shadow-none flex flex-col">
+                    <h3 class="text-lg font-semibold mb-2">⚡ 日別 ショートカットキー利用率</h3>
+                    <div class="chart-legend">
+                        <div><span class="legend-dot" style="background-color:#06b6d4"></span>利用率 (%)</div>
+                    </div>
+                    <div class="flex-grow relative h-80"><canvas id="trendShortcutRate"></canvas></div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- スクリプト -->
+    <script src="/static/js/api.js"></script>
+    <script src="/static/js/trend_dashboard.js"></script>
+</body>
+</html>

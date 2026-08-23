@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--_SIG=Zq4V+xmF3RZzEplJ4BFl6ZMy8Xm/hQiiIKKfhVgd5gw5sE73InBvxVyTEjUFTQiCMD9qFOjCiZkJ2MOiD1AborbH6D8J/3KY6sj6We1d00XCt6AlWgWdJw19BrYTVb6koaxgMNe+NozTeUNsj9qshBkrlEMZd+AkX+Raj9pzC0c=-->
+<Package Id="RosebudMUI.ja-jp" Type="MSI" Path="RosebudMUI.MSI" Version="1.0" ProductCode="{90140000-0010-0411-0000-0000000FF1CE}" MSIVersion="14.0.4763.1000" Platform="x86">
+	<Feature Id="RosebudMSIFiles" Cost="3142341">
+		<OptionRef Id="RosebudMSIFiles"/>
+	</Feature>
+	<Feature Id="RosebudMSIFilesIntl_1041" Cost="175155">
+		<OptionRef Id="RosebudMSIFiles"/>
+	</Feature>
+	<Feature Id="SetupControllerFiles" Cost="468">
+		<OptionRef Id="AlwaysInstalled"/>
+	</Feature>
+	<Feature Id="SetupXmlFiles" Cost="468">
+		<OptionRef Id="AlwaysInstalled"/>
+	</Feature>
+</Package>

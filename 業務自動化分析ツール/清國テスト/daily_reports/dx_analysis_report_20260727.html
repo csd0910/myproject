@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>詳細DX抽出レポート - 20260727</title>
+    <script src="https://cdn.tailwindcss.com"></script><script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <script>mermaid.initialize({startOnLoad:true});</script>
+    <style>body { background-color: #f8fafc; color: #334155; }</style>
+</head>
+<body class="p-6 md:p-12">
+    <div class="max-w-7xl mx-auto bg-white p-8 rounded-xl shadow-lg border border-gray-100">
+        <header class="mb-12 border-b pb-6">
+            <h1 class="text-3xl font-extrabold text-slate-800 mb-2">詳細DX抽出レポート (20260727)</h1>
+            <p class="text-slate-500">業務ロギングとAIによる自動化提案</p>
+        </header>
+        
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-12">
+            <!-- 左カラム：グラフ（アプリ割合 ＆ 操作割合） -->
+            <div class="lg:col-span-3 space-y-12 border-r pr-8">
+                <div>
+                    <h2 class="text-lg font-bold mb-4 text-center text-slate-700">🖥️ アプリ使用割合</h2>
+                    <div class="relative w-full aspect-square"><canvas id="appChart"></canvas></div>
+                </div>
+                <div>
+                    <h2 class="text-lg font-bold mb-4 text-center text-slate-700">⚙️ 操作ごとの割合 (作業分解)</h2>
+                    <div class="relative w-full aspect-square"><canvas id="taskChart"></canvas></div>
+                </div>
+            </div>
+            
+            <!-- 右カラム：AI解析結果（タイムライン、フロー図、DX提案） -->
+            <div class="lg:col-span-9">
+                <h2 class="text-2xl mb-4 border-b pb-2 text-blue-700 font-bold">⏱ タイムスタンプ順の操作履歴と所要時間</h2>
+<ul>
+    <li class="mb-2 p-2 bg-blue-50 rounded-lg">
+        <strong class="text-blue-800">16:23:59 - 16:25:10: 初期ファイル検索・整理</strong><br>
+        手作業での所要時間: 1分11秒<br>
+        プログラムで自動化した場合の参考時間: 10秒<br>
+        <span class="text-gray-600 text-sm">（多数のExcel参照、共有ドライブ/特定ファイル検索、日付フォルダ整理など）</span>
+    </li>
+    <li class="mb-2 p-2 bg-blue-50 rounded-lg">
+        <strong class="text-blue-800">16:25:37 - 16:26:08: 週次報告書データ準備とコピペ転記</strong><br>
+        手作業での所要時間: 31秒<br>
+        プログラムで自動化した場合の参考時間: 5秒<br>
+        <span class="text-gray-600 text-sm">（他データからの実績表への複数列コピペ転記、週次報告書確認、受注明細CSV確認など）</span>
+    </li>
+    <li class="mb-2 p-2 bg-blue-50 rounded-lg">
+        <strong class="text-blue-800">16:42:55 - 16:44:14: 受注明細データ加工と週次報告書更新</strong><br>
+        手作業での所要時間: 1分19秒<br>
+        プログラムで自動化した場合の参考時間: 10秒<br>
+        <span class="text-gray-600 text-sm">（受注明細フィルター設定、データ表示確認、右クリックメニュー、複数Excelファイル処理、週次報告書コピペ転記など）</span>
+    </li>
+    <li class="mb-2 p-2 bg-blue-50 rounded-lg">
+        <strong class="text-blue-800">16:44:28 - 16:47:52: 週次報告書・商品政策書データの確認・更新・分析</strong><br>
+        手作業での所要時間: 3分24秒<br>
+        プログラムで自動化した場合の参考時間: 30秒<br>
+        <span class="text-gray-600 text-sm">（発注明細CSV選択、関連ファイル確認、計画実績分析、実績コピペ入力、各種指標確認、コメント記載、データ入力・テキスト整理など）</span>
+    </li>
+    <li class="mb-2 p-2 bg-blue-50 rounded-lg">
+        <strong class="text-blue-800">16:48:54 - 16:53:45: 受注明細CSVの集計・分類、週次報告書への最終転記、マスタ更新</strong><br>
+        手作業での所要時間: 4分51秒<br>
+        プログラムで自動化した場合の参考時間: 30秒<br>
+        <span class="text-gray-600 text-sm">（受注明細閲覧、販売計画参照・入力、データ表示問題確認、販促リスト確認、品目cd入力、ピボットテーブル作成検討、シート管理、手動分類集計、実績データコピペ、好不調コメント更新、分類指定、ウィンドウ設定、商品マスタ保存、終売案内入力など）</span>
+    </li>
+    <li class="mb-2 p-2 bg-blue-100 rounded-lg font-bold">
+        <strong class="text-blue-900">合計手作業時間: 11分16秒</strong><br>
+        <strong class="text-blue-900">合計自動化参考時間: 1分25秒</strong><br>
+        <strong class="text-green-700">想定短縮時間: 9分51秒</strong>
+    </li>
+</ul>
+
+<div class="mt-8 flex flex-col lg:flex-row gap-8">
+    <div class="flex-1 lg:w-1/2">
+        <h2 class="text-xl mb-4 border-b pb-2 text-teal-700 font-bold">🔄 現在の処理フロー図 (手動所要時間)</h2>
+        <div class="mermaid bg-slate-50 p-4 rounded shadow">
+graph TD
+    A["作業開始"] --> B["初期ファイル検索・整理 (1分11秒)"];
+    B --> C["週次報告書データ準備・コピペ (31秒)"];
+    C --> D["受注明細データ加工・週次報告書更新 (1分19秒)"];
+    D --> E["週次報告・商品政策書確認・更新・分析 (3分24秒)"];
+    E --> F["受注明細集計・報告書最終転記・マスタ更新 (4分51秒)"];
+    F --> G["作業終了"];
+        </div>
+    </div>
+    <div class="flex-1 lg:w-1/2">
+        <h2 class="text-xl mb-4 border-b pb-2 text-orange-600 font-bold">🚀 自動化後のフロー図 (短縮時間)</h2>
+        <div class="mermaid bg-slate-50 p-4 rounded shadow">
+graph TD
+    A[RPAトリガー: 週次報告プロセス開始] --> B["RPA: 関連ファイル自動検索・取得 (約1分短縮)"];
+    B --> C["RPA: 受注明細CSV自動加工・集計 (約3分短縮)"];
+    C --> D["RPA: 週次報告書・商品政策書への自動転記・更新 (約5分短縮)"];
+    D --> E{"担当者: 好不調要因・施策コメント入力 (手動残存)"};
+    E --> F["RPA: 商品マスタ/終売案内データ自動更新 (約1分短縮)"];
+    F --> G[作業終了: 約9分51秒短縮見込み];
+        </div>
+    </div>
+</div>
+
+<div class="mt-12 bg-orange-50 p-6 rounded-xl border border-orange-100">
+    <h2 class="text-2xl mb-4 text-orange-800 font-bold">💡 具体的な自動化案とステップ</h2>
+    <h3 class="text-xl font-semibold mb-2 text-orange-700">RPA導入による「週次報告書作成およびデータ管理」のDX化案</h3>
+    <ol class="list-decimal list-inside space-y-3 text-gray-800">
+        <li>
+            <strong class="text-orange-900">Step 1: データ収集とファイル整理の自動化</strong>
+            <p class="ml-4">共有ドライブ、デスクトップ、ローカルフォルダから週次報告書、受注明細CSV、商品政策書、受領明細Excelなどの関連ファイルを自動で検索・特定し、所定の作業フォルダにコピーします。特定の日付（例: "0727"）や期間（例: "2025年7月と8月"）に基づいたファイルフィルタリングも自動化し、作業に必要なデータの一元化と準備を高速化します。</p>
+        </li>
+        <li>
+            <strong class="text-orange-900">Step 2: 受注明細CSVデータの自動加工と集計</strong>
+            <p class="ml-4">最新の受注明細CSVファイルをExcelで開き、指定期間（例: 2025年7月1日～8月1日）で自動フィルター設定します。さらに、品目コードの入力（例: C6セルに"品目cd"）といったデータクレンジング作業を自動実行。数量、金額、粗利などの必要な項目でピボットテーブルを自動作成し、商品分類別・期間別の実績データを集計します。日付表示形式の調整や列幅の自動調整も行い、分析しやすい形に整えます。</p>
+        </li>
+        <li>
+            <strong class="text-orange-900">Step 3: 週次報告書・商品政策書への自動転記と更新</strong>
+            <p class="ml-4">商品課の週次報告書フォーマットをExcelで開き、Step 2で集計した実績データを自動でコピー＆ペースト転記します（他データからの複数列、大分類実績データ、CH列からCV列への転記など）。また、商品政策書を開き、売上や粗利の計画・実績データ、構成比、進捗率などを自動で入力・更新します。関連する複数のExcelファイルからの参照・入力作業もRPAで自動化し、手作業による転記ミスや時間消費を大幅に削減します。</p>
+        </li>
+        <li>
+            <strong class="text-orange-900">Step 4: マスタデータと関連情報の自動更新</strong>
+            <p class="ml-4">商品マスタデータに変更が生じた場合、その内容を自動で更新し、ファイルを保存します。加えて、終売案内Excelに商品情報と処理状況を自動入力することで、商品の供給・終売状況に関する管理業務の効率化と精度向上を図ります。</p>
+        </li>
+        <li>
+            <strong class="text-orange-900">Step 5: レポート生成と通知の自動化 (オプション)</strong>
+            <p class="ml-4">最終更新された週次報告書や商品政策書をPDF形式で自動出力し、指定の共有フォルダに保存します。さらに、報告書完成を関係者へ自動通知する機能を加えることで、情報共有の迅速化と担当者の確認作業負担を軽減します。</p>
+        </li>
+    </ol>
+</div>
+            </div>
+        </div>
+    </div>
+    <script>
+        // アプリ割合グラフ
+        new Chart(document.getElementById('appChart').getContext('2d'), {
+            type: 'pie', data: { labels: ["EXCEL.EXE", "", "explorer.exe", "ShellExperienceHost.exe", "gui_app.exe"], datasets: [{ data: [797, 732, 234, 10, 2], backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#64748b'] }] }
+        });
+        // 操作割合（手作業/コピペなど）グラフ
+        new Chart(document.getElementById('taskChart').getContext('2d'), {
+            type: 'pie', data: { labels: ["\u624b\u5165\u529b\u30fb\u7de8\u96c6", "\u30b3\u30d4\u30da\u30fb\u53cd\u5fa9\u8ee2\u8a18", "\u95a2\u6570\u51e6\u7406", "\u305d\u306e\u4ed6\u95b2\u89a7\u30fb\u5f85\u6a5f"], datasets: [{ data: [13, 6, 0, 33], backgroundColor: ['#ef4444', '#3b82f6', '#10b981', '#64748b'] }] }
+        });
+    </script>
+</body></html>
