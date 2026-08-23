@@ -1,0 +1,14 @@
+{
+  "userSettings": {
+    "artifactReviewMode": "ARTIFACT_REVIEW_MODE_TURBO",
+    "autoExecutionPolicy": "CASCADE_COMMANDS_AUTO_EXECUTION_EAGER",
+    "customThemeSeedsDark": {
+      "foregroundOverride": "#0BD0FD",
+      "primary": "#0CF9C5"
+    },
+    "enableTerminalSandbox": false,
+    "nonWorkspaceFileAccessPolicy": "AGENT_SETTING_POLICY_ALLOW",
+    "remoteControlHostname": "fwn-026-void-plume",
+    "themeMode": "THEME_MODE_DARK"
+  }
+}

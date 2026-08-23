@@ -1,0 +1,21 @@
+{
+  "id": "9635e33d-a5dd-4b29-9e58-f719b1e7fe56",
+  "name": "MyProject",
+  "projectResources": {
+    "resources": [
+      {
+        "gitFolder": {
+          "folderUri": "file:///c%3A/Users/%E3%83%95%E3%82%A9%E3%83%BC%E3%83%AC%E3%82%B9%E3%83%88026/MyProject",
+          "defaultBranch": "main"
+        }
+      },
+      {
+        "gitFolder": {
+          "folderUri": "file:///c%3A%5CUsers%5C%E3%83%95%E3%82%A9%E3%83%BC%E3%83%AC%E3%82%B9%E3%83%88026%5CMyProject",
+          "defaultBranch": "main"
+        }
+      }
+    ]
+  },
+  "updatedAt": "2026-07-24T06:30:57.987517900Z"
+}
