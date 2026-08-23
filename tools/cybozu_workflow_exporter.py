@@ -59,6 +59,9 @@ class CybozuWorkflowExporterApp:
         
         self.btn_extract = ttk.Button(btn_box, text="ステップ②：ブラウザ起動＆抽出開始", command=self.start_extraction)
         self.btn_extract.pack(side=tk.LEFT, padx=5)
+        
+        self.btn_delete = ttk.Button(btn_box, text="ステップ③：不要データ一括削除", command=self.delete_unneeded)
+        self.btn_delete.pack(side=tk.LEFT, padx=5)
 
         self.btn_stop = ttk.Button(btn_box, text="中断", command=self.stop_extraction, state=tk.DISABLED)
         self.btn_stop.pack(side=tk.LEFT, padx=5)
@@ -111,10 +114,10 @@ class CybozuWorkflowExporterApp:
                 wb = openpyxl.Workbook()
                 ws_sent = wb.active
                 ws_sent.title = "送信一覧"
-                ws_sent.append(["番号", "申請日", "カテゴリ", "状況", "申請者/処理者", "件名", "添付ファイル", "フォルダへのリンク"])
+                ws_sent.append(["削除フラグ", "番号", "申請日", "カテゴリ", "状況", "申請者/処理者", "件名", "添付ファイル", "フォルダへのリンク"])
                 
                 ws_recept = wb.create_sheet(title="受信一覧")
-                ws_recept.append(["番号", "申請日", "カテゴリ", "状況", "申請者/処理者", "件名", "添付ファイル", "フォルダへのリンク"])
+                ws_recept.append(["削除フラグ", "番号", "申請日", "カテゴリ", "状況", "申請者/処理者", "件名", "添付ファイル", "フォルダへのリンク"])
                 
                 wb.save(excel_path)
             except Exception as e:
@@ -126,6 +129,74 @@ class CybozuWorkflowExporterApp:
     def stop_extraction(self):
         self.is_extracting = False
         self.log("中断シグナルを送信しました。現在の処理が終わるまでお待ちください。")
+
+    def delete_unneeded(self):
+        save_dir = self.save_dir_var.get()
+        excel_path = os.path.join(save_dir, "ワークフロー台帳.xlsx")
+        db_path = os.path.join(save_dir, "workflow_manager.db")
+        if not os.path.exists(excel_path):
+            self.log("エラー: ワークフロー台帳.xlsx が見つかりません。")
+            return
+            
+        import shutil
+        import openpyxl
+        
+        self.log("\n--- ステップ③：不要データの一括削除処理を開始します ---")
+        self.btn_db.config(state=tk.DISABLED)
+        self.btn_extract.config(state=tk.DISABLED)
+        self.btn_delete.config(state=tk.DISABLED)
+        
+        def run_delete():
+            try:
+                wb = openpyxl.load_workbook(excel_path)
+                conn = sqlite3.connect(db_path)
+                c = conn.cursor()
+                
+                delete_count = 0
+                target_flags = ["〇", "○", "削除", "x", "X", "×"]
+                
+                for sheet_name in wb.sheetnames:
+                    ws = wb[sheet_name]
+                    # 下から上へループ（行削除時のズレ防止）
+                    for row_idx in range(ws.max_row, 1, -1):
+                        flag_cell = ws.cell(row=row_idx, column=1).value
+                        if flag_cell and str(flag_cell).strip() in target_flags:
+                            item_id = ws.cell(row=row_idx, column=2).value
+                            folder_link = ws.cell(row=row_idx, column=9).value
+                            
+                            # 1. フォルダの完全削除
+                            if folder_link and os.path.exists(folder_link):
+                                try:
+                                    shutil.rmtree(folder_link)
+                                    self.log(f"  -> フォルダ削除完了: [No.{item_id}]")
+                                except Exception as e:
+                                    self.log(f"  -> フォルダ削除エラー [No.{item_id}]: {e}")
+                            
+                            # 2. DBから削除
+                            if item_id:
+                                c.execute("DELETE FROM processed_workflows WHERE id = ?", (item_id,))
+                            
+                            # 3. Excelから行を削除
+                            ws.delete_rows(row_idx)
+                            delete_count += 1
+                            
+                if delete_count > 0:
+                    conn.commit()
+                    wb.save(excel_path)
+                    self.log(f"\n>>> [完了] 計 {delete_count} 件の不要データ（バックアップフォルダ・台帳記録）を完全に削除しました！")
+                else:
+                    self.log("\n>>> [完了] 削除フラグ（〇や削除など）が設定されているデータは見つかりませんでした。")
+                    
+            except Exception as e:
+                self.log(f"!! 削除中にエラーが発生しました: {e}")
+                self.log("※台帳ファイル(Excel)が開いたままになっている場合は、一度閉じてから再度実行してください。")
+            finally:
+                if 'conn' in locals(): conn.close()
+                self.btn_db.config(state=tk.NORMAL)
+                self.btn_extract.config(state=tk.NORMAL)
+                self.btn_delete.config(state=tk.NORMAL)
+                
+        threading.Thread(target=run_delete, daemon=True).start()
 
     def start_extraction(self):
         save_dir = self.save_dir_var.get()
@@ -288,16 +359,16 @@ class CybozuWorkflowExporterApp:
                 wb = openpyxl.Workbook()
                 ws_sent = wb.active
                 ws_sent.title = "送信一覧"
-                ws_sent.append(["番号", "申請日", "カテゴリ", "状況", "申請者/処理者", "件名", "添付ファイル", "フォルダへのリンク"])
+                ws_sent.append(["削除フラグ", "番号", "申請日", "カテゴリ", "状況", "申請者/処理者", "件名", "添付ファイル", "フォルダへのリンク"])
                 ws_recept = wb.create_sheet(title="受信一覧")
-                ws_recept.append(["番号", "申請日", "カテゴリ", "状況", "申請者/処理者", "件名", "添付ファイル", "フォルダへのリンク"])
+                ws_recept.append(["削除フラグ", "番号", "申請日", "カテゴリ", "状況", "申請者/処理者", "件名", "添付ファイル", "フォルダへのリンク"])
                 
             if True:
                 for i, item in enumerate(all_target_items):
                     cat_name = item['category_name']
                     if cat_name not in wb.sheetnames:
                         ws = wb.create_sheet(title=cat_name)
-                        ws.append(["番号", "申請日", "カテゴリ", "状況", "申請者/処理者", "件名", "添付ファイル", "フォルダへのリンク"])
+                        ws.append(["削除フラグ", "番号", "申請日", "カテゴリ", "状況", "申請者/処理者", "件名", "添付ファイル", "フォルダへのリンク"])
                     ws = wb[cat_name]
                     if not self.is_extracting: break
                     
@@ -431,11 +502,11 @@ class CybozuWorkflowExporterApp:
                     conn.close()
                     
                     att_str = " / ".join(attached_names)
-                    row_data = [item['id'], item['date'], cat_name, item['status'], item['person'], item['folder_title'], att_str, folder_path]
+                    row_data = ["", item['id'], item['date'], cat_name, item['status'], item['person'], item['folder_title'], att_str, folder_path]
                     ws.append(row_data)
                     
                     # フォルダへのリンクをハイパーリンク化（クリックで開けるようにする）
-                    cell = ws.cell(row=ws.max_row, column=8)
+                    cell = ws.cell(row=ws.max_row, column=9)
                     cell.hyperlink = folder_path
                     cell.style = "Hyperlink"
                     

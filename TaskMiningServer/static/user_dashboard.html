@@ -8,20 +8,21 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
     <script>mermaid.initialize({startOnLoad: true});</script>
     <!-- アプリ固有スタイル -->
     <link rel="stylesheet" href="/static/css/common.css">
 </head>
-<body class="bg-slate-50">
+<body class="bg-slate-900 text-slate-200">
 
     <!-- ===== ヘッダー & フィルターバー ===== -->
-    <div class="w-full bg-[#0f172a] text-[#f8fafc] px-6 pt-6 pb-8 md:px-12 md:pt-8 md:pb-12 border-b border-slate-800">
-        <div class="w-full max-w-[1600px] mx-auto">
+    <div class="w-full bg-slate-900 text-[#f8fafc] px-6 pt-6 pb-8 md:px-12 md:pt-8 md:pb-12 border-b border-slate-800">
+        <div class="w-full mx-auto">
             <header class="mb-6 flex justify-between items-center">
                 <div>
                     <h1 class="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-emerald-400 flex items-center gap-3 mb-2">
-                        🌐 詳細DX抽出レポート (ミクロビュー)
+                        🌐 詳細DX抽出レポート
                         <span class="text-xs font-mono bg-blue-500/20 text-blue-300 px-2 py-1 rounded-full border border-blue-500/30">Ver1.0.2</span>
                     </h1>
                     <p class="text-slate-400">対象ユーザー: <span id="displayUserName" class="font-bold text-slate-200">全メンバー</span></p>
@@ -39,23 +40,23 @@
                         class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded border border-slate-600 transition-colors text-sm font-semibold flex items-center gap-2 shadow-sm">
                         <span>🖨️</span> 印刷 (PDF)
                     </button>
+                    <button onclick="downloadImage()"
+                        class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded border border-slate-600 transition-colors text-sm font-semibold flex items-center gap-2 shadow-sm">
+                        <span>🖼️</span> 画像 (PNG)
+                    </button>
                     <a href="/static/dashboard.html"
                         class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded border border-slate-600 transition-colors text-sm font-semibold flex items-center gap-2 shadow-sm">
-                        🌐 部門マクロビューへ戻る
+                        <span>🏢</span> 部門データ参照
                     </a>
                 </div>
             </header>
             <!-- フィルターバー -->
-            <div class="bg-[rgba(30,41,59,0.7)] border border-[rgba(255,255,255,0.1)] rounded-xl p-4 flex flex-wrap items-end gap-4 print:hidden shadow-lg" style="backdrop-filter:blur(10px)">
+            <div class="bg-slate-800/80 border border-[rgba(255,255,255,0.1)] rounded-xl p-4 flex flex-wrap items-end gap-4 print:hidden shadow-lg" style="backdrop-filter:blur(10px)">
                 <div>
-                    <label class="block text-xs text-slate-400 mb-1">📅 開始日時</label>
-                    <input type="datetime-local" id="filterStart" class="bg-slate-700 border border-slate-600 rounded px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-blue-500 w-48 shadow-inner">
+                    <label class="block text-xs text-slate-400 mb-1">📅 対象日</label>
+                    <input type="date" id="filterDate" class="bg-slate-700 border border-slate-600 rounded px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-blue-500 w-48 shadow-inner">
                 </div>
-                <div>
-                    <label class="block text-xs text-slate-400 mb-1">📅 終了日時</label>
-                    <input type="datetime-local" id="filterEnd" class="bg-slate-700 border border-slate-600 rounded px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-blue-500 w-48 shadow-inner">
-                </div>
-                <div class="ml-auto flex gap-2">
+                <div class="flex gap-2">
                     <button onclick="applyFilters()" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded text-sm transition-colors">絞り込み適用</button>
                     <button onclick="resetUserFilters()" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 border border-slate-600 font-semibold rounded text-sm transition-colors">リセット</button>
                 </div>
@@ -64,30 +65,31 @@
     </div>
 
     <!-- ===== メインコンテンツ ===== -->
-    <div class="w-full max-w-[1600px] mx-auto p-6 md:p-12 -mt-4">
-        <div class="bg-white p-8 rounded-xl shadow-sm border border-slate-200">
+    <div class="w-full mx-auto p-6 md:p-12 -mt-4">
+        <div class="bg-slate-800 p-8 rounded-xl shadow-sm border border-slate-700">
 
             <!-- KPIカード -->
             <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
-                <div class="bg-white border rounded-sm p-4 flex flex-col items-center justify-center text-center shadow-none">
-                    <div class="text-slate-500 text-xs font-bold">総稼働時間</div>
-                    <div class="text-2xl font-extrabold text-slate-800 mt-2" id="kpi-total-hours">--<span class="text-base font-normal text-slate-500 ml-1">h</span></div>
+                <div class="bg-slate-800 border border-teal-700/50 border-t-4 border-t-teal-400 rounded-sm p-4 flex flex-col items-center justify-center text-center shadow-lg relative overflow-hidden">
+                    <div class="absolute -right-4 -bottom-4 text-6xl opacity-10">🎯</div>
+                    <div class="text-teal-300 text-xs font-bold relative z-10">守れた集中時間</div>
+                    <div class="text-3xl font-extrabold text-teal-400 mt-2 relative z-10" id="kpi-focused">--<span class="text-base font-normal text-teal-500 ml-1">h</span></div>
                 </div>
-                <div class="bg-white border-l-4 border-l-red-400 rounded-sm p-4 flex flex-col items-center justify-center text-center shadow-none">
-                    <div class="text-slate-500 text-xs font-bold">非効率作業時間</div>
+                <div class="bg-slate-800 border rounded-sm p-4 flex flex-col items-center justify-center text-center shadow-none">
+                    <div class="text-slate-300 text-xs font-bold">総稼働時間</div>
+                    <div class="text-2xl font-extrabold text-slate-200 mt-2" id="kpi-total-hours">--<span class="text-base font-normal text-slate-400 ml-1">h</span></div>
+                </div>
+                <div class="bg-slate-800 border border-slate-700 border-l-4 border-l-red-400 rounded-sm p-4 flex flex-col items-center justify-center text-center shadow-none">
+                    <div class="text-slate-300 text-xs font-bold">非効率作業時間</div>
                     <div class="text-2xl font-extrabold text-red-500 mt-2" id="kpi-inefficient-time">--<span class="text-base font-normal text-red-400 ml-1">m</span></div>
                 </div>
-                <div class="bg-white border rounded-sm p-4 flex flex-col items-center justify-center text-center shadow-none">
-                    <div class="text-slate-500 text-xs font-bold">AIツール操作時間</div>
-                    <div class="text-2xl font-extrabold text-indigo-600 mt-2" id="kpi-ai-time">--<span class="text-base font-normal text-indigo-400 ml-1">m</span></div>
-                </div>
-                <div class="bg-white border rounded-sm p-4 flex flex-col items-center justify-center text-center shadow-none">
-                    <div class="text-slate-500 text-xs font-bold">Web会議時間</div>
+                <div class="bg-slate-800 border rounded-sm p-4 flex flex-col items-center justify-center text-center shadow-none">
+                    <div class="text-slate-300 text-xs font-bold">Web会議時間</div>
                     <div class="text-2xl font-extrabold text-purple-600 mt-2" id="kpi-meeting">--<span class="text-base font-normal text-purple-400 ml-1">h</span></div>
                 </div>
-                <div class="bg-white border rounded-sm p-4 flex flex-col items-center justify-center text-center shadow-none">
-                    <div class="text-slate-500 text-xs font-bold">アイドル時間</div>
-                    <div class="text-2xl font-extrabold text-slate-500 mt-2" id="kpi-idle">--<span class="text-base font-normal text-slate-400 ml-1">h</span></div>
+                <div class="bg-slate-800 border rounded-sm p-4 flex flex-col items-center justify-center text-center shadow-none">
+                    <div class="text-slate-300 text-xs font-bold">アイドル時間</div>
+                    <div class="text-2xl font-extrabold text-slate-400 mt-2" id="kpi-idle">--<span class="text-base font-normal text-slate-400 ml-1">h</span></div>
                 </div>
             </div>
 
@@ -96,101 +98,67 @@
                 <!-- 左サイドバー: 円グラフ + 詳細メトリクス -->
                 <div class="lg:col-span-3 space-y-12 border-r pr-8">
                     <div>
-                        <h2 class="text-lg font-bold mb-4 text-center text-slate-700">📊 業務内訳 (連絡・会議・作業)</h2>
+                        <h2 class="text-lg font-bold mb-4 text-center text-slate-300">📊 業務内訳 (連絡・会議・作業)</h2>
                         <div class="relative w-full aspect-square"><canvas id="breakdownChart"></canvas></div>
                     </div>
                     <div>
-                        <h2 class="text-lg font-bold mb-4 text-center text-slate-700">🖥️ アプリ使用割合</h2>
+                        <h2 class="text-lg font-bold mb-4 text-center text-slate-300">🖥️ アプリ使用割合</h2>
                         <div class="relative w-full aspect-square"><canvas id="appChart"></canvas></div>
                     </div>
                     <div>
-                        <h2 class="text-lg font-bold mb-4 text-center text-slate-700">⚙️ 操作回数の内訳</h2>
+                        <h2 class="text-lg font-bold mb-4 text-center text-slate-300">⚙️ 操作回数の内訳</h2>
                         <div class="relative w-full aspect-square"><canvas id="taskChart"></canvas></div>
                     </div>
                     <!-- 詳細メトリクス -->
-                    <div class="mt-8 bg-slate-50 border p-4 rounded-lg">
+                    <div class="mt-8 bg-slate-900 border p-4 rounded-lg">
                         <h3 class="text-sm font-bold text-slate-600 border-b pb-2 mb-3">詳細操作量メトリクス</h3>
                         <div class="space-y-3">
                             <div class="flex justify-between items-center text-sm">
                                 <span class="text-indigo-600 font-bold">文字手入力</span>
-                                <span class="font-bold text-indigo-700" id="sidebar-clicks">-- 回</span>
+                                <span class="font-bold text-indigo-400" id="sidebar-clicks">-- 回</span>
                             </div>
                             <div class="flex justify-between items-center text-sm">
-                                <span class="text-teal-600 font-bold">スクロール移動量</span>
-                                <span class="font-bold text-teal-700 text-right" id="sidebar-scrolls">-- 行</span>
-                            </div>
-                            <div class="flex justify-between items-center text-sm">
-                                <span class="text-amber-600 font-bold">マウス移動 (平均比)</span>
-                                <span class="font-bold text-amber-600 flex items-center gap-1" id="sidebar-distance">--</span>
-                            </div>
-                            <div class="flex justify-between items-center text-sm">
-                                <span class="text-rose-600 font-bold">画面切り替え</span>
-                                <span class="font-bold text-rose-700" id="sidebar-switches">-- 回</span>
+                                <span class="text-rose-600 font-bold">画面切り替え (マルチタスク)</span>
+                                <span class="font-bold text-rose-400" id="sidebar-switches">-- 回</span>
                             </div>
                             <div class="flex justify-between items-center text-sm">
                                 <span class="text-slate-600 font-bold">コピペ操作</span>
-                                <span class="font-bold text-slate-700" id="sidebar-copypaste">-- 回</span>
+                                <span class="font-bold text-slate-300" id="sidebar-copypaste">-- 回</span>
                             </div>
                         </div>
                     </div>
                     <!-- 自己改善ベンチマーク指標 -->
-                    <div class="mt-4 bg-indigo-50 border border-indigo-100 p-4 rounded-lg shadow-sm">
-                        <h3 class="text-sm font-bold text-indigo-800 border-b border-indigo-200 pb-2 mb-3 flex items-center gap-1">
-                            <span>💡</span> 自己改善ベンチマーク (部門比較)
+                    <div class="mt-4 bg-slate-800 border border-indigo-100 p-4 rounded-lg shadow-sm">
+                        <h3 class="text-sm font-bold text-indigo-300 border-b border-indigo-200 pb-2 mb-3 flex items-center gap-1">
+                            <span>💡</span> 自己改善ベンチマーク (過去の自分比較)
                         </h3>
                         
                         <div class="space-y-4">
                             <!-- ショートカット活用率 -->
                             <div class="relative group cursor-help">
-                                <div class="flex justify-between text-xs mb-1">
-                                    <span class="text-indigo-700 font-semibold">ショートカット活用度</span>
-                                    <span class="font-bold text-indigo-800" id="bm-my-shortcut">--%</span>
+                                <!-- ツールチップ -->
+                                <div class="absolute z-50 left-1/2 -translate-x-1/2 bottom-full mb-2 w-56 bg-slate-800 text-white text-xs rounded p-3 shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 pointer-events-none border border-slate-700">
+                                    <div class="font-bold mb-1 text-indigo-300">ショートカット活用度</div>
+                                    キーボードショートカットの使用割合です。この数値が高いほど、マウス操作の手間が省け、作業が高速化されていることを示します。
+                                    <div class="mt-2 pt-2 border-t border-slate-600">
+                                        <div class="font-bold text-[10px] text-slate-400 mb-1">主に使用されたショートカット:</div>
+                                        <ul id="shortcut-details-list" class="pl-4 list-disc text-[10px] text-slate-300">
+                                            <li>データなし</li>
+                                        </ul>
+                                    </div>
                                 </div>
-                                <div class="w-full bg-indigo-200 rounded-full h-2 relative">
+                                <div class="flex justify-between text-xs mb-1">
+                                    <span class="text-indigo-400 font-semibold">ショートカット活用度</span>
+                                    <span class="font-bold text-indigo-300" id="bm-my-shortcut">--%</span>
+                                </div>
+                                <div class="w-full bg-indigo-900 rounded-full h-2 relative">
                                     <div class="bg-indigo-600 h-2 rounded-full absolute left-0" id="bm-bar-shortcut" style="width:0%"></div>
-                                    <div class="absolute h-3 w-1 bg-emerald-500 top-[-2px] z-10" id="bm-avg-shortcut" style="left:0%;" title="部門平均"></div>
-                                    <div class="absolute h-3 w-1 bg-amber-500 top-[-2px] z-10" id="bm-top-shortcut" style="left:0%;" title="上位10%平均"></div>
+                                    <div class="absolute h-3 w-1 bg-emerald-500 top-[-2px] z-10" id="bm-avg-shortcut" style="left:0%;" title="過去7日平均"></div>
                                 </div>
-                                <div class="flex justify-between mt-1 text-[10px] text-slate-500">
-                                    <span class="flex items-center gap-1"><span class="w-2 h-2 bg-emerald-500 inline-block"></span>部門平均: <span id="bm-avg-shortcut-txt">--%</span></span>
-                                    <span class="flex items-center gap-1"><span class="w-2 h-2 bg-amber-500 inline-block"></span>上位10%: <span id="bm-top-shortcut-txt">--%</span></span>
+                                <div class="flex justify-between mt-1 text-[10px] text-slate-400">
+                                    <span class="flex items-center gap-1"><span class="w-2 h-2 bg-emerald-500 inline-block"></span>直近7日平均: <span id="bm-avg-shortcut-txt">--%</span></span>
                                 </div>
                             </div>
-                            
-                            <!-- 右クリック依存率 -->
-                            <div class="relative group cursor-help">
-                                <div class="flex justify-between text-xs mb-1">
-                                    <span class="text-slate-700 font-semibold">右クリック依存率 (低いほど良)</span>
-                                    <span class="font-bold text-slate-800" id="bm-my-rightclick">--%</span>
-                                </div>
-                                <div class="w-full bg-slate-200 rounded-full h-2 relative">
-                                    <div class="bg-slate-500 h-2 rounded-full absolute left-0" id="bm-bar-rightclick" style="width:0%"></div>
-                                    <div class="absolute h-3 w-1 bg-emerald-500 top-[-2px] z-10" id="bm-avg-rightclick" style="left:0%;" title="部門平均"></div>
-                                    <div class="absolute h-3 w-1 bg-amber-500 top-[-2px] z-10" id="bm-top-rightclick" style="left:0%;" title="上位10%平均"></div>
-                                </div>
-                                <div class="flex justify-between mt-1 text-[10px] text-slate-500">
-                                    <span class="flex items-center gap-1"><span class="w-2 h-2 bg-emerald-500 inline-block"></span>部門平均: <span id="bm-avg-rightclick-txt">--%</span></span>
-                                    <span class="flex items-center gap-1"><span class="w-2 h-2 bg-amber-500 inline-block"></span>上位10%: <span id="bm-top-rightclick-txt">--%</span></span>
-                                </div>
-                            </div>
-                            
-                            <!-- 画面切り替え頻度 -->
-                            <div class="relative group cursor-help">
-                                <div class="flex justify-between text-xs mb-1">
-                                    <span class="text-rose-700 font-semibold">画面切替/時 (マルチタスク)</span>
-                                    <span class="font-bold text-rose-800" id="bm-my-switch">--回/h</span>
-                                </div>
-                                <div class="w-full bg-rose-200 rounded-full h-2 relative">
-                                    <div class="bg-rose-500 h-2 rounded-full absolute left-0" id="bm-bar-switch" style="width:0%"></div>
-                                    <div class="absolute h-3 w-1 bg-emerald-500 top-[-2px] z-10" id="bm-avg-switch" style="left:0%;" title="部門平均"></div>
-                                    <div class="absolute h-3 w-1 bg-amber-500 top-[-2px] z-10" id="bm-top-switch" style="left:0%;" title="上位10%平均"></div>
-                                </div>
-                                <div class="flex justify-between mt-1 text-[10px] text-slate-500">
-                                    <span class="flex items-center gap-1"><span class="w-2 h-2 bg-emerald-500 inline-block"></span>部門平均: <span id="bm-avg-switch-txt">--回</span></span>
-                                    <span class="flex items-center gap-1"><span class="w-2 h-2 bg-amber-500 inline-block"></span>上位10%: <span id="bm-top-switch-txt">--回</span></span>
-                                </div>
-                            </div>
-                        </div>
                         </div>
                     </div>
                 </div>
@@ -200,51 +168,51 @@
                     <!-- AI業務サマリ -->
                     <div>
                         <div class="flex justify-between items-end mb-4 border-b pb-2">
-                            <h2 class="text-2xl text-indigo-700 font-bold">📝 AI業務サマリ＆非効率分析レポート</h2>
+                            <h2 class="text-2xl text-indigo-400 font-bold">📝 AI業務サマリ＆非効率分析レポート</h2>
                             <button onclick="generateAIReportInline('CURRENT_USER')" id="inlineAiReportBtn"
                                 class="px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white rounded-md border border-purple-400 flex items-center gap-2 text-sm font-bold shadow-lg shadow-purple-500/30 transition-all">
                                 <span>🤖</span> 現状のデータから即時生成する
                             </button>
                         </div>
-                        <div id="inlineAiReportContent" class="bg-slate-50 border border-slate-200 rounded-sm p-8 text-slate-700 prose max-w-none">
+                        <div id="inlineAiReportContent" class="bg-slate-900 border border-slate-700 rounded-sm p-8 text-slate-300 prose max-w-none">
                             <div class="text-center text-slate-400 py-10">
                                 <span class="text-4xl mb-3 block">📊</span>
-                                <p class="font-bold text-slate-500 mb-2">まだAIレポートは生成されていません</p>
+                                <p class="font-bold text-slate-400 mb-2">まだAIレポートは生成されていません</p>
                                 <p class="text-sm">「即時生成する」ボタンを押すと、Gemini AIが業務サマリを自動抽出します。</p>
                             </div>
                         </div>
                     </div>
 
                     <!-- 散布図 -->
-                    <div class="bg-slate-50 border p-4 rounded-sm shadow-none">
+                    <div class="bg-slate-900 border p-4 rounded-sm shadow-none">
                         <h3 class="text-lg font-semibold mb-2">🎯 [ミクロ分析] 作業時間 vs 手入力・コピペ回数 散布図</h3>
-                        <p class="text-xs text-slate-500 mb-4">右上に位置する操作ほど「自動化最優先ゾーン」です。</p>
-                        <div id="scatterDetail" class="hidden p-4 mb-4 bg-white rounded-sm border-l-4 border-amber-500 text-slate-800"></div>
+                        <p class="text-xs text-slate-400 mb-4">右上に位置する操作ほど「自動化最優先ゾーン」です。</p>
+                        <div id="scatterDetail" class="hidden p-4 mb-4 bg-slate-800 rounded-sm border-l-4 border-amber-500 text-slate-200"></div>
                         <div class="h-80 relative"><canvas id="scatterChart"></canvas></div>
                     </div>
 
                     <!-- フロー図 -->
-                    <div class="bg-white p-6 rounded-sm border shadow-none">
+                    <div class="bg-slate-800 p-6 rounded-sm border shadow-none">
                         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
-                            <h2 class="text-2xl border-b-2 border-teal-500 pb-1 text-teal-800 font-bold">🔄 処理フロー図 (可変)</h2>
+                            <h2 class="text-2xl border-b-2 border-teal-400 pb-1 text-teal-300 font-bold">🔄 処理フロー図 (可変)</h2>
                             <div class="mt-4 sm:mt-0 flex items-center gap-2">
-                                <span class="text-sm text-slate-500 font-bold">対象業務ファイル:</span>
+                                <span class="text-sm text-slate-400 font-bold">対象業務ファイル:</span>
                                 <select id="flowSelect" onchange="updateFlows()"
-                                    class="border-2 border-teal-200 rounded-sm px-3 py-1.5 text-sm bg-teal-50 font-semibold text-teal-900 focus:outline-none focus:border-teal-500">
+                                    class="border-2 border-teal-200 rounded-sm px-3 py-1.5 text-sm bg-teal-50 font-semibold text-teal-900 focus:outline-none focus:border-teal-400">
                                     <option value="all">全体フロー</option>
                                 </select>
                             </div>
                         </div>
                         <div class="flex flex-col xl:flex-row gap-8">
                             <div class="flex-1 xl:w-1/2 flex flex-col">
-                                <h3 id="flowManualHeader" class="text-lg mb-3 text-slate-700 font-bold bg-slate-100 px-4 py-2 rounded-t-lg">手動所要時間 (現状)</h3>
-                                <div id="flowManualContainer" class="bg-slate-50 p-4 rounded-b-lg shadow-inner border border-t-0 border-slate-200 overflow-y-auto flex-grow flex justify-center min-h-[300px] max-h-[500px]">
+                                <h3 id="flowManualHeader" class="text-lg mb-3 text-slate-200 font-bold bg-slate-700 px-4 py-2 rounded-t-lg">手動所要時間 (現状)</h3>
+                                <div id="flowManualContainer" class="bg-slate-900 p-4 rounded-b-lg shadow-inner border border-t-0 border-slate-700 overflow-y-auto flex-grow flex justify-center min-h-[300px] max-h-[500px]">
                                     <div class="text-slate-400 mt-10">読み込み中...</div>
                                 </div>
                             </div>
                             <div class="flex-1 xl:w-1/2 flex flex-col">
-                                <h3 id="flowAutoHeader" class="text-lg mb-3 text-orange-700 font-bold bg-orange-100 px-4 py-2 rounded-t-lg">自動化後 (予想)</h3>
-                                <div id="flowAutoContainer" class="bg-orange-50/50 p-4 rounded-b-lg shadow-inner border border-t-0 border-orange-200 overflow-y-auto flex-grow flex justify-center min-h-[300px] max-h-[500px]">
+                                <h3 id="flowAutoHeader" class="text-lg mb-3 text-orange-300 font-bold bg-orange-900/60 px-4 py-2 rounded-t-lg">自動化後 (予想)</h3>
+                                <div id="flowAutoContainer" class="bg-orange-900/20 p-4 rounded-b-lg shadow-inner border border-t-0 border-orange-700 overflow-y-auto flex-grow flex justify-center min-h-[300px] max-h-[500px]">
                                     <div class="text-slate-400 mt-10">読み込み中...</div>
                                 </div>
                             </div>
@@ -253,7 +221,7 @@
 
                     <!-- 比較グラフ & トレンドグラフ -->
                     <div class="grid grid-cols-2 gap-6">
-                        <div class="bg-white border p-4 rounded-sm shadow-none flex flex-col">
+                        <div class="bg-slate-800 border p-4 rounded-sm shadow-none flex flex-col">
                             <h3 class="text-lg font-semibold mb-2">📊 工程別 予想短縮時間 (現状 vs 予想)</h3>
                             <div class="chart-legend">
                                 <div><span class="legend-dot" style="background-color:#eb6834"></span>現状</div>
@@ -261,7 +229,7 @@
                             </div>
                             <div class="flex-grow relative h-64"><canvas id="forecastBar"></canvas></div>
                         </div>
-                        <div class="bg-white border p-4 rounded-sm shadow-none flex flex-col">
+                        <div class="bg-slate-800 border p-4 rounded-sm shadow-none flex flex-col">
                             <h3 class="text-lg font-semibold mb-2">📉 個人改善トレンド (非効率作業の推移)</h3>
                             <div class="chart-legend">
                                 <div><span class="legend-dot" style="background-color:#1baf7a"></span>非効率操作（回）</div>
@@ -271,10 +239,55 @@
                     </div>
 
                     <!-- タイムライン -->
-                    <div class="bg-white border p-4 rounded-sm shadow-none mt-6">
-                        <h3 class="text-lg font-semibold mb-4 text-indigo-800">🕒 時系列の作業ログ</h3>
+                    <div class="bg-slate-800 border p-4 rounded-sm shadow-none mt-6">
+                        <h3 class="text-lg font-semibold mb-4 text-indigo-300">🕒 時系列の作業ログ</h3>
                         <div id="timelineContainer" class="space-y-3 max-h-96 overflow-y-auto pr-2">
                             <div class="text-slate-400 text-center py-4">読み込み中...</div>
+                        </div>
+                    </div>
+                    
+                    <!-- ========================================== -->
+                    <!-- トレンド推移エリア (過去7日間) -->
+                    <!-- ========================================== -->
+                    <div class="mt-12 pt-8 border-t-2 border-slate-700">
+                        <h2 class="text-2xl font-bold text-slate-100 mb-6 flex items-center gap-2">
+                            <span>📈</span> 直近7日間のトレンド分析
+                        </h2>
+                        
+                        <div class="grid grid-cols-2 gap-6 mb-6">
+                            <!-- 1. 利用アプリ推移 -->
+                            <div class="bg-slate-800 border border-slate-700 p-4 rounded-sm shadow-sm flex flex-col">
+                                <h3 class="text-lg font-semibold text-slate-300 mb-2">💻 アプリケーション利用推移 (TOP5)</h3>
+                                <div class="flex-grow relative h-64"><canvas id="trendApps"></canvas></div>
+                            </div>
+                            
+                            <!-- 2. 業務内訳推移 -->
+                            <div class="bg-slate-800 border border-slate-700 p-4 rounded-sm shadow-sm flex flex-col">
+                                <h3 class="text-lg font-semibold text-slate-300 mb-2">📊 業務内訳の推移</h3>
+                                <div class="flex-grow relative h-64"><canvas id="trendBreakdown"></canvas></div>
+                            </div>
+                        </div>
+                        
+                        <div class="grid grid-cols-2 gap-6 mb-6">
+                            <!-- 3. 操作種類の割合推移 -->
+                            <div class="bg-slate-800 border border-slate-700 p-4 rounded-sm shadow-sm flex flex-col">
+                                <h3 class="text-lg font-semibold text-slate-300 mb-2">⌨️ 操作種類の割合推移</h3>
+                                <div class="flex-grow relative h-64"><canvas id="trendOperationTypes"></canvas></div>
+                            </div>
+                            
+                            <!-- 4. ショートカットキー利用率推移 -->
+                            <div class="bg-slate-800 border border-slate-700 p-4 rounded-sm shadow-sm flex flex-col">
+                                <h3 class="text-lg font-semibold text-slate-300 mb-2">⚡ ショートカット利用率推移</h3>
+                                <div class="flex-grow relative h-64"><canvas id="trendShortcutRate"></canvas></div>
+                            </div>
+                        </div>
+                        
+                        <div class="grid grid-cols-1 gap-6">
+                            <!-- 5. 集中時間推移 -->
+                            <div class="bg-slate-800 border border-slate-700 p-4 rounded-sm shadow-sm flex flex-col">
+                                <h3 class="text-lg font-semibold text-slate-300 mb-2">🎯 守れた集中時間推移 (h)</h3>
+                                <div class="flex-grow relative h-48"><canvas id="trendFocused"></canvas></div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -283,27 +296,27 @@
     </div>
 
     <!-- グラフ詳細パネル (ホバーポップアップ) -->
-    <div id="chartModal" class="fixed w-[48rem] bg-white border-2 border-indigo-200 rounded-xl shadow-2xl hidden z-40 flex flex-col pointer-events-none transition-opacity duration-200" style="left:50%;top:20%">
-        <div class="p-4 border-b border-indigo-100 flex justify-between items-center bg-indigo-50/80 rounded-t-xl">
-            <h3 class="font-bold text-slate-800 flex items-center gap-2 text-lg">📊 トップ10 内訳詳細</h3>
+    <div id="chartModal" class="fixed w-[48rem] bg-slate-800 border-2 border-indigo-200 rounded-xl shadow-2xl hidden z-40 flex flex-col pointer-events-none transition-opacity duration-200" style="left:50%;top:20%">
+        <div class="p-4 border-b border-indigo-100 flex justify-between items-center bg-slate-800/80 rounded-t-xl">
+            <h3 class="font-bold text-slate-200 flex items-center gap-2 text-lg">📊 トップ10 内訳詳細</h3>
         </div>
         <div class="p-6">
             <div class="text-center mb-4">
-                <div id="chartModalLabel" class="text-2xl font-bold text-slate-800 mb-2"></div>
+                <div id="chartModalLabel" class="text-2xl font-bold text-slate-200 mb-2"></div>
                 <div class="text-5xl font-extrabold text-indigo-600 mb-2" id="chartModalPercent"></div>
             </div>
-            <div id="chartModalValue" class="text-base text-slate-700"></div>
+            <div id="chartModalValue" class="text-base text-slate-300"></div>
         </div>
     </div>
 
     <!-- AIレポートモーダル -->
     <div id="aiModal" class="fixed inset-0 bg-black/80 hidden z-50 flex items-center justify-center p-6 backdrop-blur-sm">
-        <div class="bg-white border border-slate-300 rounded-xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl">
-            <div class="p-5 border-b border-slate-200 flex justify-between items-center bg-slate-50 rounded-t-xl">
-                <h2 class="text-xl font-bold flex items-center gap-2 text-slate-800"><span class="text-2xl">🤖</span> DXコンサルタント AI改善レポート</h2>
+        <div class="bg-slate-800 border border-slate-300 rounded-xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl">
+            <div class="p-5 border-b border-slate-700 flex justify-between items-center bg-slate-900 rounded-t-xl">
+                <h2 class="text-xl font-bold flex items-center gap-2 text-slate-200"><span class="text-2xl">🤖</span> DXコンサルタント AI改善レポート</h2>
                 <button onclick="closeAIModal()" class="text-slate-400 hover:text-slate-600 text-2xl font-bold px-2">&times;</button>
             </div>
-            <div id="aiModalContent" class="p-6 overflow-y-auto flex-grow text-slate-700 prose max-w-none"></div>
+            <div id="aiModalContent" class="p-6 overflow-y-auto flex-grow text-slate-300 prose max-w-none"></div>
         </div>
     </div>
 
@@ -311,5 +324,33 @@
     <script src="/static/js/api.js"></script>
     <script src="/static/js/charts.js"></script>
     <script src="/static/js/user_dashboard.js"></script>
+    <script>
+        async function downloadImage() {
+            document.body.classList.add('exporting-image');
+            try {
+                const hiddenElements = document.querySelectorAll('.print\\:hidden');
+                hiddenElements.forEach(el => el.style.display = 'none');
+                
+                const canvas = await html2canvas(document.body, {
+                    backgroundColor: '#ffffff',
+                    scale: 2,
+                    logging: false,
+                    useCORS: true
+                });
+                
+                hiddenElements.forEach(el => el.style.display = '');
+                document.body.classList.remove('exporting-image');
+                
+                const a = document.createElement('a');
+                a.href = canvas.toDataURL('image/png');
+                a.download = `TaskMining_Micro_${document.getElementById('displayUserName').textContent}_${Date.now()}.png`;
+                a.click();
+            } catch (err) {
+                console.error("画像生成エラー:", err);
+                alert("画像のエクスポートに失敗しました。");
+                document.body.classList.remove('exporting-image');
+            }
+        }
+    </script>
 </body>
 </html>

@@ -14,6 +14,7 @@ from database import get_connection
 import utils
 from utils import ADMIN_TOKEN_SECRET, resolve_user_id, parse_datetime_to_timestamp, global_staff_map, global_staff_counter
 from services.trend_service import get_historical_trend
+from google import genai
 
 router = APIRouter(tags=['Dashboard'])
 
@@ -136,6 +137,8 @@ async def get_dashboard_data(user_id: str = "ALL", start_date: str = None, end_d
     total_right_clicks = 0
     total_shortcut_keys = 0
     total_manual_typing = 0
+    total_focused_time = 0
+    
     total_shortcut_details = {}
     
     scatter = []
@@ -202,6 +205,10 @@ async def get_dashboard_data(user_id: str = "ALL", start_date: str = None, end_d
         elif "excel" in app_lower: app_name = "Excel"
         elif "winword" in app_lower: app_name = "Word"
         
+        is_meeting = "zoom" in app_lower or "teams" in app_lower or "meet" in app_lower or "meet" in title_lower or "zoom" in title_lower
+        is_email = "outlook" in app_lower or "mail" in app_lower or "gmail" in title_lower or "mail" in title_lower or "outlook" in title_lower
+        is_chat = "slack" in app_lower or "chatwork" in app_lower or "line" in app_lower or "slack" in title_lower or "chatwork" in title_lower or "line" in title_lower or ("teams" in title_lower and not is_meeting) or ("teams" in app_lower and not is_meeting)
+        
         total_sec += duration
         total_clicks += click_c
         total_scrolls += scroll_c
@@ -212,6 +219,10 @@ async def get_dashboard_data(user_id: str = "ALL", start_date: str = None, end_d
         total_shortcut_keys += shortcut_key
         total_manual_typing += manual
         
+        # 集中時間の計算 (通常作業・基幹業務・AI操作など、チャット/メール/会議/アイドル以外)
+        if not is_meeting and not is_email and not is_chat and duration > 0 and idle_time == 0:
+            total_focused_time += duration
+        
         if shortcut_details_str:
             try:
                 import json
@@ -220,10 +231,6 @@ async def get_dashboard_data(user_id: str = "ALL", start_date: str = None, end_d
                     total_shortcut_details[k] = total_shortcut_details.get(k, 0) + v
             except:
                 pass
-        
-        is_meeting = "zoom" in app_lower or "teams" in app_lower or "meet" in app_lower or "meet" in title_lower or "zoom" in title_lower
-        is_email = "outlook" in app_lower or "mail" in app_lower or "gmail" in title_lower or "mail" in title_lower or "outlook" in title_lower
-        is_chat = "slack" in app_lower or "chatwork" in app_lower or "line" in app_lower or "slack" in title_lower or "chatwork" in title_lower or "line" in title_lower or ("teams" in title_lower and not is_meeting) or ("teams" in app_lower and not is_meeting)
         
         is_ai = False
         if "chatgpt" in app_lower or "claude" in app_lower or "copilot" in app_lower or "gemini" in app_lower or "antigravity" in app_lower:
@@ -272,11 +279,17 @@ async def get_dashboard_data(user_id: str = "ALL", start_date: str = None, end_d
         
         if file_name:
             if file_name not in bottlenecks_map:
-                bottlenecks_map[file_name] = {"time": 0, "count": 0, "users": set(), "daily_counts": {}}
+                bottlenecks_map[file_name] = {
+                    "time": 0, "count": 0, "users": set(), "daily_counts": {},
+                    "clicks": 0, "right_clicks": 0, "mouse_dist": 0, "context_switches": 0
+                }
             bottlenecks_map[file_name]["time"] += duration
             bottlenecks_map[file_name]["count"] += (manual + copy)
+            bottlenecks_map[file_name]["clicks"] += click_c
+            bottlenecks_map[file_name]["right_clicks"] += right_click
+            bottlenecks_map[file_name]["mouse_dist"] += mouse_d
+            bottlenecks_map[file_name]["context_switches"] += context_sw
             bottlenecks_map[file_name]["users"].add(display_name)
-            
             if recv:
                 dt = datetime.fromtimestamp(recv)
                 date_str = dt.strftime('%Y-%m-%d')
@@ -303,7 +316,10 @@ async def get_dashboard_data(user_id: str = "ALL", start_date: str = None, end_d
     # ボトルネックリストの成形
     bottlenecks = []
     for k, v in bottlenecks_map.items():
-        score = int((v["count"] / max(1, total_sec)) * v["count"] * (v["time"] / 60))
+        base_score = (v["count"] / max(1, total_sec)) * v["count"] * (v["time"] / 60)
+        right_click_rate = (v["right_clicks"] / v["clicks"]) if v["clicks"] > 0 else 0
+        penalty = (v["context_switches"] * 2) + (right_click_rate * 50) + (v["mouse_dist"] / 10000)
+        score = int(base_score + penalty)
         tool = "Excel VBA" if "Excel" in k else "Python" if score > 500 else "PowerShell"
         bottlenecks.append({
             "name": k,
@@ -360,21 +376,18 @@ async def get_dashboard_data(user_id: str = "ALL", start_date: str = None, end_d
             u_rate = (stats["inefficient_sec"] / stats["total_sec"]) if stats["total_sec"] > 0 else 0
             score = int((u_rate - avg_rate) * 100) # 非効率度が高い（悪い）とプラス
             members.append({
-                "name": u, 
                 "score_vs_avg": score,
-                "total_sec": stats["total_sec"],
-                "inefficient_sec": stats["inefficient_sec"],
                 "rate": u_rate
             })
-    
     kpi = {
         "member_count": len(users_set),
         "total_hours": round(total_sec / 3600, 1),
         "inefficient_hours": round(inefficient_sec / 3600, 1),
         "meeting_hours": round(work_breakdown_totals["Web会議"] / 3600, 1),
-        "idle_hours": round(work_breakdown_totals["アイドル(操作なし)"] / 3600, 1),
+        "idle_hours": round(work_breakdown_totals.get("アイドル(操作なし)", 0) / 3600, 1),
         "ai_hours": round(work_breakdown_totals["AIツール操作"] / 3600, 2),
         "ai_minutes": round(work_breakdown_totals["AIツール操作"] / 60),
+        "total_focused_time": total_focused_time,
         "estimated_saved_hours": round((inefficient_sec / 3600) * 0.4 * 240, 1),
         "automation_candidates": len([b for b in bottlenecks if b["score"] > 100]),
         "total_clicks": total_clicks,
@@ -430,23 +443,6 @@ async def get_user_data(user_id: str = "ALL", start_date: str = None, end_date: 
     # トレンドの取得
     trend_res = get_historical_trend(conn, user_id=user_id, department=department)
     
-    # --- ベンチマーク（部門平均・上位10%）の計算 ---
-    cursor.execute("""
-        SELECT c.user_id, SUM(c.shortcut_key_count), SUM(c.right_click_count), 
-               SUM(c.context_switch_count), SUM(c.duration_seconds), SUM(c.click_count)
-        FROM client_logs c
-        LEFT JOIN employees e ON c.user_id = e.user_id
-        WHERE e.department = %s AND c.duration_seconds > 0
-        GROUP BY c.user_id
-    """ if os.environ.get("DATABASE_URL") else """
-        SELECT c.user_id, SUM(c.shortcut_key_count), SUM(c.right_click_count), 
-               SUM(c.context_switch_count), SUM(c.duration_seconds), SUM(c.click_count)
-        FROM client_logs c
-        LEFT JOIN employees e ON c.user_id = e.user_id
-        WHERE e.department = ? AND c.duration_seconds > 0
-        GROUP BY c.user_id
-    """, (department,))
-    dept_members = cursor.fetchall()
     
     benchmarks = {
         "my_shortcut_rate": 0,
@@ -460,59 +456,23 @@ async def get_user_data(user_id: str = "ALL", start_date: str = None, end_date: 
         "top_switch_per_hr": 0
     }
     
-    if dept_members:
-        member_stats_list = []
-        for m in dept_members:
-            uid, sk, rc, sw, dur, clk = m
-            sk = sk or 0; rc = rc or 0; sw = sw or 0; dur = dur or 1; clk = clk or 1
-            s_rate = round(sk / max(1, sk + rc) * 100, 1)
-            r_rate = round(rc / max(1, clk) * 100, 1)
-            sw_hr = round(sw / (dur / 3600), 1) if dur > 0 else 0
-            stats = {"uid": uid, "s_rate": s_rate, "r_rate": r_rate, "sw_hr": sw_hr}
-            member_stats_list.append(stats)
-            if resolved and resolved != "ALL" and uid == resolved["uuid"]:
-                benchmarks["my_shortcut_rate"] = s_rate
-                benchmarks["my_rightclick_rate"] = r_rate
-                benchmarks["my_switch_per_hr"] = sw_hr
-                
-        # Averages
-        benchmarks["avg_shortcut_rate"] = round(sum(m["s_rate"] for m in member_stats_list) / len(member_stats_list), 1)
-        benchmarks["avg_rightclick_rate"] = round(sum(m["r_rate"] for m in member_stats_list) / len(member_stats_list), 1)
-        benchmarks["avg_switch_per_hr"] = round(sum(m["sw_hr"] for m in member_stats_list) / len(member_stats_list), 1)
+    # 過去7日間の自分の平均を計算
+    if trend_res and "shortcut_rate" in trend_res and len(trend_res["shortcut_rate"]) > 0:
+        benchmarks["avg_shortcut_rate"] = round(sum(trend_res["shortcut_rate"]) / len(trend_res["shortcut_rate"]), 1)
         
-        # Top 10% (best efficiency)
-        top_n = max(1, int(len(member_stats_list) * 0.1))
-        
-        sorted_by_s = sorted(member_stats_list, key=lambda x: x["s_rate"], reverse=True)[:top_n]
-        benchmarks["top_shortcut_rate"] = round(sum(m["s_rate"] for m in sorted_by_s) / len(sorted_by_s), 1)
-        
-        sorted_by_r = sorted(member_stats_list, key=lambda x: x["r_rate"])[:top_n]
-        benchmarks["top_rightclick_rate"] = round(sum(m["r_rate"] for m in sorted_by_r) / len(sorted_by_r), 1)
-        
-        sorted_by_sw = sorted(member_stats_list, key=lambda x: x["sw_hr"])[:top_n]
-        benchmarks["top_switch_per_hr"] = round(sum(m["sw_hr"] for m in sorted_by_sw) / len(sorted_by_sw), 1)
-    
     query_files = "SELECT file_name, sum(duration_seconds), sum(manual_typing_count + copy_paste_count) FROM client_logs WHERE file_name IS NOT NULL AND file_name != '' "
     params = []
     if user_id != "ALL":
         query_files += f" AND user_id = {placeholder}"
         params.append(user_id)
         
-    import dateutil.parser
     if start_date:
         query_files += f" AND received_at >= {placeholder}"
-        try:
-            params.append(dateutil.parser.parse(start_date).timestamp())
-        except:
-            params.append(0)
-            
+        params.append(parse_datetime_to_timestamp(start_date, 0))
     if end_date:
         query_files += f" AND received_at <= {placeholder}"
-        try:
-            params.append(dateutil.parser.parse(end_date).timestamp())
-        except:
-            params.append(9999999999)
-    query_files += " GROUP BY file_name ORDER BY sum(duration_seconds) DESC LIMIT 5"
+        params.append(parse_datetime_to_timestamp(end_date, 9999999999))
+    query_files += " GROUP BY file_name ORDER BY sum(duration_seconds) DESC LIMIT 30"
     
     cursor.execute(query_files, tuple(params))
     top_files = cursor.fetchall()
@@ -592,21 +552,14 @@ async def get_user_data(user_id: str = "ALL", start_date: str = None, end_date: 
     if resolved != "ALL" and user_id != "CURRENT_USER" and resolved:
         timeline_query += f" AND (user_id = {placeholder} OR user_id IN (SELECT user_id FROM employees WHERE name = {placeholder}))"
         timeline_params.extend([resolved["uuid"], resolved["name"]])
-    import dateutil.parser
     if start_date:
         timeline_query += f" AND received_at >= {placeholder}"
-        try:
-            timeline_params.append(dateutil.parser.parse(start_date).timestamp())
-        except:
-            timeline_params.append(0)
+        timeline_params.append(parse_datetime_to_timestamp(start_date, 0))
     if end_date:
         timeline_query += f" AND received_at <= {placeholder}"
-        try:
-            timeline_params.append(dateutil.parser.parse(end_date).timestamp())
-        except:
-            timeline_params.append(9999999999)
+        timeline_params.append(parse_datetime_to_timestamp(end_date, 9999999999))
     
-    timeline_query += " ORDER BY received_at DESC LIMIT 50"
+    timeline_query += " ORDER BY received_at DESC LIMIT 300"
     cursor.execute(timeline_query, tuple(timeline_params))
     raw_timeline = cursor.fetchall()
     
@@ -709,7 +662,7 @@ async def analyze_dashboard_data(
     cursor = conn.cursor()
     
     query = """
-        SELECT l.operation_type, l.file_name, l.duration_seconds, l.manual_typing_count, l.copy_paste_count, l.app_name 
+        SELECT l.operation_type, l.file_name, l.duration_seconds, l.manual_typing_count, l.copy_paste_count, l.app_name, l.click_count, l.right_click_count, l.context_switch_count
         FROM client_logs l
         LEFT JOIN employees e ON l.user_id = e.user_id
         WHERE 1=1
@@ -743,21 +696,40 @@ async def analyze_dashboard_data(
     
     summary = f"対象: {user_id}\n合計 {len(rows)} 件のサンプルログデータ\n" + str(rows)
     
-    prompt = f"""
-    あなたはDXコンサルタントです。以下のPC操作ログ概要を読み、現在の業務フローの改善策を提案してください。
-    【必須要件】
-    1. RPAやPowerQueryは禁止。Python, Excel VBA, GAS, PowerShellのいずれかを提案すること。
-    2. 自動化優先度スコアが高いものを抽出し、以下のタグをつけて提案すること。
-       - Excel内完結の定型転記 → 【VBA】
-       - Googleフォーム/スプレッドシート連携 → 【GAS】
-       - PC操作の自動化・ファイル整理・監視系 → 【PowerShell】
-       - 複数システムを跨ぐ分析・レポート自動生成 → 【Python】
-    3. 各個人の具体的なミクロの作業（現状）と、効率化後のフローを比較し、各工程ごとの「短縮時間」を明記したHTMLベースの視覚的なフローチャート（矢印やカード形式）を出力すること。
-    4. 【超重要】効率化の効果や将来予測については、「〜になる」「確実に削減できる」といった断定的な表現を絶対に避け、「〜となる可能性があります」「〜を見込める推算です」といった、期待値を上げすぎない控えめな（濁した）表現を徹底すること。
-    5. 【超重要】出力するHTMLの各タグ行の先頭には、絶対にスペースやタブのインデントを付けないでください（Markdownのコードブロックとしてパースされるのを防ぐためです）。また、```html などの装飾も一切含めないでください。行頭は必ず < 記号から始まるようにしてください。
-    
-    【ログ概要】\n{summary}
-    """
+    if user_id != "ALL":
+        prompt = f"""
+        あなたはユーザーをサポートする優しいアシスタントです。以下のPC操作ログ概要を読み、今日のユーザーの頑張りを労いつつ、業務フローの改善策を提案してください。
+        【必須要件】
+        1. トーン＆マナー: 「ご担当者様」のような監査報告書・評価的な文体は絶対に避け、「お疲れ様です！今日のあなたは〜」といった一人称・語りかけ調（親しみやすくサポートするトーン）にすること。
+        2. RPAやPowerQueryは禁止。Python, Excel VBA, GAS, PowerShellのいずれかを提案すること。
+        3. 自動化優先度スコアが高いものを抽出し、以下のタグをつけて提案すること。
+           - Excel内完結の定型転記 → 【VBA】
+           - Googleフォーム/スプレッドシート連携 → 【GAS】
+           - PC操作の自動化・ファイル整理・監視系 → 【PowerShell】
+           - 複数システムを跨ぐ分析・レポート自動生成 → 【Python】
+        4. 各個人の具体的なミクロの作業（現状）と、効率化後のフローを比較し、各工程ごとの「短縮時間」を明記したHTMLベースの視覚的なフローチャート（矢印やカード形式）を出力すること。
+        5. 【超重要】出力するHTMLの各タグ行の先頭には、絶対にスペースやタブのインデントを付けないでください（Markdownのコードブロックとしてパースされるのを防ぐためです）。また、```html などの装飾も一切含めないでください。行頭は必ず < 記号から始まるようにしてください。
+        6. 【超重要】入力されたクリック数、右クリック数、画面切替数などの生データを**絶対にそのまま出力しないでください**。「右クリックが多い」といった具体的な数値への言及は避け、代わりに「ショートカットキーの活用でさらに楽になりますよ」といったポジティブで定性的な行動変容の提案に変換してください。
+        
+        【ログ概要】\n{summary}
+        """
+    else:
+        prompt = f"""
+        あなたはDXコンサルタントです。以下のPC操作ログ概要を読み、現在の業務フローの改善策を提案してください。
+        【必須要件】
+        1. RPAやPowerQueryは禁止。Python, Excel VBA, GAS, PowerShellのいずれかを提案すること。
+        2. 自動化優先度スコアが高いものを抽出し、以下のタグをつけて提案すること。
+           - Excel内完結の定型転記 → 【VBA】
+           - Googleフォーム/スプレッドシート連携 → 【GAS】
+           - PC操作の自動化・ファイル整理・監視系 → 【PowerShell】
+           - 複数システムを跨ぐ分析・レポート自動生成 → 【Python】
+        3. 各個人の具体的なミクロの作業（現状）と、効率化後のフローを比較し、各工程ごとの「短縮時間」を明記したHTMLベースの視覚的なフローチャート（矢印やカード形式）を出力すること。
+        4. 【超重要】効率化の効果や将来予測については、「〜になる」「確実に削減できる」といった断定的な表現を絶対に避け、「〜となる可能性があります」「〜を見込める推算です」といった、期待値を上げすぎない控えめな（濁した）表現を徹底すること。
+        5. 【超重要】出力するHTMLの各タグ行の先頭には、絶対にスペースやタブのインデントを付けないでください（Markdownのコードブロックとしてパースされるのを防ぐためです）。また、```html などの装飾も一切含めないでください。行頭は必ず < 記号から始まるようにしてください。
+        6. 【超重要】入力されたクリック数、右クリック数、画面切替数などの生データを**絶対にそのまま出力しないでください**。「右クリック〇〇回」といった監視的な報告は避け、これらを特徴量としてのみ解釈し、「ショートカット活用による時短」「コンテキストスイッチ（画面切替）の削減」といった定性的な業務プロセス改善の提案に変換してください。
+        
+        【ログ概要】\n{summary}
+        """
     
     client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
     try:
@@ -795,6 +767,283 @@ async def set_salary(request: Request):
     conn.commit()
     conn.close()
     return {"status": "success"}
+
+@router.get("/api/dashboard/trend_data")
+async def get_trend_data(
+    user_id: str = "ALL",
+    start_date: str = None,
+    end_date: str = None,
+    department: str = "ALL"
+):
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        from datetime import datetime, timezone, timedelta
+        JST = timezone(timedelta(hours=9))
+        
+        # parse dates
+        start_dt = datetime.strptime(start_date[:10], "%Y-%m-%d") if start_date else datetime.now() - timedelta(days=7)
+        end_dt = datetime.strptime(end_date[:10], "%Y-%m-%d") if end_date else datetime.now()
+        
+        # Fetch ALL data in this range in one query
+        day_start_ts = start_dt.replace(hour=0, minute=0, second=0).timestamp()
+        day_end_ts = end_dt.replace(hour=23, minute=59, second=59).timestamp()
+        
+        q = """
+            SELECT c.received_at, c.duration_seconds, c.manual_typing_count, c.copy_paste_count, 
+                   c.shortcut_key_count, c.click_count, c.scroll_count, c.mouse_distance, c.context_switch_count, 
+                   c.app_name, c.file_name, c.operation_type, c.right_click_count
+            FROM client_logs c
+            LEFT JOIN employees e ON c.user_id = e.user_id
+            WHERE c.received_at >= %s AND c.received_at <= %s
+        """ if os.environ.get("DATABASE_URL") else """
+            SELECT c.received_at, c.duration_seconds, c.manual_typing_count, c.copy_paste_count, 
+                   c.shortcut_key_count, c.click_count, c.scroll_count, c.mouse_distance, c.context_switch_count, 
+                   c.app_name, c.file_name, c.operation_type, c.right_click_count
+            FROM client_logs c
+            LEFT JOIN employees e ON c.user_id = e.user_id
+            WHERE c.received_at >= ? AND c.received_at <= ?
+        """
+        
+        params = [day_start_ts, day_end_ts]
+        
+        if user_id != "ALL":
+            q += " AND c.user_id = " + ("%s" if os.environ.get("DATABASE_URL") else "?")
+            params.append(user_id)
+        elif department != "ALL":
+            q += " AND e.department = " + ("%s" if os.environ.get("DATABASE_URL") else "?")
+            params.append(department)
+            
+        cursor.execute(q, tuple(params))
+        rows = cursor.fetchall()
+        
+        # Group data by date
+        from collections import defaultdict
+        
+        # Define structures
+        daily_stats = {}
+        days = (end_dt - start_dt).days + 1
+        labels = []
+        for i in range(days):
+            current_dt = start_dt + timedelta(days=i)
+            day_label = current_dt.strftime("%m/%d")
+            labels.append(day_label)
+            daily_stats[day_label] = {
+                "dur": 0, "man": 0, "cpy": 0, "shortcut": 0, "clicks": 0,
+                "scrolls": 0, "dist": 0, "switch": 0, "right": 0, "focused": 0,
+                "apps": defaultdict(int),
+                "work_breakdown": defaultdict(int)
+            }
+            
+        app_total_hours = defaultdict(int)
+
+        for row in rows:
+            if len(row) == 13:
+                recv, dur, man, cpy, shortcut, clicks, scrolls, dist, switch, app_name, file_name, op_type, right = row
+            else:
+                recv = row[0]
+                dur = row[1] or 0
+                man = row[2] or 0
+                cpy = row[3] or 0
+                shortcut = row[4] or 0
+                clicks = row[5] or 0
+                scrolls = row[6] or 0
+                dist = row[7] or 0
+                switch = row[8] or 0
+                app_name = row[9]
+                file_name = row[10]
+                op_type = row[11]
+                right = row[12] if len(row) > 12 else 0
+                
+            if not recv: continue
+            
+            dt = datetime.fromtimestamp(recv)
+            day_label = dt.strftime("%m/%d")
+            
+            if day_label not in daily_stats:
+                continue
+                
+            dur = dur or 0
+            man = man or 0
+            cpy = cpy or 0
+            shortcut = shortcut or 0
+            clicks = clicks or 0
+            scrolls = scrolls or 0
+            dist = dist or 0
+            switch = switch or 0
+            right = right or 0
+            app_name = app_name or "Unknown"
+            file_name = file_name or "Unknown"
+            op_type = op_type or ""
+            
+            stats = daily_stats[day_label]
+            stats["dur"] += dur
+            stats["man"] += man
+            stats["cpy"] += cpy
+            stats["shortcut"] += shortcut
+            stats["clicks"] += clicks
+            stats["scrolls"] += scrolls
+            stats["dist"] += dist
+            stats["switch"] += switch
+            stats["right"] += right
+            
+            app_lower = app_name.lower()
+            title_lower = file_name.lower()
+            
+            if "powerpnt" in app_lower: app_name = "PowerPoint"
+            elif "excel" in app_lower: app_name = "Excel"
+            elif "winword" in app_lower: app_name = "Word"
+            
+            stats["apps"][app_name] += dur
+            app_total_hours[app_name] += dur
+            
+            # Work Breakdown logic
+            is_meeting = "zoom" in app_lower or "teams" in app_lower or "meet" in app_lower or "meet" in title_lower or "zoom" in title_lower
+            is_email = "outlook" in app_lower or "mail" in app_lower or "gmail" in title_lower or "mail" in title_lower or "outlook" in title_lower
+            is_chat = "slack" in app_lower or "chatwork" in app_lower or "line" in app_lower or "slack" in title_lower or "chatwork" in title_lower or "line" in title_lower or ("teams" in title_lower and not is_meeting) or ("teams" in app_lower and not is_meeting)
+            
+            is_ai = False
+            if "chatgpt" in app_lower or "claude" in app_lower or "copilot" in app_lower or "gemini" in app_lower or "antigravity" in app_lower:
+                is_ai = True
+            elif "chatgpt" in title_lower or "claude" in title_lower or "copilot" in title_lower or "gemini" in title_lower or "antigravity" in title_lower:
+                is_ai = True
+                
+            current_bd = "通常作業"
+            if app_lower == "基幹システム(kvm)": current_bd = "基幹業務"
+            elif is_meeting: current_bd = "Web会議"
+            elif is_email: current_bd = "メール(外部連絡)"
+            elif is_chat: current_bd = "チャット(内部連絡)"
+            elif is_ai: current_bd = "AIツール操作"
+            elif clicks == 0 and scrolls == 0 and dist == 0 and man == 0 and cpy == 0: current_bd = "アイドル(操作なし)"
+            
+            if clicks == 0 and scrolls == 0 and dist == 0 and man == 0 and cpy == 0:
+                idle_time = dur
+            else:
+                idle_time = 0
+                
+            if not is_meeting and not is_email and not is_chat and dur > 0 and idle_time == 0:
+                stats["focused"] += dur
+                
+            stats["work_breakdown"][current_bd] += dur
+
+        # Find top 5 apps overall
+        top_apps = [k for k, v in sorted(app_total_hours.items(), key=lambda x: x[1], reverse=True)[:5]]
+        
+        # Prepare arrays for frontend
+        work_hours = []
+        inefficient_time = []
+        inefficient_ops = []
+        ai_ratio = []
+        manual_ratio = []
+        shortcut_rate = []
+        type_input = []
+        type_copy = []
+        type_view = []
+        focused_time = []
+        
+        mouse_dist = []
+        context_switches = []
+        clicks_trend = []
+        right_clicks_trend = []
+        
+        apps_trend = {app: [] for app in top_apps}
+        apps_trend["その他"] = []
+        
+        bd_categories = ["基幹業務", "メール(外部連絡)", "チャット(内部連絡)", "Web会議", "AIツール操作", "アイドル(操作なし)", "通常作業"]
+        breakdown_trend = {cat: [] for cat in bd_categories}
+        
+        for label in labels:
+            stats = daily_stats[label]
+            dur = stats["dur"]
+            man = stats["man"]
+            cpy = stats["cpy"]
+            shortcut = stats["shortcut"]
+            clicks = stats["clicks"]
+            dist = stats["dist"]
+            switch = stats["switch"]
+            right = stats["right"]
+            
+            # Simple KPIs
+            w_h = round(dur / 3600, 1)
+            i_t = round((man + cpy) * 5 / 60, 1) # assumed 5 seconds per inefficient op
+            
+            work_hours.append(w_h)
+            inefficient_time.append(i_t)
+            inefficient_ops.append(man + cpy)
+            focused_time.append(round(stats["focused"] / 3600, 1))
+            
+            # Mouse / Clicks
+            mouse_dist.append(dist)
+            context_switches.append(switch)
+            clicks_trend.append(clicks)
+            right_clicks_trend.append(right)
+            
+            # AI ratio simple calculation
+            ai_dur = stats["work_breakdown"]["AIツール操作"]
+            ai_r = round((ai_dur / max(1, dur)) * 100, 1) if dur > 0 else 0
+            man_r = round(((dur - ai_dur) / max(1, dur)) * 100, 1) if dur > 0 else 0
+            ai_ratio.append(ai_r)
+            manual_ratio.append(man_r)
+            
+            # Shortcut rate
+            s_rate = round((shortcut / max(1, clicks + shortcut + right)) * 100, 1) if (clicks + shortcut + right) > 0 else 0
+            shortcut_rate.append(s_rate)
+            
+            # Type ratio (heuristic)
+            total_ops = max(1, man + cpy + clicks)
+            t_in = round(man / total_ops * 100, 1) if total_ops > 0 else 0
+            t_cp = round(cpy / total_ops * 100, 1) if total_ops > 0 else 0
+            t_vw = round(max(0, 100 - t_in - t_cp), 1) if total_ops > 0 else 0
+            type_input.append(t_in)
+            type_copy.append(t_cp)
+            type_view.append(t_vw)
+            
+            # Apps
+            other_app_dur = 0
+            for app_name, app_dur in stats["apps"].items():
+                if app_name in top_apps:
+                    apps_trend[app_name].append(round(app_dur / 3600, 2))
+                else:
+                    other_app_dur += app_dur
+                    
+            for app in top_apps:
+                if len(apps_trend[app]) < len(labels):
+                    # In case the app wasn't in this day's dict at all, pad it
+                    apps_trend[app].append(0)
+            apps_trend["その他"].append(round(other_app_dur / 3600, 2))
+            
+            # Breakdown
+            for cat in bd_categories:
+                breakdown_trend[cat].append(round(stats["work_breakdown"].get(cat, 0) / 3600, 2))
+                
+        return {
+            "labels": labels,
+            "work_hours": work_hours,
+            "focused_time": focused_time,
+            "inefficient_time": inefficient_time,
+            "inefficient_ops": inefficient_ops,
+            "ai_ratio": ai_ratio,
+            "manual_ratio": manual_ratio,
+            "shortcut_rate": shortcut_rate,
+            "type_input": type_input,
+            "type_copy": type_copy,
+            "type_view": type_view,
+            "mouse_dist": mouse_dist,
+            "context_switches": context_switches,
+            "clicks_trend": clicks_trend,
+            "right_clicks_trend": right_clicks_trend,
+            "apps_trend": apps_trend,
+            "breakdown_trend": breakdown_trend,
+            "top_apps": top_apps
+        }
+        
+    except Exception as e:
+        print(f"Error generating trend data: {e}")
+        return {
+            "labels": []
+        }
+    finally:
+        conn.close()
 
 if __name__ == "__main__":
     import uvicorn

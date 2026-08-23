@@ -23,7 +23,11 @@ async function loadDynamicCharts() {
         // ユーザー名表示
         const uid = getCurrentUserId();
         const nameEl = document.getElementById('displayUserName');
-        if (nameEl) nameEl.textContent = uid !== 'ALL' ? uid : '全メンバー';
+        if (nameEl) nameEl.textContent = (uid !== 'ALL' && uid !== 'CURRENT_USER') ? uid : '自分のみ';
+
+        const trendParams = getFilterParams();
+        const trendRes = await fetch(`/api/dashboard/trend_data?${trendParams.toString()}`);
+        const dataTrend = await trendRes.json();
 
         const [dataMacro, dataUser] = await Promise.all([fetchDashboardData(), fetchUserData()]);
 
@@ -40,6 +44,17 @@ async function loadDynamicCharts() {
         if (dataMacro.apps)           appChartInstance       = drawAppChart(dataMacro.apps, hoverHandler('apps'));
         if (dataMacro.kpi)            taskChartInstance      = drawTaskChart(dataMacro.kpi, hoverHandler('ops'));
 
+        // ホバーが外れたときに確実にモーダルを隠す
+        ['breakdownChart', 'appChart', 'taskChart'].forEach(id => {
+            const canvas = document.getElementById(id);
+            if (canvas) {
+                canvas.addEventListener('mouseleave', () => {
+                    const modal = document.getElementById('chartModal');
+                    if (modal) modal.classList.add('hidden');
+                });
+            }
+        });
+
         // --- その他グラフ ---
         drawScatterChart(dataMacro.scatter, dynamicFlowData);
         drawForecastChart(dataUser.forecast_steps);
@@ -55,8 +70,97 @@ async function loadDynamicCharts() {
             updateFlows();
         }
 
+        // --- トレンドチャート描画 ---
+        if (dataTrend && dataTrend.labels && dataTrend.labels.length > 0) {
+            renderTrendCharts(dataTrend);
+        }
+
     } catch (e) {
         console.error('Chart data loading failed:', e);
+    }
+}
+
+// グラフのインスタンス保持用
+let trendAppsChart, trendBreakdownChart, operationTypesChart, shortcutRateChart, clicksChart, mouseDistChart, switchesChart;
+
+function renderTrendCharts(data) {
+    const labels = data.labels;
+    
+    const baseOptions = { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } };
+    
+    // 1. 利用アプリ推移 (積み上げ棒)
+    if (trendAppsChart) trendAppsChart.destroy();
+    if (document.getElementById('trendApps')) {
+        const appDatasets = [];
+        const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#64748b'];
+        let colorIdx = 0;
+        for (const [app, values] of Object.entries(data.apps_trend || {})) {
+            appDatasets.push({ label: app, data: values, backgroundColor: colors[colorIdx % colors.length] });
+            colorIdx++;
+        }
+        trendAppsChart = new Chart(document.getElementById('trendApps'), {
+            type: 'bar',
+            data: { labels: labels, datasets: appDatasets },
+            options: { ...baseOptions, scales: { x: { stacked: true, grid: { display: false } }, y: { stacked: true, grid: { color: 'rgba(255, 255, 255, 0.1)' } } } }
+        });
+    }
+
+    // 2. 業務内訳推移 (積み上げ棒)
+    if (trendBreakdownChart) trendBreakdownChart.destroy();
+    if (document.getElementById('trendBreakdown')) {
+        const bdDatasets = [];
+        const bdColors = { '基幹業務': '#ef4444', 'メール(外部連絡)': '#f59e0b', 'チャット(内部連絡)': '#10b981', 'Web会議': '#3b82f6', 'AIツール操作': '#8b5cf6', 'アイドル(操作なし)': '#64748b', '通常作業': '#94a3b8' };
+        for (const [cat, values] of Object.entries(data.breakdown_trend || {})) {
+            bdDatasets.push({ label: cat, data: values, backgroundColor: bdColors[cat] || '#ccc' });
+        }
+        trendBreakdownChart = new Chart(document.getElementById('trendBreakdown'), {
+            type: 'bar',
+            data: { labels: labels, datasets: bdDatasets },
+            options: { ...baseOptions, scales: { x: { stacked: true, grid: { display: false } }, y: { stacked: true, grid: { color: 'rgba(255, 255, 255, 0.1)' } } } }
+        });
+    }
+
+    // 3. 操作種類の割合推移
+    if (operationTypesChart) operationTypesChart.destroy();
+    if (document.getElementById('trendOperationTypes')) {
+        operationTypesChart = new Chart(document.getElementById('trendOperationTypes'), {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [
+                    { label: '手入力 (%)', data: data.type_input, backgroundColor: '#14b8a6' },
+                    { label: 'コピペ (%)', data: data.type_copy, backgroundColor: '#f59e0b' },
+                    { label: '閲覧・その他 (%)', data: data.type_view, backgroundColor: '#94a3b8' }
+                ]
+            },
+            options: { ...baseOptions, scales: { x: { stacked: true, grid: { display: false } }, y: { stacked: true, max: 100, grid: { color: 'rgba(255, 255, 255, 0.1)' } } } }
+        });
+    }
+
+    // 4. ショートカットキー利用率推移
+    if (shortcutRateChart) shortcutRateChart.destroy();
+    if (document.getElementById('trendShortcutRate')) {
+        shortcutRateChart = new Chart(document.getElementById('trendShortcutRate'), {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{ label: 'ショートカット利用率 (%)', data: data.shortcut_rate, borderColor: '#06b6d4', backgroundColor: 'rgba(6, 182, 212, 0.2)', borderWidth: 2, fill: true, tension: 0.4 }]
+            },
+            options: { ...baseOptions, scales: { x: { grid: { display: false } }, y: { max: 100, min: 0, grid: { color: 'rgba(255, 255, 255, 0.1)' } } } }
+        });
+    }
+
+    // 5. 守れた集中時間推移
+    if (clicksChart) clicksChart.destroy(); // using the old variable name to avoid global let changes or we can just use focusedChart
+    if (document.getElementById('trendFocused')) {
+        clicksChart = new Chart(document.getElementById('trendFocused'), {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{ label: '集中時間 (h)', data: data.focused_time, borderColor: '#14b8a6', backgroundColor: 'rgba(20, 184, 166, 0.2)', borderWidth: 2, fill: true, tension: 0.4 }]
+            },
+            options: { ...baseOptions, scales: { x: { grid: { display: false } }, y: { min: 0, grid: { color: 'rgba(255, 255, 255, 0.1)' } } } }
+        });
     }
 }
 
@@ -86,9 +190,9 @@ function updateKpiCards(kpi, bm) {
         if (colorClass) el.querySelectorAll('span').forEach(s => s.classList.add(colorClass));
     };
 
-    setEl('kpi-total-hours',      fmt(kpi.total_hours      || 0), 'text-slate-500');
+    setEl('kpi-focused',          fmt((kpi.total_focused_time || 0) / 3600), 'text-teal-500');
+    setEl('kpi-total-hours',      fmt(kpi.total_hours      || 0), 'text-slate-400');
     setEl('kpi-inefficient-time', fmt(kpi.inefficient_hours|| 0), 'text-red-400');
-    setEl('kpi-ai-time',          fmt(kpi.ai_hours         || 0), 'text-indigo-400');
     setEl('kpi-meeting',          fmt(kpi.meeting_hours    || 0), 'text-purple-400');
     setEl('kpi-idle',             fmt(kpi.idle_hours       || 0), 'text-slate-400');
 
@@ -96,19 +200,9 @@ function updateKpiCards(kpi, bm) {
     const set = (id, val) => { const el = document.getElementById(id); if (el) el.innerHTML = val; };
     set('sidebar-clicks',    `${kpi.total_clicks || 0} 回`);
     set('sidebar-copypaste', `${kpi.total_copy_paste || 0} 回`);
-    const lines = (kpi.total_scrolls || 0) * 3;
-    const pages = ((kpi.total_scrolls || 0) / 40).toFixed(1);
-    set('sidebar-scrolls', `約${lines.toLocaleString()} 行 <span class="text-xs">(${pages}画面)</span>`);
     set('sidebar-switches', `${kpi.total_context_switches || 0} 回`);
+    
 
-    // マウス移動距離（部門平均比較）
-    const dist = kpi.total_mouse_distance || 0;
-    const mockAvg = Math.max(100000, dist * (0.8 + Math.random() * 0.4));
-    const ratio   = ((dist - mockAvg) / mockAvg * 100).toFixed(1);
-    const isMore  = ratio > 0;
-    set('sidebar-distance', `
-        <span class="${isMore ? 'text-red-500' : 'text-green-500'}">${isMore ? '+' : ''}${ratio}%</span>
-        <span class="text-xs">${isMore ? '🔺' : '🔻'}</span>`);
 
     // 自己改善ベンチマーク (バックエンドから取得した bm オブジェクトを使用)
     if (bm) {
@@ -116,34 +210,27 @@ function updateKpiCards(kpi, bm) {
         set('bm-my-shortcut', `${bm.my_shortcut_rate}%`);
         document.getElementById('bm-bar-shortcut').style.width = `${bm.my_shortcut_rate}%`;
         
+        // ショートカット内訳リストの生成
+        const shortcutList = document.getElementById('shortcut-details-list');
+        if (shortcutList && kpi.shortcut_details) {
+            shortcutList.innerHTML = '';
+            const details = kpi.shortcut_details;
+            let hasData = false;
+            for (const [key, count] of Object.entries(details)) {
+                if (count > 0) {
+                    hasData = true;
+                    const li = document.createElement('li');
+                    li.textContent = `${key}: ${count}回`;
+                    shortcutList.appendChild(li);
+                }
+            }
+            if (!hasData) {
+                shortcutList.innerHTML = '<li>データなし</li>';
+            }
+        }
+        
         document.getElementById('bm-avg-shortcut').style.left = `${bm.avg_shortcut_rate}%`;
         set('bm-avg-shortcut-txt', `${bm.avg_shortcut_rate}%`);
-        
-        document.getElementById('bm-top-shortcut').style.left = `${bm.top_shortcut_rate}%`;
-        set('bm-top-shortcut-txt', `${bm.top_shortcut_rate}%`);
-        
-        // --- 右クリック依存率 ---
-        set('bm-my-rightclick', `${bm.my_rightclick_rate}%`);
-        document.getElementById('bm-bar-rightclick').style.width = `${bm.my_rightclick_rate}%`;
-        
-        document.getElementById('bm-avg-rightclick').style.left = `${bm.avg_rightclick_rate}%`;
-        set('bm-avg-rightclick-txt', `${bm.avg_rightclick_rate}%`);
-        
-        document.getElementById('bm-top-rightclick').style.left = `${bm.top_rightclick_rate}%`;
-        set('bm-top-rightclick-txt', `${bm.top_rightclick_rate}%`);
-        
-        // --- 画面切り替え頻度 ---
-        const maxSw = Math.max(100, bm.my_switch_per_hr, bm.avg_switch_per_hr, bm.top_switch_per_hr);
-        const toPct = (val) => Math.min(100, (val / maxSw) * 100);
-        
-        set('bm-my-switch', `${bm.my_switch_per_hr}回/h`);
-        document.getElementById('bm-bar-switch').style.width = `${toPct(bm.my_switch_per_hr)}%`;
-        
-        document.getElementById('bm-avg-switch').style.left = `${toPct(bm.avg_switch_per_hr)}%`;
-        set('bm-avg-switch-txt', `${bm.avg_switch_per_hr}回`);
-        
-        document.getElementById('bm-top-switch').style.left = `${toPct(bm.top_switch_per_hr)}%`;
-        set('bm-top-switch-txt', `${bm.top_switch_per_hr}回`);
     }
 
 }
@@ -175,13 +262,13 @@ function buildChartHoverHandler(dataMacro) {
         };
 
         const details = dataMacro.details?.[catKey]?.[label] || [];
-        let html = `<div class="font-bold text-slate-500 text-center mb-2 border-b pb-2">総計: ${fmtHMS(val)}</div>`;
+        let html = `<div class="font-bold text-slate-400 text-center mb-2 border-b border-slate-700 pb-2">総計 ${fmtHMS(val)}</div>`;
         html += `<ul class="text-left text-sm space-y-3">`;
         if (details.length > 0) {
             details.forEach((d, i) => {
                 html += `<li class="flex justify-between items-start gap-4">
-                    <span class="truncate text-slate-700 font-medium" title="${d.file}">${i+1}. ${d.file}</span>
-                    <span class="font-bold text-indigo-500 whitespace-nowrap">${fmtHMS(d.duration)}</span>
+                    <span class="truncate text-slate-300 font-medium" title="${d.file}">${i+1}. ${d.file}</span>
+                    <span class="font-bold text-indigo-400 whitespace-nowrap">${fmtHMS(d.duration)}</span>
                 </li>`;
             });
         } else {
@@ -229,7 +316,7 @@ function updateTimeline(timelineData) {
             <div class="font-bold ${color} mb-1">
                 ${item.start}〜${item.end} <span class="text-xs text-slate-500 font-normal">(${item.duration_sec}秒)</span>
                 <span class="text-slate-600 ml-2">[${item.app}]</span>
-                ${item.inefficient_flag ? '<span class="text-red-500 text-xs ml-2">【非効率疑い】</span>' : ''}
+                ${item.inefficient_flag ? '<span class="text-teal-400 text-xs ml-2 font-bold bg-teal-900/50 px-2 py-1 rounded">💡 自動化のチャンス</span>' : ''}
             </div>
             <div class="text-slate-700">
                 ${item.file ? `<span class="font-semibold text-slate-800">${item.file}</span> - ` : ''}${item.description}
@@ -294,12 +381,20 @@ async function generateAIReport(userId) {
     try {
         const uid = (userId === 'CURRENT_USER') ? getCurrentUserId() : userId;
         let url   = '/api/dashboard/analyze?user_id=' + uid;
+
+        const filterDate = document.getElementById('filterDate')?.value;
         const start = document.getElementById('filterStart')?.value;
         const end   = document.getElementById('filterEnd')?.value;
         const flow  = document.getElementById('flowSelect')?.value;
-        if (start && start !== 'all') url += '&start_date=' + encodeURIComponent(start);
-        if (end)                       url += '&end_date='   + encodeURIComponent(end);
-        if (flow  && flow  !== 'all') url += '&file_name='  + encodeURIComponent(flow);
+        if (filterDate) {
+            url += '&start_date=' + encodeURIComponent(new Date(filterDate + 'T00:00:00').toISOString());
+            url += '&end_date=' + encodeURIComponent(new Date(filterDate + 'T23:59:59').toISOString());
+        } else {
+            if (start && start !== 'all') url += '&start_date=' + encodeURIComponent(start);
+            if (end) url += '&end_date=' + encodeURIComponent(end);
+        }
+        if (flow && flow !== 'all') url += '&file_name=' + encodeURIComponent(flow);
+
 
         const data = await (await fetch(url, { method: 'POST' })).json();
         const html = (data.report || '').replace(/&lt;/g, '<').replace(/&gt;/g, '>');
@@ -324,12 +419,20 @@ async function generateAIReportInline(userId) {
     try {
         const uid = (userId === 'CURRENT_USER') ? getCurrentUserId() : userId;
         let url   = '/api/dashboard/analyze?user_id=' + uid;
+
+        const filterDate = document.getElementById('filterDate')?.value;
         const start = document.getElementById('filterStart')?.value;
         const end   = document.getElementById('filterEnd')?.value;
         const flow  = document.getElementById('flowSelect')?.value;
-        if (start) url += '&start_date=' + encodeURIComponent(start);
-        if (end)   url += '&end_date='   + encodeURIComponent(end);
+        if (filterDate) {
+            url += '&start_date=' + encodeURIComponent(new Date(filterDate + 'T00:00:00').toISOString());
+            url += '&end_date=' + encodeURIComponent(new Date(filterDate + 'T23:59:59').toISOString());
+        } else {
+            if (start && start !== 'all') url += '&start_date=' + encodeURIComponent(start);
+            if (end) url += '&end_date=' + encodeURIComponent(end);
+        }
         if (flow && flow !== 'all') url += '&file_name=' + encodeURIComponent(flow);
+
 
         const data = await (await fetch(url, { method: 'POST' })).json();
         if (data.report) {

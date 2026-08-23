@@ -30,6 +30,7 @@ def generate_reports(target_dir=None):
     total_seconds = 0
     log_text = ""
     system_log_text = ""
+    task_counts = {"手入力・編集": 0, "コピペ・反復転記": 0, "関数処理": 0, "その他閲覧・待機": 0}
     
     # 簡易集計（活動ログ）
     if activity_log:
@@ -38,18 +39,31 @@ def generate_reports(target_dir=None):
             reader = csv.reader(f)
             headers = next(reader, None)
             for row in reader:
-                if len(row) >= 4:
-                    app, title, start, end, dur = row[1], row[2], row[3], row[4], row[5]
+                if len(row) >= 6:
+                    start, end, dur_str, status, app, title = row[0], row[1], row[2], row[3], row[4], row[5]
+                    ai_text = row[6] if len(row) > 6 else ""
+                    
                     try:
-                        dur_int = int(dur)
+                        dur_int = int(dur_str.replace("秒", "").strip())
                         app_usage[app] += dur_int
                         total_seconds += dur_int
                     except:
                         pass
-                    log_text += f"- {start}〜{end} [{app}] {title} ({dur}秒)\n"
-
-    # 詳細集計（システムログ）と作業割合の算出
-    task_counts = {"手入力・編集": 0, "コピペ・反復転記": 0, "関数処理": 0, "その他閲覧・待機": 0}
+                        
+                    log_text += f"- {start}〜{end} [{app}] {title} ({dur_str}) : {ai_text}\n"
+                    
+                    # system_logが無い場合は、activity_logからタスク種別を推測して代用
+                    if not system_log:
+                        system_log_text += f"[{start}] App:{app} | Action:{ai_text}\n"
+                        ai_lower = ai_text.lower() + title.lower()
+                        if "コピペ" in ai_lower or "転記" in ai_lower or "コピー" in ai_lower:
+                            task_counts["コピペ・反復転記"] += 1
+                        elif "入力" in ai_lower or "更新" in ai_lower:
+                            task_counts["手入力・編集"] += 1
+                        elif "計算" in ai_lower or "関数" in ai_lower:
+                            task_counts["関数処理"] += 1
+                        else:
+                            task_counts["その他閲覧・待機"] += 1
     if system_log:
         with open(system_log, "r", encoding="utf-8-sig") as f:
             reader = csv.reader(f)
@@ -99,7 +113,7 @@ def generate_reports(target_dir=None):
 {log_text}
 【要件】
 1. HTMLの <div> などの要素のみ出力してください（```html などの記号は不要）。
-2. 「本日の主な業務サマリ」と「タイムライン（時系列の作業内容）」を分かりやすく記載してください。
+2. 「本日の主な業務サマリ」と「タイムライン」を分かりやすく記載してください。ただし、タイムラインの内容は長々と書かず、操作内容を端的に短くまとめてください。
 """
     try:
         res_simple = client.models.generate_content(model=GEMINI_MODEL, contents=prompt_simple)
@@ -146,8 +160,8 @@ def generate_reports(target_dir=None):
 以下の【システム詳細ログ】を分析し、HTML要素のみを出力してください（```htmlなどのマークダウン記号は絶対に含まないこと）。
 
 【出力フォーマット・要件】
-<h2 class="text-2xl mb-4 border-b pb-2 text-blue-700 font-bold">⏱ タイムスタンプ順の操作履歴と所要時間</h2>
-（各作業の「手作業での所要時間」と「プログラムで自動化した場合の参考時間」を対比してリスト化）
+<h2 class="text-2xl mb-4 border-b pb-2 text-blue-700 font-bold">📁 操作した主要ファイルと手作業のコスト</h2>
+（操作した主要なファイル名・システム名と、それに費やした手作業の実時間、およびプログラムで自動化した場合の想定削減時間を簡潔にリスト化してください。日報のような時系列の履歴は不要です。）
 
 <div class="mt-8 flex flex-col lg:flex-row gap-8">
     <div class="flex-1 lg:w-1/2">
