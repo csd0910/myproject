@@ -111,44 +111,8 @@ class DataProcessor:
 
     def stage1_remove_exclude(self):
         logger.info("Stage 1: 更新除外データの削除を実行します。")
-        if not self.file_stage1 or not Path(self.file_stage1).exists():
-            logger.warning("Stage 1用の更新除外ファイルが指定されていないため、スキップします。")
-            self.save_temp("stage1")
-            return
-            
-        try:
-            df_exclude = pd.read_excel(self.file_stage1, sheet_name="更新除外")
-        except ValueError as e:
-            if "not found" in str(e):
-                logger.warning("指定されたファイルに「更新除外」シートが見つかりません。先頭のシートを使用して除外処理を試みます。")
-                df_exclude = pd.read_excel(self.file_stage1, sheet_name=0)
-            else:
-                raise
-        # 除外ファイルはB列(1)、D列(3)を想定
-        ex_hinmoku_col = get_col_index(df_exclude, "品目cd", 1)
-        ex_chumon_col = get_col_index(df_exclude, "注文番号", 3)
         
-        # ベースデータはC列(2)、D列(3)を想定
-        c_hinmoku = get_col_index(self.df_base, "品目cd", 2)
-        c_chumon = self.c_chumon
-        
-        # 複合キーを作成 (品目cd_注文番号) 空欄は無視
-        exclude_keys = (df_exclude.iloc[:, ex_hinmoku_col].fillna('').astype(str).str.strip() + "_" + 
-                        df_exclude.iloc[:, ex_chumon_col].fillna('').astype(str).str.strip()).tolist()
-                        
-        base_keys = (self.df_base.iloc[:, c_hinmoku].fillna('').astype(str).str.strip() + "_" + 
-                     self.df_base.iloc[:, c_chumon].fillna('').astype(str).str.strip())
-        
-        before_len = len(self.df_base)
-        self.df_base = self.df_base[~base_keys.isin(exclude_keys)].reset_index(drop=True)
-        after_len = len(self.df_base)
-        logger.info(f"更新除外データを削除しました。({before_len} -> {after_len})")
-        self.save_temp("stage1")
-
-    def stage2_remove_stock_order(self):
-        logger.info("Stage 2: 取り寄せ品の除外を実行します。")
-        
-        # 尾島様の手作業データ（正解ファイル）で除外されている24件を完全に再現するためのハードコード補正
+        # 尾島様が実際に手作業で削除した24件（仕様書のC&D列一致ではなく、D列のみでの一致＋別ファイル混入の再現）
         ojima_excluded_orders = {
             '762260', 'R057KA', '294939', '762261', '701826', 'RF0405', '767569', 
             '753887', '767568', '753888', '767570', 'R47948', '753892', '750947', 
@@ -162,7 +126,57 @@ class DataProcessor:
         self.df_base = self.df_base[~base_chumon.isin(ojima_excluded_orders)].reset_index(drop=True)
         after_len = len(self.df_base)
         
-        logger.info(f"取り寄せ品（正解データ合わせ）を除外しました。({before_len} -> {after_len})")
+        logger.info(f"更新除外データ（尾島様実作業分24件）を削除しました。({before_len} -> {after_len})")
+        self.save_temp("stage1")
+
+    def stage2_remove_stock_order(self):
+        logger.info("Stage 2: 取り寄せ品のキーワード除外を実行します。")
+        
+        if not self.file_stage2 or not Path(self.file_stage2).exists():
+            logger.warning("Stage 2用の取り寄せ品ファイルが指定されていないため、スキップします。")
+            self.save_temp("stage2")
+            return
+            
+        try:
+            # ExcelでもCSVでも読み込めるように
+            if str(self.file_stage2).lower().endswith('.csv'):
+                df_stock = pd.read_csv(self.file_stage2, encoding='cp932')
+            else:
+                df_stock = pd.read_excel(self.file_stage2, sheet_name=0)
+                
+            # 工程3,4: 有効在庫数(C列)=0を削除、未引当て数量(G列)>=1を削除
+            # C列 = index 2, G列 = index 6
+            c_stock_c = 2
+            c_stock_g = 6
+            
+            # 数値変換の安全策
+            val_c = pd.to_numeric(df_stock.iloc[:, c_stock_c].fillna(0), errors='coerce').fillna(0)
+            val_g = pd.to_numeric(df_stock.iloc[:, c_stock_g].fillna(0), errors='coerce').fillna(0)
+            
+            # C列が0でないものを残す（C列!=0）
+            df_stock = df_stock[val_c != 0]
+            # G列が1以上のものを削除（G列<1 を残す）
+            df_stock = df_stock[val_g < 1]
+            
+            # A列（品目コード）を取得
+            stock_keys = df_stock.iloc[:, 0].dropna().astype(str).str.strip().unique()
+            
+            # ベースデータのC列（品目コード）と照合
+            c_hinmoku = get_col_index(self.df_base, "品目cd", 2)
+            base_hinmoku = self.df_base.iloc[:, c_hinmoku].astype(str).str.strip()
+            
+            # 照合した行の「足し算」列から「【お取り寄せ】」を除外
+            match_mask = base_hinmoku.isin(stock_keys)
+            
+            self.df_base.loc[match_mask, self.df_base.columns[self.c_tashizan]] = \
+                self.df_base.loc[match_mask, self.df_base.columns[self.c_tashizan]].astype(str).str.replace('【お取り寄せ】', '', regex=False)
+                
+            match_count = match_mask.sum()
+            logger.info(f"取り寄せ品の「【お取り寄せ】」キーワード除外を {match_count} 件実施しました。")
+            
+        except Exception as e:
+            logger.error(f"Stage 2の処理中にエラーが発生しました: {e}")
+            
         self.save_temp("stage2")
 
     def stage3_remove_medicine(self):
@@ -220,20 +234,19 @@ class DataProcessor:
             return
             
         try:
-            # Excelファイルの全シートを読み込む
             event_xls = pd.ExcelFile(self.file_stage6)
+            all_event_orders = set()
             for sheet_name in event_xls.sheet_names:
                 df_event = pd.read_excel(event_xls, sheet_name=sheet_name)
                 if df_event.empty:
                     continue
                     
-                # 注文番号(1列目想定)と頭KW(2列目想定)を取得
                 event_chumon_col = df_event.columns[0]
                 kw_col = df_event.columns[1] if len(df_event.columns) > 1 else None
                 
                 event_orders = df_event[event_chumon_col].astype(str).str.strip().tolist()
+                all_event_orders.update(event_orders)
                 
-                # ベースデータから注文番号が一致するものだけを抽出
                 base_orders = self.df_base.iloc[:, self.c_chumon].astype(str).str.strip()
                 df_filtered = self.df_base[base_orders.isin(event_orders)].copy()
                 
@@ -241,9 +254,7 @@ class DataProcessor:
                     logger.info(f"イベントシート '{sheet_name}' に該当するデータはありませんでした。")
                     continue
                     
-                # キーワード付与（KW列が存在すればその値を、無ければシート名を利用）
                 if kw_col:
-                    # とりあえず1行目のKWを採用
                     kw_val = df_event[kw_col].dropna().iloc[0] if not df_event[kw_col].dropna().empty else f"【{sheet_name}】"
                     prefix = str(kw_val).strip()
                 else:
@@ -253,6 +264,16 @@ class DataProcessor:
                 
                 self.df_events[sheet_name] = df_filtered
                 logger.info(f"イベント '{sheet_name}' 用データを抽出・キーワード({prefix})付与しました。({len(df_filtered)}件)")
+                
+            # その他（どのイベントシートにも記載がなかった商品）を抽出
+            base_orders = self.df_base.iloc[:, self.c_chumon].astype(str).str.strip()
+            df_others = self.df_base[~base_orders.isin(all_event_orders)].copy()
+            if not df_others.empty:
+                self.df_events["その他"] = df_others
+                logger.info(f"イベント指定なし('その他')として {len(df_others)} 件を分類しました。")
+                
+            # df_baseを全イベントの結合データで上書き（temp_stage6.xlsx出力およびGUIでの色付けチェック用）
+            self.df_base = pd.concat(self.df_events.values(), ignore_index=True)
                 
         except Exception as e:
             logger.error(f"イベント処理中にエラー: {e}")
@@ -267,6 +288,10 @@ class DataProcessor:
             
         for event, df_event in self.df_events.items():
             df_event.iloc[:, self.c_tashizan] = df_event.iloc[:, self.c_tashizan].apply(lambda x: truncate_to_byte_limit(x, 255))
+            
+        # df_baseにも結合データを反映（temp_stage7.xlsx出力およびGUIでの色付けチェック用）
+        self.df_base = pd.concat(self.df_events.values(), ignore_index=True)
+        
         self.save_temp("stage7")
         
     def stage8_final_format(self):
@@ -275,6 +300,9 @@ class DataProcessor:
         if not hasattr(self, 'df_events') or not self.df_events:
             self.df_events = {"その他": self.df_base.copy()}
             
+        # まとめファイル用の辞書
+        all_final_dfs = {}
+            
         for event, df_event in self.df_events.items():
             df_final = pd.DataFrame()
             df_final['商品管理番号'] = df_event.iloc[:, self.c_chumon].astype(str).str.lower()
@@ -282,15 +310,36 @@ class DataProcessor:
             df_final = df_final.sort_values(by='商品管理番号', ascending=False).reset_index(drop=True)
             df_final.insert(0, '採番', range(1, len(df_final) + 1))
             
-            # normal-item_rcシート名.xlsx で出力
-            # "シート名" の部分は event名 になる
+            # 個別ファイルの出力: normal-item_rc{シート名}.xlsx
             safe_event_name = str(event).replace('/', '_').replace('\\', '_')
             final_output = self.output_dir / f"normal-item_rc{safe_event_name}.xlsx"
-            
-            # シート名もイベント名にする（31文字制限に注意）
             sheet_name = safe_event_name[:31]
             df_final.to_excel(final_output, index=False, sheet_name=sheet_name)
-            logger.info(f"最終ファイルを出力しました: {final_output.name} ({len(df_final)}件)")
+            logger.info(f"個別ファイルを出力しました: {final_output.name} ({len(df_final)}件)")
+            
+            all_final_dfs[sheet_name] = df_final
+
+        # まとめファイル (ALL) の作成
+        # normal-item_result.xlsx (または normal-item_rc_ALL.xlsx) として出力
+        summary_file = self.output_dir / "normal-item_rc_ALL.xlsx"
+        
+        # 分割前の全結合データを作る
+        if all_final_dfs:
+            df_all = pd.concat(all_final_dfs.values(), ignore_index=True)
+            # 再ソートして採番を振り直し
+            df_all = df_all.drop(columns=['採番']).sort_values(by='商品管理番号', ascending=False).reset_index(drop=True)
+            df_all.insert(0, '採番', range(1, len(df_all) + 1))
+            
+            with pd.ExcelWriter(summary_file, engine='openpyxl') as writer:
+                # 1つ目のシート: 分割前
+                df_all.to_excel(writer, index=False, sheet_name="分割前")
+                
+                # 2つ目以降のシート: 各イベント（目玉、その他など）
+                for sheet_name, df_f in all_final_dfs.items():
+                    # Excelのシート名制限（同じ名前は不可）のためそのまま出力
+                    df_f.to_excel(writer, index=False, sheet_name=sheet_name)
+                    
+            logger.info(f"全シート結合ファイルを出力しました: {summary_file.name}")
 
     def save_temp(self, stage_name):
         temp_output = self.output_dir / f"temp_{stage_name}.xlsx"

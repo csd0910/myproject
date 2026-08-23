@@ -96,8 +96,8 @@ def main():
     ojima_dir = os.path.join(base_dir, "【テスト用】商品名作成 尾島手作業")
     
     stages = [
-        ("Stage1 (除外)", "temp_stage1.xlsx", "【手順1】result_260819_154419.xlsx", "rows"),
-        ("Stage2 (取り寄せ除外)", "temp_stage2.xlsx", "【手順5】result_260819_154419.xlsx", "rows"),
+        ("Stage1 (除外)", "temp_stage1.xlsx", "【手順2】result_260819_154419.xlsx", "rows"),
+        ("Stage2 (取り寄せ除外)", "temp_stage2.xlsx", "【手順5】result_260819_154419.xlsx", "content"),
         ("Stage3 (医薬品除外)", "temp_stage3.xlsx", "【手順6】result_260819_154419.xlsx", "rows"),
         ("Stage4 (文字列削除)", "temp_stage4.xlsx", "【手順7】result_260819_154419.xlsx", "content"),
         ("Stage5 (送料無料付与)", "temp_stage5.xlsx", "【手順8】result_260819_154419.xlsx", "content")
