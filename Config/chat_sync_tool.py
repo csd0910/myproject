@@ -54,14 +54,19 @@ def do_restore(zip_path, brain_dir, script_dir):
         return
         
     print(f"📦 バックアップZIPを解析中...")
-    backup_uuids = set()
+    backup_last_modified = {}
     with zipfile.ZipFile(zip_path, 'r') as z:
         for info in z.infolist():
             parts = Path(info.filename).parts
             if len(parts) > 0 and len(parts[0]) == 36 and parts[0].count('-') == 4:
-                backup_uuids.add(parts[0])
+                uuid = parts[0]
+                # Keep track of the most recent file date in each UUID folder
+                dt = info.date_time # tuple (year, month, day, hour, min, sec)
+                if uuid not in backup_last_modified or dt > backup_last_modified[uuid]:
+                    backup_last_modified[uuid] = dt
                     
-    backup_uuids = list(backup_uuids)
+    # Sort UUIDs by most recent first
+    backup_uuids = sorted(list(backup_last_modified.keys()), key=lambda x: backup_last_modified[x], reverse=True)
     num_backups = len(backup_uuids)
     
     if num_backups == 0:
@@ -78,19 +83,22 @@ def do_restore(zip_path, brain_dir, script_dir):
             
     local_chats.sort(key=lambda x: x[1], reverse=True)
     
+    # If there are fewer local chats (dummies) than backups, we only restore what we can fit!
+    restorable_count = min(len(local_chats), num_backups)
+    
     if len(local_chats) < num_backups:
-        print(f"\n⚠️ 【準備不足】バックアップが {num_backups} 件ありますが、IDE上のチャット数が足りません。")
-        print(f"👉 Antigravity IDEを開き、「New Chat」をあと【 {num_backups - len(local_chats)} 回 】連続で作成してください。")
-        print("👉 その後、IDEを完全に閉じてから、このスクリプトを再度実行してください。")
-        return
+        print(f"\n⚠️ 【お知らせ】バックアップは {num_backups} 件ありますが、IDE上のチャット（空箱）が {len(local_chats)} 個しかありません。")
+        print(f"👉 今回は「最近使ったチャット 最新 {restorable_count} 件」だけを優先して復元します！")
+        print("（もしもっと古い履歴も見たい場合は、後でIDEで「新しいチャット」を追加作成してから再度実行すればOKです）")
         
-    dummies = local_chats[:num_backups]
+    dummies = local_chats[:restorable_count]
+    backup_uuids_to_restore = backup_uuids[:restorable_count]
     
     print(f"\n🎯 以下の通り、バックアップを空のダミーチャットに注入します:")
-    for i in range(min(3, num_backups)):
-        print(f"  [{backup_uuids[i]}] -> ダミースロット [{dummies[i][0].name}]")
-    if num_backups > 3:
-        print(f"  ...他 {num_backups - 3} 件")
+    for i in range(min(3, restorable_count)):
+        print(f"  [{backup_uuids_to_restore[i]}] (最新) -> ダミースロット [{dummies[i][0].name}]")
+    if restorable_count > 3:
+        print(f"  ...他 {restorable_count - 3} 件")
         
     print("\n⚠️ 【最終確認】 上記の最新のダミーチャットを上書きしてよろしいですか？")
     print("※実行前に必ず Antigravity IDE を完全に終了させておいてください。")
@@ -109,8 +117,8 @@ def do_restore(zip_path, brain_dir, script_dir):
     with zipfile.ZipFile(zip_path, 'r') as z:
         z.extractall(temp_extract_dir)
         
-    for i in range(num_backups):
-        source_dir = temp_extract_dir / backup_uuids[i]
+    for i in range(restorable_count):
+        source_dir = temp_extract_dir / backup_uuids_to_restore[i]
         target_dir = dummies[i][0]
         shutil.rmtree(target_dir)
         shutil.copytree(source_dir, target_dir)
