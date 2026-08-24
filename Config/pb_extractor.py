@@ -12,20 +12,27 @@ def extract_text_from_pb(file_path):
     with open(file_path, 'rb') as f:
         data = f.read()
     
-    # 不正なバイト列を置換文字()に変換しつつUTF-8として読み込む
-    text = data.decode('utf-8', errors='replace')
+    text = data.decode('utf-8', errors='ignore')
     
-    # Protobufのバイナリ制御文字や置換文字を区切り文字としてテキストを分割
-    # (\n, \t, \r は改行やインデントとして残す)
     chunks = re.split(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]+', text)
     
     valid_chunks = []
     for chunk in chunks:
         chunk = chunk.strip()
-        # 意味のある長さのテキスト（10文字以上）のみを抽出
-        if len(chunk) >= 10:
-            valid_chunks.append(chunk)
+        if len(chunk) < 10:
+            continue
             
+        # 日本語（ひらがな、カタカナ、漢字）が含まれているか
+        has_japanese = bool(re.search(r'[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]', chunk))
+        
+        if has_japanese:
+            valid_chunks.append(chunk)
+        else:
+            # 日本語が含まれない場合（ソースコード等）、意味不明な記号（ゴミ）の割合をチェック
+            normal_chars = re.findall(r'[a-zA-Z0-9\s.,!?"\'(){}\[\]:;<>+\-*/=_#@]', chunk)
+            if len(chunk) > 20 and (len(normal_chars) / len(chunk)) > 0.9:
+                valid_chunks.append(chunk)
+                
     return "\n\n" + ("-" * 40) + "\n\n".join(valid_chunks)
 
 def main():
