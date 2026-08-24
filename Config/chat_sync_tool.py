@@ -3,16 +3,24 @@ import sys
 import zipfile
 import shutil
 from pathlib import Path
+import logging
 
-def get_brain_dir():
+# ロガーの設定
+logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
+logger = logging.getLogger(__name__)
+
+def get_ide_dir():
     user_profile = os.environ.get("USERPROFILE", "")
-    return Path(user_profile) / ".gemini" / "antigravity-ide" / "brain"
+    return Path(user_profile) / ".gemini" / "antigravity-ide"
 
-def do_backup(zip_path, brain_dir):
-    print("\n📦 バックアップ処理を開始します...")
+def do_backup(zip_path, ide_dir):
+    logger.info("バックアップ処理を開始します...")
     
-    if not brain_dir.exists():
-        print(f"❌ エラー: brainフォルダが見つかりません: {brain_dir}")
+    brain_dir = ide_dir / "brain"
+    conv_dir = ide_dir / "conversations"
+    
+    if not brain_dir.exists() or not conv_dir.exists():
+        logger.error("必要なディレクトリ (brain または conversations) が見つかりません。")
         return
 
     # 既存のZIPがあれば削除
@@ -20,153 +28,119 @@ def do_backup(zip_path, brain_dir):
         try:
             zip_path.unlink()
         except Exception as e:
-            print(f"❌ エラー: 古いバックアップを削除できませんでした ({e})")
+            logger.error(f"古いバックアップを削除できませんでした: {e}")
             return
 
-    # UUID形式のフォルダのみを収集
-    target_dirs = []
+    # バックアップ対象のUUIDを収集
+    target_uuids = set()
     for d in brain_dir.iterdir():
         if d.is_dir() and len(d.name) == 36 and d.name.count('-') == 4:
-            target_dirs.append(d)
+            target_uuids.add(d.name)
             
-    if not target_dirs:
-        print("❌ バックアップするチャット履歴が見つかりません。")
+    if not target_uuids:
+        logger.warning("バックアップするチャット履歴が見つかりません。")
         return
 
-    print(f"🔍 {len(target_dirs)} 件のチャット履歴を圧縮中... (少々お待ちください)")
+    logger.info(f"{len(target_uuids)} 件のチャット履歴を圧縮中... (少々お待ちください)")
     
-    with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zf:
-        for folder in target_dirs:
-            for filepath in folder.rglob('*'):
-                if filepath.is_file():
-                    arcname = filepath.relative_to(brain_dir)
-                    zf.write(filepath, arcname)
-                    
-    print(f"🎉 バックアップ完了！")
-    print(f"保存先: {zip_path.name}")
-    print("※忘れずに Git へ Push してクラウドに同期してください。")
+    try:
+        with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zf:
+            for uuid in target_uuids:
+                # 1. brain フォルダ (アーティファクト・ログ) の保存
+                b_dir = brain_dir / uuid
+                if b_dir.exists():
+                    for filepath in b_dir.rglob('*'):
+                        if filepath.is_file():
+                            arcname = Path("brain") / filepath.relative_to(brain_dir)
+                            zf.write(filepath, arcname)
+                
+                # 2. conversations フォルダ (チャットDB本体) の保存
+                for ext in ['.db', '.pb']:
+                    c_file = conv_dir / f"{uuid}{ext}"
+                    if c_file.exists():
+                        arcname = Path("conversations") / c_file.name
+                        zf.write(c_file, arcname)
+                        
+        logger.info(f"バックアップ完了！保存先: {zip_path.name}")
+        logger.info("※忘れずに移行先PCへ移動してください。")
+    except Exception as e:
+        logger.error(f"バックアップ中にエラーが発生しました: {e}")
 
-def do_restore(zip_path, brain_dir, script_dir):
-    print("\n🚀 復元（インジェクション）処理を開始します...")
+def do_restore(zip_path, ide_dir):
+    logger.info("復元処理を開始します...")
     
     if not zip_path.exists():
-        print(f"❌ エラー: バックアップZIPが見つかりません: {zip_path.name}")
+        logger.error(f"バックアップZIPが見つかりません: {zip_path.name}")
         return
         
-    print(f"📦 バックアップZIPを解析中...")
-    backup_last_modified = {}
-    with zipfile.ZipFile(zip_path, 'r') as z:
-        for info in z.infolist():
-            parts = Path(info.filename).parts
-            if len(parts) > 0 and len(parts[0]) == 36 and parts[0].count('-') == 4:
-                uuid = parts[0]
-                # Keep track of the most recent file date in each UUID folder
-                dt = info.date_time # tuple (year, month, day, hour, min, sec)
-                if uuid not in backup_last_modified or dt > backup_last_modified[uuid]:
-                    backup_last_modified[uuid] = dt
-                    
-    # Sort UUIDs by most recent first
-    backup_uuids = sorted(list(backup_last_modified.keys()), key=lambda x: backup_last_modified[x], reverse=True)
-    num_backups = len(backup_uuids)
-    
-    if num_backups == 0:
-        print("❌ エラー: ZIP内に有効なチャットデータが見つかりませんでした。")
-        return
-        
-    print(f"✅ {num_backups} 件のチャットバックアップを検出しました。")
-    
-    print(f"🔍 ローカルのIDE状態をチェック中...")
-    local_chats = []
-    for d in brain_dir.iterdir():
-        if d.is_dir() and len(d.name) == 36 and d.name.count('-') == 4:
-            local_chats.append((d, d.stat().st_ctime))
-            
-    local_chats.sort(key=lambda x: x[1], reverse=True)
-    
-    # If there are fewer local chats (dummies) than backups, we only restore what we can fit!
-    restorable_count = min(len(local_chats), num_backups)
-    
-    if len(local_chats) < num_backups:
-        print(f"\n⚠️ 【お知らせ】バックアップは {num_backups} 件ありますが、IDE上のチャット（空箱）が {len(local_chats)} 個しかありません。")
-        print(f"👉 今回は「最近使ったチャット 最新 {restorable_count} 件」だけを優先して復元します！")
-        print("（もしもっと古い履歴も見たい場合は、後でIDEで「新しいチャット」を追加作成してから再度実行すればOKです）")
-        
-    dummies = local_chats[:restorable_count]
-    backup_uuids_to_restore = backup_uuids[:restorable_count]
-    
-    print(f"\n🎯 以下の通り、バックアップを空のダミーチャットに注入します:")
-    for i in range(min(3, restorable_count)):
-        print(f"  [{backup_uuids_to_restore[i]}] (最新) -> ダミースロット [{dummies[i][0].name}]")
-    if restorable_count > 3:
-        print(f"  ...他 {restorable_count - 3} 件")
-        
-    print("\n⚠️ 【最終確認】 上記の最新のダミーチャットを上書きしてよろしいですか？")
+    print("\n⚠️ 【最終確認】 復元を開始します。")
     print("※実行前に必ず Antigravity IDE を完全に終了させておいてください。")
     ans = input("実行しますか？ (y/n): ")
     if ans.lower() != 'y':
-        print("処理を中止しました。")
+        logger.info("処理を中止しました。")
         return
         
-    print("\n🚀 バックアップを注入中... (数分かかる場合があります)")
+    logger.info("バックアップを展開中... (既存データは上書きされます)")
     
-    temp_extract_dir = script_dir / "temp_extract_recovery"
-    if temp_extract_dir.exists():
-        shutil.rmtree(temp_extract_dir)
-    temp_extract_dir.mkdir()
-    
-    with zipfile.ZipFile(zip_path, 'r') as z:
-        z.extractall(temp_extract_dir)
+    try:
+        with zipfile.ZipFile(zip_path, 'r') as z:
+            # 古いバグのあるZIP形式（brain や conversations フォルダの階層がない）を弾く安全装置
+            valid_format = any(info.filename.startswith("brain/") or info.filename.startswith("conversations/") for info in z.infolist())
+            if not valid_format:
+                logger.error("【重大なエラー】このZIPファイルは古い仕様で作成されており、チャット本体(DB)が含まれていません！")
+                logger.error("元のPCで『最新の chat_sync_tool.py』を実行し、再度バックアップを取り直してください。")
+                return
+                
+            # 展開先は ide_dir (.gemini/antigravity-ide)
+            z.extractall(ide_dir)
+            
+        logger.info("展開が完了しました。")
         
-    for i in range(restorable_count):
-        source_dir = temp_extract_dir / backup_uuids_to_restore[i]
-        target_dir = dummies[i][0]
-        shutil.rmtree(target_dir)
-        shutil.copytree(source_dir, target_dir)
-        
-        # パスの自動書き換え処理 (別PCへの移行対策)
+        # ユーザー名書き換え処理 (パスの自動調整)
         current_user = os.environ.get("USERNAME", "user")
-        for filepath in target_dir.rglob('*'):
-            if filepath.is_file() and filepath.suffix in ['.jsonl', '.md', '.json', '.txt']:
-                try:
-                    with open(filepath, 'r', encoding='utf-8') as f:
-                        content = f.read()
-                    
-                    if "フォーレスト026" in content and current_user != "フォーレスト026":
-                        content = content.replace("フォーレスト026", current_user)
-                        with open(filepath, 'w', encoding='utf-8') as f:
-                            f.write(content)
-                except Exception:
-                    pass
+        brain_dir = ide_dir / "brain"
         
-    print("🧹 一時ファイルをクリーンアップ中...")
-    shutil.rmtree(temp_extract_dir)
-    
-    print("\n🎉 【復旧完了！】")
-    print("Antigravity IDEを起動してください。サイドバーの「新しいチャット」の中に")
-    print("過去のチャット履歴が完全に復元されているはずです！")
+        logger.info("パス設定の最適化（ユーザー名の調整）を行っています...")
+        if brain_dir.exists():
+            for filepath in brain_dir.rglob('*'):
+                if filepath.is_file() and filepath.suffix in ['.jsonl', '.md', '.json', '.txt']:
+                    try:
+                        with open(filepath, 'r', encoding='utf-8') as f:
+                            content = f.read()
+                        
+                        if "フォーレスト026" in content and current_user != "フォーレスト026":
+                            content = content.replace("フォーレスト026", current_user)
+                            with open(filepath, 'w', encoding='utf-8') as f:
+                                f.write(content)
+                    except Exception:
+                        continue
+                    
+        logger.info("🎉 復旧完了！IDEを起動し、過去のチャットが表示されるか確認してください。")
+    except Exception as e:
+        logger.error(f"復元中にエラーが発生しました: {e}")
 
 def main():
     print("="*60)
-    print("🔄 Antigravity Chat Sync Tool (バックアップ＆復元ツール)")
+    print("🔄 Antigravity Chat Sync Tool (バックアップ＆復元ツール) - 厳格改修版")
     print("="*60)
     
     script_dir = Path(__file__).parent
     zip_path = script_dir / "Antigravity_ChatHistory_Backup.zip"
-    brain_dir = get_brain_dir()
+    ide_dir = get_ide_dir()
     
     print("\nどちらの操作を行いますか？")
-    print("  [1] ⬆️ 現在のチャット履歴をすべてZIPにバックアップする (PC移行・退社前)")
-    print("  [2] ⬇️ ZIPからダミーチャットに履歴を復元する (別PC・出社時)")
+    print("  [1] ⬆️ 現在のチャット履歴をすべてZIPにバックアップする")
+    print("  [2] ⬇️ ZIPから履歴を復元する (UUID維持)")
     print("  [0] キャンセル")
     
     choice = input("\n番号を選択してください (1/2/0): ")
     
     if choice == '1':
-        do_backup(zip_path, brain_dir)
+        do_backup(zip_path, ide_dir)
     elif choice == '2':
-        do_restore(zip_path, brain_dir, script_dir)
+        do_restore(zip_path, ide_dir)
     else:
-        print("キャンセルしました。")
+        logger.info("キャンセルしました。")
 
 if __name__ == '__main__':
     main()
