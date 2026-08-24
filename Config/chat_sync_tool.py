@@ -123,6 +123,21 @@ def do_restore(zip_path, brain_dir, script_dir):
         shutil.rmtree(target_dir)
         shutil.copytree(source_dir, target_dir)
         
+        # パスの自動書き換え処理 (別PCへの移行対策)
+        current_user = os.environ.get("USERNAME", "user")
+        for filepath in target_dir.rglob('*'):
+            if filepath.is_file() and filepath.suffix in ['.jsonl', '.md', '.json', '.txt']:
+                try:
+                    with open(filepath, 'r', encoding='utf-8') as f:
+                        content = f.read()
+                    
+                    if "フォーレスト026" in content and current_user != "フォーレスト026":
+                        content = content.replace("フォーレスト026", current_user)
+                        with open(filepath, 'w', encoding='utf-8') as f:
+                            f.write(content)
+                except Exception:
+                    pass
+        
     print("🧹 一時ファイルをクリーンアップ中...")
     shutil.rmtree(temp_extract_dir)
     
